@@ -1,4 +1,5 @@
 use std::io::{self, Read, Seek, SeekFrom, Cursor};
+use crate::io_types::{Endian, Vector2, Vector3, Vector4};
 
 macro_rules! impl_generic_enum_reader {
     ($type:ty, $read_value:ident, $get_value:ident, $read:ident, $get:ident) => {
@@ -64,54 +65,6 @@ macro_rules! impl_numeric_reader {
     };
 }
 
-#[derive(Debug, Clone, Copy)]
-#[allow(dead_code)]
-pub struct Vector2 {
-    x: f32,
-    y: f32
-}
-
-impl Vector2 {
-    pub fn new(x: f32, y: f32) -> Self {
-        Vector2 { x, y }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-#[allow(dead_code)]
-pub struct Vector3 {
-    x: f32,
-    y: f32,
-    z: f32
-}
-
-impl Vector3 {
-    pub fn new(x: f32, y: f32, z: f32) -> Self {
-        Vector3 { x, y, z }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-#[allow(dead_code)]
-pub struct Vector4 {
-    x: f32,
-    y: f32,
-    z: f32,
-    w: f32
-}
-
-impl Vector4 {
-    pub fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
-        Vector4 { x, y, z, w }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum Endian {
-    Big,
-    Little
-}
-
 pub struct BinaryReader<R> {
     inner: R,
     endian: Endian,
@@ -147,6 +100,7 @@ impl<R: Read + Seek> BinaryReader<R> {
         return self.inner.stream_position()
     }
 
+    // Returns total stream length
     pub fn length(&mut self) -> io::Result<u64> {
         let initial = self.position()?;
         let length = self.inner.seek(SeekFrom::End(0))?;
@@ -154,18 +108,19 @@ impl<R: Read + Seek> BinaryReader<R> {
         Ok(length)
     }
 
+    // Returns remaining length of the stream
     pub fn remaining(&mut self) -> io::Result<u64> {
         Ok(self.length()? - self.position()?)
     }
 
     /// Moves stream position to the target
     pub fn seek(&mut self, position: u64) -> io::Result<u64> {
-        return self.inner.seek(SeekFrom::Start(position));
+        self.inner.seek(SeekFrom::Start(position))
     }
 
     /// Moves stream position relative to current position
     pub fn skip(&mut self, position: i64) -> io::Result<u64> {
-        return self.inner.seek(SeekFrom::Current(position));
+        self.inner.seek(SeekFrom::Current(position))
     }
 
     /// Advances the stream position until it meets the specified alignment.
@@ -186,7 +141,7 @@ impl<R: Read + Seek> BinaryReader<R> {
         if align == 0 {
             return Err(io::Error::new(io::ErrorKind::InvalidData, "padding was 0"))
         }
-        
+
         let rel_pos = self.position()? - start;
 
         if rel_pos % align > 0 {
@@ -417,6 +372,7 @@ impl<R: Read + Seek> BinaryReader<R> {
     impl_generic_enum_reader!(i32, read_i32, get_i32, read_enum_i32, get_enum_i32);
     impl_generic_enum_reader!(i64, read_i64, get_i64, read_enum_i64, get_enum_i64);
 
+    /// Reads either a four or eight-byte signed integer depending on `varint_i64`.
     pub fn read_varint(&mut self) -> io::Result<i64> {
         if self.varint_i64 {
             self.read_i64()
@@ -426,6 +382,7 @@ impl<R: Read + Seek> BinaryReader<R> {
         }
     }
 
+    /// Reads a vector of either four or eight-byte signed integers depending on `varint_i64`.
     pub fn read_varint_vec(&mut self, count: u64) -> io::Result<Vec<i64>> {
         (0..count).map(|_| self.read_varint()).collect()
     }
@@ -435,6 +392,7 @@ impl<R: Read + Seek> BinaryReader<R> {
         Self::assert_value(self.read_varint()?, expected, "varint")
     }
 
+    /// Reads either a four or eight-byte signed integer depending on `varint_i64` from the specified position without advancing the stream.
     pub fn get_varint(&mut self, position: u64) -> io::Result<i64> {
         if self.varint_i64 {
             self.get_i64(position)
@@ -444,6 +402,7 @@ impl<R: Read + Seek> BinaryReader<R> {
         }
     }
 
+    /// Reads an array of either four or eight-byte signed integers depending on `varint_i64` from the specified position without advancing the stream.
     pub fn get_varint_vec(&mut self, position: u64, count: u64) -> io::Result<Vec<i64>> {
         let initial = self.position()?;
         self.seek(position)?;
