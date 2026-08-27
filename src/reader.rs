@@ -170,6 +170,9 @@ impl<R: Read + Seek> BinaryReader<R> {
 
     /// Advances the stream position until it meets the specified alignment.
     pub fn pad(&mut self, align: u64) -> io::Result<u64> {
+        if align == 0 {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "padding was 0"))
+        }
         let pos = self.position()?;
         if pos % align > 0 {
             self.skip((align - (pos % align)) as i64)?;
@@ -180,6 +183,10 @@ impl<R: Read + Seek> BinaryReader<R> {
 
     /// Advances the stream position until it meets the specified alignment relative to the given starting position.
     pub fn pad_relative(&mut self, start: u64, align: u64) -> io::Result<u64> {
+        if align == 0 {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "padding was 0"))
+        }
+        
         let rel_pos = self.position()? - start;
 
         if rel_pos % align > 0 {
@@ -1021,6 +1028,52 @@ mod tests {
         assert_eq!(reader.position().unwrap(), 4);
         reader.skip(-2).unwrap();
         assert_eq!(reader.position().unwrap(), 2);
+    }
+
+    #[test]
+    fn pad_leaves_next_data_untouched() {
+        let mut data = vec![0u8; 0x10];
+        data.extend_from_slice(&[0xDE, 0xAD, 0xBE, 0xEF]);
+
+        let mut reader = BinaryReader::from_bytes(data, Endian::Little, true);
+
+        reader.seek(0x0D).unwrap();
+        reader.pad(0x10).unwrap();
+
+        let value = reader.read_u32().unwrap();
+
+        assert_eq!(value, 0xEFBEADDE);
+    }
+
+    #[test]
+    fn pad_supports_different_alignments() {
+        let cases = [
+            (0x00, 0x04, 0x00),
+            (0x01, 0x04, 0x04),
+            (0x03, 0x04, 0x04),
+            (0x04, 0x04, 0x04),
+            (0x07, 0x08, 0x08),
+            (0x11, 0x10, 0x20),
+            (0x21, 0x20, 0x40),
+        ];
+
+        for (position, alignment, expected) in cases {
+            let data = vec![0u8; 128];
+            let mut reader = BinaryReader::from_bytes(data.clone(), Endian::Little, true);
+
+            reader.seek(position).unwrap();
+            reader.pad(alignment).unwrap();
+
+            assert_eq!(reader.position().unwrap(), expected);
+        }
+    }
+
+    #[test]
+    fn pad_rejects_zero_alignment() {
+        let data = vec![0u8; 16];
+        let mut reader = BinaryReader::from_bytes(data.clone(), Endian::Little, true);
+
+        assert!(reader.pad(0).is_err());
     }
 }
 
