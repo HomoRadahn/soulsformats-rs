@@ -65,6 +65,48 @@ macro_rules! impl_numeric_reader {
 }
 
 #[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
+pub struct Vector2 {
+    x: f32,
+    y: f32
+}
+
+impl Vector2 {
+    pub fn new(x: f32, y: f32) -> Self {
+        Vector2 { x, y }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
+pub struct Vector3 {
+    x: f32,
+    y: f32,
+    z: f32
+}
+
+impl Vector3 {
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
+        Vector3 { x, y, z }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
+pub struct Vector4 {
+    x: f32,
+    y: f32,
+    z: f32,
+    w: f32
+}
+
+impl Vector4 {
+    pub fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
+        Vector4 { x, y, z, w }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 pub enum Endian {
     Big,
     Little
@@ -103,6 +145,17 @@ impl<R: Read + Seek> BinaryReader<R> {
     /// Returns current stream position
     pub fn position(&mut self) -> io::Result<u64> {
         return self.inner.stream_position()
+    }
+
+    pub fn length(&mut self) -> io::Result<u64> {
+        let initial = self.position()?;
+        let length = self.inner.seek(SeekFrom::End(0))?;
+        self.seek(initial)?;
+        Ok(length)
+    }
+
+    pub fn remaining(&mut self) -> io::Result<u64> {
+        Ok(self.length()? - self.position()?)
     }
 
     /// Moves stream position to the target
@@ -369,6 +422,43 @@ impl<R: Read + Seek> BinaryReader<R> {
         result.and_then(|values| restore.map(|_| values))
     }
 
+    pub fn read_vector_2(&mut self) -> io::Result<Vector2> {
+        Ok(Vector2::new(
+            self.read_f32()?,
+            self.read_f32()?
+        ))
+    }
+
+    pub fn read_vector_3(&mut self) -> io::Result<Vector3> {
+        Ok(Vector3::new(
+            self.read_f32()?,
+            self.read_f32()?,
+            self.read_f32()?
+        ))
+    }
+
+    pub fn read_vector_4(&mut self) -> io::Result<Vector4> {
+        Ok(Vector4::new(
+            self.read_f32()?,
+            self.read_f32()?,
+            self.read_f32()?,
+            self.read_f32()?
+        ))
+    }
+
+    pub fn assert_pattern(&mut self, length: u64, pattern: u8) -> io::Result<()> {
+        let bytes = self.read_u8_vec(length)?;
+
+        if !bytes.iter().all(|&byte| byte == pattern) {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Failed assertion of: {}", pattern),
+            ));
+        }
+
+        Ok(())
+    }
+
 }
 
 impl BinaryReader<Cursor<Vec<u8>>> {
@@ -380,7 +470,7 @@ impl BinaryReader<Cursor<Vec<u8>>> {
 #[cfg(test)]
 mod tests {
     use super::{BinaryReader, Endian};
-    use std::io;
+    use std::{io, vec};
 
     macro_rules! define_enum_fixture {
         ($name:ident, $type:ty) => {
@@ -788,6 +878,27 @@ mod tests {
 
         let mut invalid_reader = BinaryReader::from_bytes(vec![0x02, 0x00], Endian::Little, true);
         assert!(invalid_reader.read_enum_u16::<EnumU16>().is_err());
+    }
+
+    #[test]
+    fn read_vectors() {
+        let mut vector2_reader = BinaryReader::from_bytes(vec![0x00, 0x00, 0x80, 0x3F, 0xCD, 0xCC, 0x2C, 0x40], Endian::Little, true);
+        let vector2 = vector2_reader.read_vector_2().unwrap();
+        assert_eq!(vector2.x, 1.0);
+        assert_eq!(vector2.y, 2.7);
+        
+        let mut vector3_reader = BinaryReader::from_bytes(vec![0x00, 0x00, 0x80, 0x3F, 0xCD, 0xCC, 0x2C, 0x40, 0x00, 0x00, 0x00, 0x00], Endian::Little, true);
+        let vector3 = vector3_reader.read_vector_3().unwrap();
+        assert_eq!(vector3.x, 1.0);
+        assert_eq!(vector3.y, 2.7);
+        assert_eq!(vector3.z, 0.0);
+
+        let mut vector4_reader = BinaryReader::from_bytes(vec![0x00, 0x00, 0x80, 0x3F, 0xCD, 0xCC, 0x2C, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], Endian::Little, true);
+        let vector4 = vector4_reader.read_vector_4().unwrap();
+        assert_eq!(vector4.x, 1.0);
+        assert_eq!(vector4.y, 2.7);
+        assert_eq!(vector4.z, 0.0);
+        assert_eq!(vector4.w, 0.0);
     }
 
     #[test]
