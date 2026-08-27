@@ -163,6 +163,32 @@ impl<R: Read + Seek> BinaryReader<R> {
         return self.inner.seek(SeekFrom::Start(position));
     }
 
+    /// Moves stream position relative to current position
+    pub fn skip(&mut self, position: i64) -> io::Result<u64> {
+        return self.inner.seek(SeekFrom::Current(position));
+    }
+
+    /// Advances the stream position until it meets the specified alignment.
+    pub fn pad(&mut self, align: u64) -> io::Result<u64> {
+        let pos = self.position()?;
+        if pos % align > 0 {
+            self.skip((align - (pos % align)) as i64)?;
+        }
+
+        Ok(self.position()?)
+    }
+
+    /// Advances the stream position until it meets the specified alignment relative to the given starting position.
+    pub fn pad_relative(&mut self, start: u64, align: u64) -> io::Result<u64> {
+        let rel_pos = self.position()? - start;
+
+        if rel_pos % align > 0 {
+            self.skip((align - (rel_pos % align)) as i64)?;
+        }
+
+        Ok(self.position()?)
+    }
+
     /// Reads a one-byte boolean value
     pub fn read_bool(&mut self) -> io::Result<bool> {
         let mut buf = [0u8; 1];
@@ -981,6 +1007,20 @@ mod tests {
 
         let mut invalid_reader = BinaryReader::from_bytes(vec![2], Endian::Little, true);
         assert!(invalid_reader.assert_bool(&[false, true]).is_err());
+    }
+
+    #[test]
+    fn stream_operations() {
+        let mut reader = BinaryReader::from_bytes(vec![0x0, 0x0, 0x0, 0x0, 0x0], Endian::Little, true);
+
+        assert_eq!(reader.position().unwrap(), 0);
+        assert_eq!(reader.length().unwrap(), 5);
+        reader.seek(1).unwrap();
+        assert_eq!(reader.remaining().unwrap(), 4);
+        reader.skip(3).unwrap();
+        assert_eq!(reader.position().unwrap(), 4);
+        reader.skip(-2).unwrap();
+        assert_eq!(reader.position().unwrap(), 2);
     }
 }
 
