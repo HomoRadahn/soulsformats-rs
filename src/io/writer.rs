@@ -1,4 +1,6 @@
+use std::fs::File;
 use std::io::{self, Cursor, Seek, SeekFrom, Write};
+use std::path::Path;
 use crate::io::{Endian};
 
 macro_rules! impl_numeric_writer {
@@ -159,6 +161,39 @@ impl<W: Write + Seek> BinaryWriter<W> {
         Ok(())
     }
 
+    pub fn write_varint(&mut self, value: i64) -> io::Result<()> {
+        match self.varint_i64 {
+            true => self.write_i64(value)?,
+            false => self.write_i32(value as i32)?
+        }
+
+        Ok(())
+    }
+
+    pub fn write_varint_vec(&mut self, data: &Vec<i64>) -> io::Result<()> {
+        for value in data {
+            self.write_varint(*value)?;
+        }
+
+        Ok(())
+    }
+
+    pub fn reserve_varint(&mut self) -> io::Result<Reservation> {
+        match self.varint_i64 {
+            true => self.reserve_i64(),
+            false => self.reserve_i32()
+        }
+    }
+
+    pub fn fill_varint(&mut self, reservation: Reservation, value: i64) -> io::Result<()> {
+        match self.varint_i64 {
+            true => self.fill_i64(reservation, value)?,
+            false => self.fill_i32(reservation, value as i32)?
+        }
+
+        Ok(())
+    }
+
     impl_numeric_writer!(u8, 1, write_u8, write_u8_vec, reserve_u8, fill_u8);
     impl_numeric_writer!(u16, 2, write_u16, write_u16_vec, reserve_u16, fill_u16);
     impl_numeric_writer!(u32, 4, write_u32, write_u32_vec, reserve_u32, fill_u32);
@@ -173,8 +208,8 @@ impl<W: Write + Seek> BinaryWriter<W> {
 
 impl BinaryWriter<Cursor<Vec<u8>>> {
     /// Initializes the BinaryWriter to write into a vector of bytes (u8)
-    pub fn from_bytes(endian: Endian, varint_u64: bool) -> Self {
-        BinaryWriter::new(Cursor::new(Vec::new()), endian, varint_u64)
+    pub fn to_bytes(endian: Endian, varint_i64: bool) -> Self {
+        BinaryWriter::new(Cursor::new(Vec::new()), endian, varint_i64)
     }
 
     pub fn get_ref_bytes(&mut self) -> &Vec<u8> {
@@ -185,5 +220,16 @@ impl BinaryWriter<Cursor<Vec<u8>>> {
     pub fn close_bytes(&mut self) -> io::Result<Vec<u8>> {
         self.assert_closing()?;
         Ok(self.inner.get_ref().clone())
+    }
+}
+
+impl BinaryWriter<File> {
+    /// Initializes the BinaryWriter, writing to a specified file. Make sure to call self.assert_closing() before dropping the BinaryWriter
+    pub fn to_file<P: AsRef<Path>>(path: P, endian: Endian, varint_i64: bool) -> io::Result<Self> {
+        Ok(BinaryWriter::new(File::create(path)?, endian, varint_i64))
+    }
+
+    pub fn get_ref_file(&self) -> &File {
+        &self.inner
     }
 }
