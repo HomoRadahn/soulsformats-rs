@@ -1,4 +1,6 @@
+use std::fs::File;
 use std::io::{self, Read, Seek, SeekFrom, Cursor};
+use std::path::Path;
 use crate::io::{Endian, Vector2, Vector3, Vector4};
 
 macro_rules! impl_generic_enum_reader {
@@ -454,7 +456,13 @@ impl<R: Read + Seek> BinaryReader<R> {
 }
 
 impl BinaryReader<Cursor<Vec<u8>>> {
-    pub fn from_bytes(bytes: Vec<u8>, endian: Endian, varint_u64: bool) -> Self {
-        BinaryReader::new(Cursor::new(bytes), endian, varint_u64)
+    pub fn from_bytes(bytes: Vec<u8>, endian: Endian, varint_i64: bool) -> Self {
+        BinaryReader::new(Cursor::new(bytes), endian, varint_i64)
+    }
+}
+
+impl BinaryReader<File> {
+    pub fn from_file<P: AsRef<Path>>(path: P, endian: Endian, varint_i64: bool) -> io::Result<Self> {
+        Ok(BinaryReader::new(File::open(path)?, endian, varint_i64))
     }
 }

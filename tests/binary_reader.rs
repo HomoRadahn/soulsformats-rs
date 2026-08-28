@@ -1,5 +1,5 @@
 use soulsformats_rs::io::{BinaryReader, Endian};
-use std::{io, vec};
+use std::{fs, io, vec};
 
     macro_rules! define_enum_fixture {
         ($name:ident, $type:ty) => {
@@ -56,6 +56,21 @@ use std::{io, vec};
             assert_eq!(get_reader.get_bool_vec(1, 2).unwrap(), vec![false, true]);
             assert_eq!(0, get_reader.position().unwrap());
         }
+    }
+
+    #[test]
+    fn read_from_file() {
+        let path = std::env::temp_dir().join(format!(
+            "soulsformats-rs-reader-{}.bin",
+            std::process::id()
+        ));
+        fs::write(&path, [0x12, 0x13]).unwrap();
+
+        let mut reader = BinaryReader::from_file(&path, Endian::Little, true).unwrap();
+        assert_eq!(reader.read_u16().unwrap(), 0x1312);
+        assert_eq!(reader.position().unwrap(), 2);
+
+        fs::remove_file(path).unwrap();
     }
 
     #[test]
