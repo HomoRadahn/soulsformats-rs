@@ -1,3 +1,9 @@
+pub mod writer;
+pub mod reader;
+
+pub use writer::BinaryWriter;
+pub use reader::BinaryReader;
+
 #[derive(Debug, Clone, Copy)]
 #[allow(dead_code)]
 pub struct Vector2 {
