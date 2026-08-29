@@ -1,18 +1,20 @@
 use std::fs::File;
 use std::io::{self, Cursor, Seek, SeekFrom, Write};
 use std::path::Path;
-use crate::io::{Endian};
+use crate::io::{Endian, Vector2, Vector3, Vector4};
 
 macro_rules! impl_numeric_writer {
     ($type:ty, $reservation_size:expr, $write:ident, $write_vec:ident, $reserve:ident, $fill:ident) => {
+        #[doc = concat!("Writes `", stringify!($type), "` value")]
         pub fn $write(&mut self, data: $type) -> io::Result<()> {
             match self.endian {
                 Endian::Little => self.inner.write_all(&data.to_le_bytes()),
                 Endian::Big => self.inner.write_all(&data.to_be_bytes()),
             }
         }
-
-        pub fn $write_vec(&mut self, data: &Vec<$type>) -> io::Result<()> {
+        
+        #[doc = concat!("Writes a vector of `", stringify!($type), "` values")]
+        pub fn $write_vec(&mut self, data: Vec<$type>) -> io::Result<()> {
             for value in data {
                 match self.endian {
                     Endian::Little => self.inner.write_all(&value.to_le_bytes())?,
@@ -22,11 +24,13 @@ macro_rules! impl_numeric_writer {
 
             Ok(())
         }
-
+        
+        #[doc = concat!("Reserves space at the current position, sized as `", stringify!($type), "`")]
         pub fn $reserve(&mut self) -> io::Result<Reservation> {
             self.add_reservation($reservation_size)
         }
-
+        
+        #[doc = concat!("Fills specified reservation with a `", stringify!($type), "` value")]
         pub fn $fill(&mut self, reservation: Reservation, value: $type) -> io::Result<()> {
             self.free_reservation(reservation)?;
 
@@ -55,8 +59,14 @@ pub struct Reservation {
 }
 
 impl<W: Write + Seek> BinaryWriter<W> {
+    /// Initializes the BinaryWriter from a generic implementing `Write + Seek`
     pub fn new(inner: W, endian: Endian, varint_i64: bool) -> Self {
         Self { inner, endian, varint_i64, reservations: Vec::new() }
+    }
+
+    /// Sets endianness of the stream
+    pub fn set_endian(&mut self, endian: Endian) {
+        self.endian = endian;
     }
 
     /// Returns current stream position
@@ -64,7 +74,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
         return self.inner.stream_position()
     }
 
-    // Returns total stream length
+    /// Returns total stream length
     pub fn length(&mut self) -> io::Result<u64> {
         let initial = self.position()?;
         let length = self.inner.seek(SeekFrom::End(0))?;
@@ -72,7 +82,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
         Ok(length)
     }
 
-    // Returns remaining length of the stream
+    /// Returns remaining length of the stream
     pub fn remaining(&mut self) -> io::Result<u64> {
         Ok(self.length()? - self.position()?)
     }
@@ -87,6 +97,34 @@ impl<W: Write + Seek> BinaryWriter<W> {
         self.inner.seek(SeekFrom::Current(position))
     }
 
+    /// Writes specified `u8` until the stream position meets the specified alignment
+    pub fn pad(&mut self, align: u64, value: u8) -> io::Result<()> {
+        while self.position()? % align > 0 {
+            self.write_u8(value)?;
+        }
+
+        Ok(())
+    }
+
+    /// Writes `0x00` until the stream position meets the specified alignment
+    pub fn pad_00(&mut self, align: u64) -> io::Result<()> {
+        self.pad(align, 0x00)
+    }
+    
+    /// Writes `0xFF` bytes until the stream position meets the specified alignment. BluePoint files do this
+    pub fn pad_ff(&mut self, align: u64) -> io::Result<()> {
+        self.pad(align, 0xFF)
+    }
+
+    /// Writes `0x00` bytes until the stream position meets the specified alignment relative to the given starting position
+    pub fn pad_relative(&mut self, start: u64, align: u64) -> io::Result<()> {
+        while (self.position()? - start) % align > 0 {
+            self.write_u8(0x00)?;
+        }
+
+        Ok(())
+    }
+
     /// Adds reservation at a specified position if that position is not added to current reservation list
     fn add_reservation(&mut self, size: usize) -> io::Result<Reservation> {
         let position = self.position()?;
@@ -94,12 +132,12 @@ impl<W: Write + Seek> BinaryWriter<W> {
             if reservation.position == position {
                 return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
-                format!("tried to reserve already reserved position"),
+                "tried to reserve already reserved position",
             ))
             }
         }
 
-        self.write_u8_vec(&vec![0xFE; size])?;
+        self.write_u8_vec(vec![0xFE; size])?;
 
         self.reservations.push(Reservation { position });
 
@@ -111,7 +149,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
         if !self.reservations.contains(&reservation) {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
-                format!("tried to fill unreserved position")))
+                "tried to fill unreserved position"))
         }
         
         if let Some(pos) = self.reservations.iter().position(|x| *x == reservation) {
@@ -121,33 +159,38 @@ impl<W: Write + Seek> BinaryWriter<W> {
         Ok(())
     }
 
-    pub fn assert_closing(&mut self) -> io::Result<()> {
+    /// Finalize the BinaryWriter - recommended to call before dropping
+    pub fn finalize(&mut self) -> io::Result<()> {
         if self.reservations.len() != 0 {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
-                format!("unable to close writer - not all reservations have been filled"),
+                "unable to close writer - not all reservations have been filled",
             ))
         }
 
         Ok(())
     }
 
+    /// Writes `bool` value
     pub fn write_bool(&mut self, value: bool) -> io::Result<()> {
         self.inner.write_all(&[value as u8])
     }
 
-    pub fn write_bool_vec(&mut self, data: &Vec<bool>) -> io::Result<()> {
+    /// Writes a vector of `bool` values
+    pub fn write_bool_vec(&mut self, data: Vec<bool>) -> io::Result<()> {
         for value in data {
-            self.write_bool(*value)?;
+            self.write_bool(value)?;
         }
 
         Ok(())
     }
 
+    /// Reserves space at the current position, sized as `bool`
     pub fn reserve_bool(&mut self) -> io::Result<Reservation> {
         self.add_reservation(1)
     }
 
+    /// Fills specified reservation with a `bool` value
     pub fn fill_bool(&mut self, reservation: Reservation, value: bool) -> io::Result<()> {
         self.free_reservation(reservation)?;
 
@@ -161,6 +204,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
         Ok(())
     }
 
+    /// Writes `varint` value
     pub fn write_varint(&mut self, value: i64) -> io::Result<()> {
         match self.varint_i64 {
             true => self.write_i64(value)?,
@@ -170,14 +214,16 @@ impl<W: Write + Seek> BinaryWriter<W> {
         Ok(())
     }
 
-    pub fn write_varint_vec(&mut self, data: &Vec<i64>) -> io::Result<()> {
+    /// Writes a vector of `varint` value
+    pub fn write_varint_vec(&mut self, data: Vec<i64>) -> io::Result<()> {
         for value in data {
-            self.write_varint(*value)?;
+            self.write_varint(value)?;
         }
 
         Ok(())
     }
 
+    /// Reserves space at the current position, sized as `varint`
     pub fn reserve_varint(&mut self) -> io::Result<Reservation> {
         match self.varint_i64 {
             true => self.reserve_i64(),
@@ -185,6 +231,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
         }
     }
 
+    /// Fills specified reservation with a `varint` value
     pub fn fill_varint(&mut self, reservation: Reservation, value: i64) -> io::Result<()> {
         match self.varint_i64 {
             true => self.fill_i64(reservation, value)?,
@@ -192,6 +239,33 @@ impl<W: Write + Seek> BinaryWriter<W> {
         }
 
         Ok(())
+    }
+
+    /// Writes a Vector2 as two `f32` numbers
+    pub fn write_vector2(&mut self, vector2: Vector2) -> io::Result<()> {
+        self.write_f32(vector2.x)?;
+        self.write_f32(vector2.y)
+    }
+
+    /// Writes a Vector3 as three `f32` numbers
+    pub fn write_vector3(&mut self, vector3: Vector3) -> io::Result<()> {
+        self.write_f32(vector3.x)?;
+        self.write_f32(vector3.y)?;
+        self.write_f32(vector3.z)
+    }
+
+    /// Writes a Vector4 as four `f32` numbers
+    pub fn write_vector4(&mut self, vector4: Vector4) -> io::Result<()> {
+        self.write_f32(vector4.x)?;
+        self.write_f32(vector4.y)?;
+        self.write_f32(vector4.z)?;
+        self.write_f32(vector4.w)
+    }
+
+    /// Write `length` of the given `value`
+    pub fn write_pattern(&mut self, length: usize, value: u8) -> io::Result<()> {
+        let bytes = vec![value; length];
+        self.write_u8_vec(bytes)
     }
 
     impl_numeric_writer!(u8, 1, write_u8, write_u8_vec, reserve_u8, fill_u8);
@@ -207,28 +281,30 @@ impl<W: Write + Seek> BinaryWriter<W> {
 }
 
 impl BinaryWriter<Cursor<Vec<u8>>> {
-    /// Initializes the BinaryWriter to write into a vector of bytes (u8)
+    /// Initializes the `BinaryWriter` to write into a vector of bytes
     pub fn to_bytes(endian: Endian, varint_i64: bool) -> Self {
         BinaryWriter::new(Cursor::new(Vec::new()), endian, varint_i64)
     }
 
+    /// Gets currently written bytes as a reference
     pub fn get_ref_bytes(&mut self) -> &Vec<u8> {
         self.inner.get_ref()
     }
 
-    /// Asserts closing the BinaryWriter and return the written bytes (the writer can still technically be used afterwards, but this should the last step of using it - followed by dropping it)
+    /// Finalizes the `BinaryWriter` and return the written bytes (the writer can still technically be used afterwards, but this should the last step of using it - followed by dropping it)
     pub fn close_bytes(&mut self) -> io::Result<Vec<u8>> {
-        self.assert_closing()?;
+        self.finalize()?;
         Ok(self.inner.get_ref().clone())
     }
 }
 
 impl BinaryWriter<File> {
-    /// Initializes the BinaryWriter, writing to a specified file. Make sure to call self.assert_closing() before dropping the BinaryWriter
+    /// Initializes the `BinaryWriter`, writing to a specified file. Make sure to call `self.assert_closing()` before dropping the BinaryWriter
     pub fn to_file<P: AsRef<Path>>(path: P, endian: Endian, varint_i64: bool) -> io::Result<Self> {
         Ok(BinaryWriter::new(File::create(path)?, endian, varint_i64))
     }
 
+    /// Gets the file that the writer is currently writing to
     pub fn get_ref_file(&self) -> &File {
         &self.inner
     }

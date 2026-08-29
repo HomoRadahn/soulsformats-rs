@@ -10,8 +10,8 @@ fn write_to_file() {
 
     let mut writer = BinaryWriter::to_file(&path, Endian::Little, true).unwrap();
     writer.write_u16(0x1312).unwrap();
-    writer.assert_closing().unwrap();
     assert_eq!(writer.get_ref_file().metadata().unwrap().len(), 2);
+    writer.finalize().unwrap();
     drop(writer);
 
     assert_eq!(fs::read(&path).unwrap(), vec![0x12, 0x13]);
@@ -31,7 +31,7 @@ macro_rules! test_numeric_writer {
                 assert_eq!(writer.get_ref_bytes(), &expected_single[..]);
 
                 let mut vec_writer = BinaryWriter::to_bytes(endian, true);
-                vec_writer.$write_vec(&$many).unwrap();
+                vec_writer.$write_vec($many).unwrap();
                 assert_eq!(vec_writer.get_ref_bytes(), &expected_many[..]);
             }
         }
@@ -165,9 +165,9 @@ test_numeric_writer!(
 fn reserve_and_fill_bool() {
     let mut writer = BinaryWriter::to_bytes(Endian::Big, true);
 
-    writer.write_u8_vec(&vec![0x00, 0x00, 0x00, 0x00]).unwrap();
+    writer.write_u8_vec(vec![0x00, 0x00, 0x00, 0x00]).unwrap();
     let sample_reservation = writer.reserve_bool().unwrap();
-    writer.write_u8_vec(&vec![0x00, 0x00, 0x00, 0x00]).unwrap();
+    writer.write_u8_vec(vec![0x00, 0x00, 0x00, 0x00]).unwrap();
     assert_eq!(writer.get_ref_bytes(), &vec![0x00, 0x00, 0x00, 0x00, 0xFE, 0x00, 0x00, 0x00, 0x00]);
     writer.fill_bool(sample_reservation, true).unwrap();
     assert_eq!(writer.position().unwrap(), writer.length().unwrap());
@@ -186,9 +186,9 @@ macro_rules! test_numeric_reservation {
                 (Endian::Big, $big),
             ] {
                 let mut writer = BinaryWriter::to_bytes(endian, true);
-                writer.write_u8_vec(&vec![0x00, 0x00, 0x00, 0x00]).unwrap();
+                writer.write_u8_vec(vec![0x00, 0x00, 0x00, 0x00]).unwrap();
                 let sample_reservation = writer.$reserve().unwrap();
-                writer.write_u8_vec(&vec![0x00, 0x00, 0x00, 0x00]).unwrap();
+                writer.write_u8_vec(vec![0x00, 0x00, 0x00, 0x00]).unwrap();
                 assert_eq!(writer.get_ref_bytes(), $expected_middle);
                 writer.$fill(sample_reservation, $single).unwrap();
                 assert_eq!(writer.position().unwrap(), writer.length().unwrap());
@@ -207,7 +207,7 @@ fn write_varint_i64() {
     assert_eq!(big_writer.get_ref_bytes(), &[0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE][..]);
 
     let mut big_vec_writer = BinaryWriter::to_bytes(Endian::Big, true);
-    big_vec_writer.write_varint_vec(&vec![-2, 562949953421312]).unwrap();
+    big_vec_writer.write_varint_vec(vec![-2, 562949953421312]).unwrap();
     assert_eq!(big_vec_writer.get_ref_bytes(), &[0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00][..]);
 
     let mut little_writer = BinaryWriter::to_bytes(Endian::Little, true);
@@ -215,7 +215,7 @@ fn write_varint_i64() {
     assert_eq!(little_writer.get_ref_bytes(), &[0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF][..]);
 
     let mut little_vec_writer = BinaryWriter::to_bytes(Endian::Little, true);
-    little_vec_writer.write_varint_vec(&vec![-2, 562949953421312]).unwrap();
+    little_vec_writer.write_varint_vec(vec![-2, 562949953421312]).unwrap();
     assert_eq!(little_vec_writer.get_ref_bytes(), &[0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00][..]);
 }
 
@@ -226,7 +226,7 @@ fn write_varint_i32() {
     assert_eq!(big_writer.get_ref_bytes(), &[0xFF, 0xFF, 0xFF, 0xFE][..]);
 
     let mut big_vec_writer = BinaryWriter::to_bytes(Endian::Big, false);
-    big_vec_writer.write_varint_vec(&vec![-2, 131072]).unwrap();
+    big_vec_writer.write_varint_vec(vec![-2, 131072]).unwrap();
     assert_eq!(big_vec_writer.get_ref_bytes(), &[0xFF, 0xFF, 0xFF, 0xFE, 0x00, 0x02, 0x00, 0x00][..]);
 
     let mut little_writer = BinaryWriter::to_bytes(Endian::Little, false);
@@ -234,7 +234,7 @@ fn write_varint_i32() {
     assert_eq!(little_writer.get_ref_bytes(), &[0xFE, 0xFF, 0xFF, 0xFF][..]);
 
     let mut little_vec_writer = BinaryWriter::to_bytes(Endian::Little, false);
-    little_vec_writer.write_varint_vec(&vec![-2, 131072]).unwrap();
+    little_vec_writer.write_varint_vec(vec![-2, 131072]).unwrap();
     assert_eq!(little_vec_writer.get_ref_bytes(), &[0xFE, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x02, 0x00][..]);
 }
 
