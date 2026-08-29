@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::{self, Cursor, Seek, SeekFrom, Write};
 use std::path::Path;
-use crate::io::{Endian, Vector2, Vector3, Vector4};
+use crate::io::{Endian, Vector2, Vector3, Vector4, ByteVector4};
 
 macro_rules! impl_numeric_writer {
     ($type:ty, $reservation_size:expr, $write:ident, $write_vec:ident, $reserve:ident, $fill:ident) => {
@@ -260,6 +260,14 @@ impl<W: Write + Seek> BinaryWriter<W> {
         self.write_f32(vector4.y)?;
         self.write_f32(vector4.z)?;
         self.write_f32(vector4.w)
+    }
+
+    /// Writes a ByteVector4 as four `u8` numbers
+    pub fn write_byte_vector4(&mut self, byte_vector4: ByteVector4) -> io::Result<()> {
+        self.write_u8(byte_vector4.x)?;
+        self.write_u8(byte_vector4.y)?;
+        self.write_u8(byte_vector4.z)?;
+        self.write_u8(byte_vector4.w)
     }
 
     /// Write `length` of the given `value`

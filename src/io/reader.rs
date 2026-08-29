@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::{self, Read, Seek, SeekFrom, Cursor};
 use std::path::Path;
-use crate::io::{Endian, Vector2, Vector3, Vector4};
+use crate::io::{Endian, Vector2, Vector3, Vector4, ByteVector4};
 
 macro_rules! impl_generic_enum_reader {
     ($type:ty, $read_value:ident, $get_value:ident, $read:ident, $get:ident) => {
@@ -426,29 +426,39 @@ impl<R: Read + Seek> BinaryReader<R> {
 
     /// Reads a `Vector2` value from two consecutive `f32` values
     pub fn read_vector_2(&mut self) -> io::Result<Vector2> {
-        Ok(Vector2::new(
-            self.read_f32()?,
-            self.read_f32()?
-        ))
+        Ok(Vector2 {
+            x: self.read_f32()?,
+            y: self.read_f32()?
+        })
     }
 
     /// Reads a `Vector3` value from three consecutive `f32` values
     pub fn read_vector_3(&mut self) -> io::Result<Vector3> {
-        Ok(Vector3::new(
-            self.read_f32()?,
-            self.read_f32()?,
-            self.read_f32()?
-        ))
+        Ok(Vector3 {
+            x: self.read_f32()?,
+            y: self.read_f32()?,
+            z: self.read_f32()?
+        })
     }
 
     /// Reads a `Vector4` value from four consecutive `f32` values
     pub fn read_vector_4(&mut self) -> io::Result<Vector4> {
-        Ok(Vector4::new(
-            self.read_f32()?,
-            self.read_f32()?,
-            self.read_f32()?,
-            self.read_f32()?
-        ))
+        Ok(Vector4 {
+            x: self.read_f32()?,
+            y: self.read_f32()?,
+            z: self.read_f32()?,
+            w: self.read_f32()?
+        })
+    }
+
+    /// Reads a `ByteVector4` value from four consecutive `u8` values
+    pub fn read_byte_vector_4(&mut self) -> io::Result<ByteVector4> {
+        Ok(ByteVector4 {
+            x: self.read_u8()?,
+            y: self.read_u8()?,
+            z: self.read_u8()?,
+            w: self.read_u8()?
+        })
     }
 
     /// Read specified a length of bytes against a specified pattern - all bytes must match the pattern
