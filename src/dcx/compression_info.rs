@@ -1,3 +1,5 @@
+use std::io::{self, ErrorKind::InvalidData};
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Type {
     Unknown,
@@ -22,6 +24,16 @@ pub enum DfltCompressionPreset {
 
 pub trait CompressionInfo {
     fn get_type(&self) -> Type;
+
+    fn get_dcx_dflt_args(&self) -> io::Result<DcxDfltCompressionArgs>
+    {
+        Err(io::Error::new(InvalidData, "not implemented for this type"))
+    }
+
+    fn get_dcx_zstd_args(&self) -> io::Result<u8>
+    {
+        Err(io::Error::new(InvalidData, "not implemented for this type"))
+    }
 }
 
 pub struct UnkCompressionInfo;
@@ -73,6 +85,11 @@ impl CompressionInfo for DcxEdgeCompressionInfo {
 }
 
 pub struct DcxDfltCompressionInfo {
+    pub args: DcxDfltCompressionArgs
+}
+
+#[derive(Clone, Copy)]
+pub struct DcxDfltCompressionArgs {
     pub unk04: i32,
     pub unk10: i32,
     pub unk14: i32,
@@ -84,22 +101,26 @@ impl CompressionInfo for DcxDfltCompressionInfo {
     fn get_type(&self) -> Type {
         Type::DcxDflt
     }
+
+    fn get_dcx_dflt_args(&self) -> io::Result<DcxDfltCompressionArgs> {
+        Ok(self.args)
+    }
 }
 
 impl DcxDfltCompressionInfo {
     /// Initializes `DcxDfltCompressionInfo` from given values
     pub fn new(unk04: i32, unk10: i32, unk14: i32, unk30: i32, unk38: i32) -> Self {
-        Self { unk04, unk10, unk14, unk30, unk38 }
+        Self { args: DcxDfltCompressionArgs { unk04, unk10, unk14, unk30, unk38 } }
     }
     
     /// Initializes `DcxDfltCompressionInfo` from given preset
     pub fn from_preset(preset: DfltCompressionPreset) -> Self {
         match preset {
-            DfltCompressionPreset::DcxDflt10000_24_9 => Self { unk04: 0x10000, unk10: 0x24, unk14: 0x2C, unk30: 9, unk38: 0 },
-            DfltCompressionPreset::DcxDflt10000_44_9 => Self { unk04: 0x10000, unk10: 0x44, unk14: 0x4C, unk30: 9, unk38: 0 },
-            DfltCompressionPreset::DcxDflt11000_44_8 => Self { unk04: 0x11000, unk10: 0x44, unk14: 0x4C, unk30: 8, unk38: 0 },
-            DfltCompressionPreset::DcxDflt11000_44_9 => Self { unk04: 0x11000, unk10: 0x44, unk14: 0x4C, unk30: 9, unk38: 0 },
-            DfltCompressionPreset::DcxDflt11000_44_9_15 => Self { unk04: 0x11000, unk10: 0x44, unk14: 0x4C, unk30: 8, unk38: 15 },
+            DfltCompressionPreset::DcxDflt10000_24_9 => Self { args: DcxDfltCompressionArgs { unk04: 0x10000, unk10: 0x24, unk14: 0x2C, unk30: 9, unk38: 0 }},
+            DfltCompressionPreset::DcxDflt10000_44_9 => Self { args: DcxDfltCompressionArgs { unk04: 0x10000, unk10: 0x44, unk14: 0x4C, unk30: 9, unk38: 0 }},
+            DfltCompressionPreset::DcxDflt11000_44_8 => Self { args: DcxDfltCompressionArgs { unk04: 0x11000, unk10: 0x44, unk14: 0x4C, unk30: 8, unk38: 0 }},
+            DfltCompressionPreset::DcxDflt11000_44_9 => Self { args: DcxDfltCompressionArgs { unk04: 0x11000, unk10: 0x44, unk14: 0x4C, unk30: 9, unk38: 0 }},
+            DfltCompressionPreset::DcxDflt11000_44_9_15 => Self { args: DcxDfltCompressionArgs { unk04: 0x11000, unk10: 0x44, unk14: 0x4C, unk30: 8, unk38: 15 }},
         }
     }
 }
@@ -130,6 +151,10 @@ pub struct DcxZstdCompressionInfo {
 impl CompressionInfo for DcxZstdCompressionInfo {
     fn get_type(&self) -> Type {
         Type::DcxZstd
+    }
+
+    fn get_dcx_zstd_args(&self) -> io::Result<u8> {
+        Ok(self.compression_level)
     }
 }
 

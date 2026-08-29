@@ -45,3 +45,15 @@ fn dcx_edge() {
     let dcx = DCX::decompress_file("./tests/files/dcx_edge.dcx".into()).unwrap();
     assert_eq!(dcx.compression.get_type(), Type::DcxEdge);
 }
+
+#[test]
+fn dcx_dflt() {
+    let dcx = DCX::decompress_file("./tests/files/dcx_dflt.dcx".into()).unwrap();
+    assert_eq!(dcx.compression.get_type(), Type::DcxDflt);
+}
+
+#[test]
+fn dcx_zstd() {
+    let dcx = DCX::decompress_file("./tests/files/dcx_zstd.dcx".into()).unwrap();
+    assert_eq!(dcx.compression.get_type(), Type::DcxZstd);
+}

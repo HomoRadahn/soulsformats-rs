@@ -1,5 +1,5 @@
 use std::io::{self, Read, Seek, Write};
-use flate2::read::DeflateDecoder;
+use crate::dcx::deflate_helper::{DeflateHelper};
 
 use crate::{io::{BinaryReader, BinaryWriter}};
 
@@ -21,17 +21,6 @@ impl ZlibHelper {
         br.assert_u8(&[0x78])?;
         br.assert_u8(&[0x01, 0x5E, 0x9C, 0xDA])?;
         
-        ZlibHelper::decompress_deflate_bytes(&br.read_u8_vec(compressed_size - 2)?)
+        DeflateHelper::decompress_deflate_bytes(&br.read_u8_vec(compressed_size - 2)?)
     }
-
-    /// Decompresses zlib bytes coming after a zlib header
-    pub fn decompress_deflate_bytes(compressed_bytes: &[u8]) -> io::Result<Vec<u8>> {
-        let mut decoder = DeflateDecoder::new(compressed_bytes);
-        let mut decompressed = Vec::new();
-
-        decoder.read_to_end(&mut decompressed)?;
-
-        Ok(decompressed)
-    }
-
 }
