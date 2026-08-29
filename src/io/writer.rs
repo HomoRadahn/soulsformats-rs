@@ -241,20 +241,88 @@ impl<W: Write + Seek> BinaryWriter<W> {
         Ok(())
     }
 
-    /// Writes a Vector2 as two `f32` numbers
+    fn write_chars(&mut self, terminate: bool, bytes: Vec<u8>) -> io::Result<()> {
+        let mut output = bytes;
+        if terminate {
+            output.push(0);
+        }
+        self.inner.write_all(&output)
+    }
+
+    /// Writes an ASCII string, with a null terminator when requested
+    pub fn write_ascii(&mut self, text: &str, terminate: bool) -> io::Result<()> {
+        self.write_chars(terminate, String::from(text).into_bytes())
+    }
+
+    /// Writes a Shift-JIS string, with a null terminator when requested
+    pub fn write_shift_jis(&mut self, text: &str, terminate: bool) -> io::Result<()> {
+        let bytes = encoding_rs::SHIFT_JIS.encode(text).0.to_vec();
+        self.write_chars(terminate, bytes)
+    }
+
+    /// Writes a UTF-16 string, with a null terminator when requested
+    pub fn write_utf16(&mut self, text: &str, terminate: bool) -> io::Result<()> {
+        let mut bytes = Vec::new();
+        for code_unit in text.encode_utf16() {
+            match self.endian {
+                Endian::Little => bytes.extend_from_slice(&code_unit.to_le_bytes()),
+                Endian::Big => bytes.extend_from_slice(&code_unit.to_be_bytes()),
+            }
+        }
+        if terminate {
+            match self.endian {
+                Endian::Little => bytes.extend_from_slice(&0u16.to_le_bytes()),
+                Endian::Big => bytes.extend_from_slice(&0u16.to_be_bytes()),
+            }
+        }
+        self.write_u8_vec(bytes)
+    }
+
+    /// Writes a null-terminated Shift-JIS string in a fixed-size field
+    pub fn write_fix_str(&mut self, text: &str, size: usize, padding: u8) -> io::Result<()> {
+        let mut fixstr = vec![padding; size];
+        let mut bytes = encoding_rs::SHIFT_JIS.encode(text).0.to_vec();
+        bytes.push(0);
+        for (index, byte) in bytes.iter().take(size).enumerate() {
+            fixstr[index] = *byte;
+        }
+        self.write_u8_vec(fixstr)
+    }
+
+    /// Writes a null-terminated UTF-16 string in a fixed-size field
+    pub fn write_fix_str_w(&mut self, text: &str, size: usize, padding: u8) -> io::Result<()> {
+        let mut fixstr = vec![padding; size];
+        let mut bytes = Vec::new();
+        for code_unit in text.encode_utf16() {
+            match self.endian {
+                Endian::Little => bytes.extend_from_slice(&code_unit.to_le_bytes()),
+                Endian::Big => bytes.extend_from_slice(&code_unit.to_be_bytes()),
+            }
+        }
+        match self.endian {
+            Endian::Little => bytes.extend_from_slice(&0u16.to_le_bytes()),
+            Endian::Big => bytes.extend_from_slice(&0u16.to_be_bytes()),
+        }
+        for (index, byte) in bytes.iter().take(size).enumerate() {
+            fixstr[index] = *byte;
+        }
+        self.inner.write_all(&fixstr)
+    }
+
+    /// Writes a `Vector2` as two `f32` numbers
     pub fn write_vector2(&mut self, vector2: Vector2) -> io::Result<()> {
         self.write_f32(vector2.x)?;
         self.write_f32(vector2.y)
     }
 
-    /// Writes a Vector3 as three `f32` numbers
+    /// Writes a `Vector3` as three `f32` numbers
     pub fn write_vector3(&mut self, vector3: Vector3) -> io::Result<()> {
         self.write_f32(vector3.x)?;
         self.write_f32(vector3.y)?;
         self.write_f32(vector3.z)
     }
 
-    /// Writes a Vector4 as four `f32` numbers
+    /// Writes a `Vector4` as four `f32` numbers
     pub fn write_vector4(&mut self, vector4: Vector4) -> io::Result<()> {
         self.write_f32(vector4.x)?;
         self.write_f32(vector4.y)?;
@@ -262,7 +330,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
         self.write_f32(vector4.w)
     }
 
-    /// Writes a ByteVector4 as four `u8` numbers
+    /// Writes a `ByteVector4` as four `u8` numbers
     pub fn write_byte_vector4(&mut self, byte_vector4: ByteVector4) -> io::Result<()> {
         self.write_u8(byte_vector4.x)?;
         self.write_u8(byte_vector4.y)?;

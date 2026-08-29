@@ -2,6 +2,29 @@ use soulsformats_rs::io::{BinaryWriter, Endian};
 use std::fs;
 
 #[test]
+fn write_strings() {
+    let mut ascii_writer = BinaryWriter::to_bytes(Endian::Little, true);
+    ascii_writer.write_ascii("AB", true).unwrap();
+    assert_eq!(ascii_writer.get_ref_bytes(), &[b'A', b'B', 0]);
+
+    let mut shift_jis_writer = BinaryWriter::to_bytes(Endian::Little, true);
+    shift_jis_writer.write_shift_jis("あ", true).unwrap();
+    assert_eq!(shift_jis_writer.get_ref_bytes(), &[0x82, 0xA0, 0x00]);
+
+    let mut utf16_writer = BinaryWriter::to_bytes(Endian::Little, true);
+    utf16_writer.write_utf16("A", true).unwrap();
+    assert_eq!(utf16_writer.get_ref_bytes(), &[0x41, 0x00, 0x00, 0x00]);
+
+    let mut fix_writer = BinaryWriter::to_bytes(Endian::Little, true);
+    fix_writer.write_fix_str("A", 4, 0xFF).unwrap();
+    assert_eq!(fix_writer.get_ref_bytes(), &[b'A', 0, 0xFF, 0xFF]);
+
+    let mut fixw_writer = BinaryWriter::to_bytes(Endian::Little, true);
+    fixw_writer.write_fix_str_w("A", 4, 0xFF).unwrap();
+    assert_eq!(fixw_writer.get_ref_bytes(), &[0x41, 0x00, 0x00, 0x00]);
+}
+
+#[test]
 fn write_to_file() {
     let path = std::env::temp_dir().join(format!(
         "soulsformats-rs-writer-{}.bin",

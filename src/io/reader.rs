@@ -461,7 +461,7 @@ impl<R: Read + Seek> BinaryReader<R> {
         })
     }
 
-    /// Read specified a length of bytes against a specified pattern - all bytes must match the pattern
+    /// Read specified a `length` of bytes against a specified `pattern` - all bytes must match the `pattern`
     pub fn assert_pattern(&mut self, length: u64, pattern: u8) -> io::Result<()> {
         let bytes = self.read_u8_vec(length)?;
 
