@@ -5,10 +5,13 @@ pub mod compression_info;
 mod zlib_helper;
 
 
-pub struct DCX;
+pub struct DCX {
+    pub decompressed: Vec<u8>,
+    pub compression: Box<dyn CompressionInfo>
+}
 
 impl DCX {
-    fn is<R>(mut br: BinaryReader<R>) -> io::Result<bool>
+    fn is_base<R>(mut br: BinaryReader<R>) -> io::Result<bool>
     where
         R: Read + Seek
     {
@@ -24,25 +27,27 @@ impl DCX {
     /// Checks whether provided bytes are a valid dcx
     pub fn is_bytes(bytes: Vec<u8>) -> io::Result<bool> {
         let br = BinaryReader::from_bytes(bytes, Endian::Big, true);
-        DCX::is(br)
+        DCX::is_base(br)
     }
     
     /// Checks whether provided file is a valid dcx
     pub fn is_file(path: String) -> io::Result<bool> {
         let br = BinaryReader::from_file(path, Endian::Big, true)?;
-        DCX::is(br)
+        DCX::is_base(br)
     }
 
     /// Decompress DCX from provided bytes
-    pub fn decompress_bytes(data: Vec<u8>) -> io::Result<(Vec<u8>, Box<dyn CompressionInfo>)> {
+    pub fn decompress_bytes(data: Vec<u8>) -> io::Result<Self> {
         let br = BinaryReader::from_bytes(data, Endian::Big, true);
-        DCX::decompress(br)
+        let (decompressed, compression) = DCX::decompress(br)?;
+        Ok(Self { decompressed, compression })
     }
 
     /// Decompress DCX from provided file
-    pub fn decompress_file(path: String) -> io::Result<(Vec<u8>, Box<dyn CompressionInfo>)> {
+    pub fn decompress_file(path: String) -> io::Result<Self> {
         let br = BinaryReader::from_file(path, Endian::Big, true)?;
-        DCX::decompress(br)
+        let (decompressed, compression) = DCX::decompress(br)?;
+        Ok(Self { decompressed, compression })
     }
 }
 
@@ -107,6 +112,7 @@ impl DCX {
             },
             Type::DcpDflt => DCX::decompress_dcp_dflt(br)?,
             Type::DcpEdge => DCX::decompress_dcp_edge(br)?,
+            Type::DcxEdge => DCX::decompress_dcx_edge(br)?,
             _ => todo!()
         };
 
@@ -183,6 +189,75 @@ impl DCX {
             let compressed = br.assert_i32(&[0, 1])? == 1;
 
             let mut chunk = br.get_u8_vec(data_start + offset as u64, size as u64)?;
+
+            if compressed {
+                let mut data = ZlibHelper::decompress_deflate_bytes(&chunk[..])?;
+                output.append(&mut data);
+            } else {
+                output.append(&mut chunk);
+            }
+        }
+        
+        return Ok(output);
+    }
+
+    fn decompress_dcx_edge<R>(mut br: BinaryReader<R>) -> io::Result<Vec<u8>>
+    where 
+        R: Read + Seek
+    {
+        br.assert_ascii(&["DCX\0"])?;
+        br.assert_i32(&[0x10000])?;
+        br.assert_i32(&[0x18])?;
+        br.assert_i32(&[0x24])?;
+        br.assert_i32(&[0x24])?;
+        let unk1 = br.read_i32()?;
+        
+        br.assert_ascii(&["DCS\0"])?;
+        let uncompressed = br.read_i32()?;
+        let _ = br.read_i32()?;
+        
+        br.assert_ascii(&["DCP\0"])?;
+        br.assert_ascii(&["EDGE"])?;
+        br.assert_i32(&[0x20])?;
+        br.assert_i32(&[0x9000000])?;
+        br.assert_i32(&[0x10000])?;
+        br.assert_i32(&[0x0])?;
+        br.assert_i32(&[0x0])?;
+        br.assert_i32(&[0x00100100])?;
+        
+        let dca_start = br.position()?;
+        br.assert_ascii(&["DCA\0"])?;
+        let dca_size = br.read_i32()?;
+
+        br.assert_ascii(&["EgdT"])?;
+        br.assert_i32(&[0x00010100])?;
+        br.assert_i32(&[0x24])?;
+        br.assert_i32(&[0x10])?;
+        br.assert_i32(&[0x10000])?;
+
+        // Uncompressed size of last block
+        br.assert_i32(&[uncompressed % 0x10000, 0x10000])?;
+        let egdt_size = br.read_i32()?;
+        let chunk_count = br.read_i32()?;
+        br.assert_i32(&[0x100000])?;
+
+        if unk1 != (0x50 + chunk_count * 0x10) {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "unexpected unk1 size in EDGE DCX"));
+        }
+        
+        if egdt_size != 0x24 + chunk_count * 0x10 {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "unexpected EgdT size in EDGE DCX"));
+        }
+
+        let mut output: Vec<u8> = Vec::with_capacity(uncompressed as usize);
+
+        for _ in 0..chunk_count {
+            br.assert_i32(&[0])?;
+            let offset = br.read_i32()? as usize;
+            let size = br.read_i32()? as usize;
+            let compressed = br.assert_i32(&[0, 1])? == 1;
+
+            let mut chunk = br.get_u8_vec(dca_start as u64 + dca_size as u64 + offset as u64, size as u64)?;
 
             if compressed {
                 let mut data = ZlibHelper::decompress_deflate_bytes(&chunk[..])?;

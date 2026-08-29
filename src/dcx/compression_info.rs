@@ -21,13 +21,13 @@ pub enum DfltCompressionPreset {
 }
 
 pub trait CompressionInfo {
-    fn get_type(&mut self) -> Type;
+    fn get_type(&self) -> Type;
 }
 
 pub struct UnkCompressionInfo;
 
 impl CompressionInfo for UnkCompressionInfo {
-    fn get_type(&mut self) -> Type {
+    fn get_type(&self) -> Type {
         Type::Unknown
     }
 }
@@ -35,7 +35,7 @@ impl CompressionInfo for UnkCompressionInfo {
 pub struct NoCompressionInfo;
 
 impl CompressionInfo for NoCompressionInfo {
-    fn get_type(&mut self) -> Type {
+    fn get_type(&self) -> Type {
         Type::None
     }
 }
@@ -43,7 +43,7 @@ impl CompressionInfo for NoCompressionInfo {
 pub struct DcpDfltCompressionInfo;
 
 impl CompressionInfo for DcpDfltCompressionInfo {
-    fn get_type(&mut self) -> Type {
+    fn get_type(&self) -> Type {
         Type::DcpDflt
     }
 }
@@ -51,7 +51,7 @@ impl CompressionInfo for DcpDfltCompressionInfo {
 pub struct DcpEdgeCompressionInfo;
 
 impl CompressionInfo for DcpEdgeCompressionInfo {
-    fn get_type(&mut self) -> Type {
+    fn get_type(&self) -> Type {
         Type::DcpEdge
     }
 }
@@ -59,7 +59,7 @@ impl CompressionInfo for DcpEdgeCompressionInfo {
 pub struct ZlibCompressionInfo;
 
 impl CompressionInfo for ZlibCompressionInfo {
-    fn get_type(&mut self) -> Type {
+    fn get_type(&self) -> Type {
         Type::Zlib
     }
 }
@@ -67,7 +67,7 @@ impl CompressionInfo for ZlibCompressionInfo {
 pub struct DcxEdgeCompressionInfo;
 
 impl CompressionInfo for DcxEdgeCompressionInfo {
-    fn get_type(&mut self) -> Type {
+    fn get_type(&self) -> Type {
         Type::DcxEdge
     }
 }
@@ -81,7 +81,7 @@ pub struct DcxDfltCompressionInfo {
 }
 
 impl CompressionInfo for DcxDfltCompressionInfo {
-    fn get_type(&mut self) -> Type {
+    fn get_type(&self) -> Type {
         Type::DcxDflt
     }
 }
@@ -112,7 +112,7 @@ pub enum KrakCompressionPreset {
 pub struct DcxKrakCompressionInfo;
 
 impl CompressionInfo for DcxKrakCompressionInfo {
-    fn get_type(&mut self) -> Type {
+    fn get_type(&self) -> Type {
         unimplemented!()
     }
 }
@@ -128,7 +128,7 @@ pub struct DcxZstdCompressionInfo {
 }
 
 impl CompressionInfo for DcxZstdCompressionInfo {
-    fn get_type(&mut self) -> Type {
+    fn get_type(&self) -> Type {
         Type::DcxZstd
     }
 }

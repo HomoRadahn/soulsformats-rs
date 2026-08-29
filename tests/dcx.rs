@@ -30,12 +30,18 @@ fn is() {
 
 #[test]
 fn dcp_dflt() {
-    let (_, mut compression) = DCX::decompress_file("./tests/files/dcp_dflt.dcx".into()).unwrap();
-    assert_eq!(compression.get_type(), Type::DcpDflt);
+    let dcx = DCX::decompress_file("./tests/files/dcp_dflt.dcx".into()).unwrap();
+    assert_eq!(dcx.compression.get_type(), Type::DcpDflt);
 }
 
 #[test]
 fn dcp_edge() {
-    let (_, mut compression) = DCX::decompress_file("./tests/files/dcp_edge.dcx".into()).unwrap();
-    assert_eq!(compression.get_type(), Type::DcpEdge);
+    let dcx = DCX::decompress_file("./tests/files/dcp_edge.dcx".into()).unwrap();
+    assert_eq!(dcx.compression.get_type(), Type::DcpEdge);
+}
+
+#[test]
+fn dcx_edge() {
+    let dcx = DCX::decompress_file("./tests/files/dcx_edge.dcx".into()).unwrap();
+    assert_eq!(dcx.compression.get_type(), Type::DcxEdge);
 }
