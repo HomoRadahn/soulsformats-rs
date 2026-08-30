@@ -10,7 +10,7 @@ pub enum Type {
     DcxEdge,
     DcxDflt,
     DcxKrak,
-    DcxZstd
+    DcxZstd,
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -25,13 +25,11 @@ pub enum DfltCompressionPreset {
 pub trait CompressionInfo {
     fn get_type(&self) -> Type;
 
-    fn get_dcx_dflt_args(&self) -> io::Result<DcxDfltCompressionArgs>
-    {
+    fn get_dcx_dflt_args(&self) -> io::Result<DcxDfltCompressionArgs> {
         Err(io::Error::new(InvalidData, "not implemented for this type"))
     }
 
-    fn get_dcx_zstd_args(&self) -> io::Result<u8>
-    {
+    fn get_dcx_zstd_args(&self) -> io::Result<u8> {
         Err(io::Error::new(InvalidData, "not implemented for this type"))
     }
 }
@@ -85,16 +83,16 @@ impl CompressionInfo for DcxEdgeCompressionInfo {
 }
 
 pub struct DcxDfltCompressionInfo {
-    pub args: DcxDfltCompressionArgs
+    pub args: DcxDfltCompressionArgs,
 }
 
 #[derive(Clone, Copy)]
 pub struct DcxDfltCompressionArgs {
-    pub unk04: i32,
-    pub unk10: i32,
-    pub unk14: i32,
-    pub unk30: i32,
-    pub unk38: i32,
+    pub unk_04: i32,
+    pub unk_10: i32,
+    pub unk_14: i32,
+    pub unk_30: i32,
+    pub unk_38: i32,
 }
 
 impl CompressionInfo for DcxDfltCompressionInfo {
@@ -110,24 +108,72 @@ impl CompressionInfo for DcxDfltCompressionInfo {
 impl DcxDfltCompressionInfo {
     /// Initializes `DcxDfltCompressionInfo` from given values
     pub fn new(unk04: i32, unk10: i32, unk14: i32, unk30: i32, unk38: i32) -> Self {
-        Self { args: DcxDfltCompressionArgs { unk04, unk10, unk14, unk30, unk38 } }
+        Self {
+            args: DcxDfltCompressionArgs {
+                unk_04: unk04,
+                unk_10: unk10,
+                unk_14: unk14,
+                unk_30: unk30,
+                unk_38: unk38,
+            },
+        }
     }
-    
+
     /// Initializes `DcxDfltCompressionInfo` from given preset
     pub fn from_preset(preset: DfltCompressionPreset) -> Self {
         match preset {
-            DfltCompressionPreset::DcxDflt10000_24_9 => Self { args: DcxDfltCompressionArgs { unk04: 0x10000, unk10: 0x24, unk14: 0x2C, unk30: 9, unk38: 0 }},
-            DfltCompressionPreset::DcxDflt10000_44_9 => Self { args: DcxDfltCompressionArgs { unk04: 0x10000, unk10: 0x44, unk14: 0x4C, unk30: 9, unk38: 0 }},
-            DfltCompressionPreset::DcxDflt11000_44_8 => Self { args: DcxDfltCompressionArgs { unk04: 0x11000, unk10: 0x44, unk14: 0x4C, unk30: 8, unk38: 0 }},
-            DfltCompressionPreset::DcxDflt11000_44_9 => Self { args: DcxDfltCompressionArgs { unk04: 0x11000, unk10: 0x44, unk14: 0x4C, unk30: 9, unk38: 0 }},
-            DfltCompressionPreset::DcxDflt11000_44_9_15 => Self { args: DcxDfltCompressionArgs { unk04: 0x11000, unk10: 0x44, unk14: 0x4C, unk30: 8, unk38: 15 }},
+            DfltCompressionPreset::DcxDflt10000_24_9 => Self {
+                args: DcxDfltCompressionArgs {
+                    unk_04: 0x10000,
+                    unk_10: 0x24,
+                    unk_14: 0x2C,
+                    unk_30: 9,
+                    unk_38: 0,
+                },
+            },
+            DfltCompressionPreset::DcxDflt10000_44_9 => Self {
+                args: DcxDfltCompressionArgs {
+                    unk_04: 0x10000,
+                    unk_10: 0x44,
+                    unk_14: 0x4C,
+                    unk_30: 9,
+                    unk_38: 0,
+                },
+            },
+            DfltCompressionPreset::DcxDflt11000_44_8 => Self {
+                args: DcxDfltCompressionArgs {
+                    unk_04: 0x11000,
+                    unk_10: 0x44,
+                    unk_14: 0x4C,
+                    unk_30: 8,
+                    unk_38: 0,
+                },
+            },
+            DfltCompressionPreset::DcxDflt11000_44_9 => Self {
+                args: DcxDfltCompressionArgs {
+                    unk_04: 0x11000,
+                    unk_10: 0x44,
+                    unk_14: 0x4C,
+                    unk_30: 9,
+                    unk_38: 0,
+                },
+            },
+            DfltCompressionPreset::DcxDflt11000_44_9_15 => Self {
+                args: DcxDfltCompressionArgs {
+                    unk_04: 0x11000,
+                    unk_10: 0x44,
+                    unk_14: 0x4C,
+                    unk_30: 8,
+                    unk_38: 15,
+                },
+            },
         }
     }
 }
 
 pub enum KrakCompressionPreset {
     EldenRing,
-    ArmoredCore6
+    ArmoredCore6,
 }
 
 pub struct DcxKrakCompressionInfo;
@@ -145,7 +191,7 @@ impl DcxKrakCompressionInfo {
 }
 
 pub struct DcxZstdCompressionInfo {
-    pub compression_level: u8
+    pub compression_level: u8,
 }
 
 impl CompressionInfo for DcxZstdCompressionInfo {
@@ -168,5 +214,5 @@ impl DcxZstdCompressionInfo {
 pub struct EdgeChunk {
     pub compressed_offset: i32,
     pub compressed_length: i32,
-    pub is_compressed: bool
+    pub is_compressed: bool,
 }

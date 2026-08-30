@@ -1,7 +1,7 @@
+use crate::io::{ByteVector3, ByteVector4, Endian, Vector2, Vector3, Vector4};
 use std::fs::File;
 use std::io::{self, Cursor, Seek, SeekFrom, Write};
 use std::path::Path;
-use crate::io::{Endian, Vector2, Vector3, Vector4, ByteVector4};
 
 macro_rules! impl_numeric_writer {
     ($type:ty, $reservation_size:expr, $write:ident, $write_vec:ident, $reserve:ident, $fill:ident) => {
@@ -12,7 +12,7 @@ macro_rules! impl_numeric_writer {
                 Endian::Big => self.inner.write_all(&data.to_be_bytes()),
             }
         }
-        
+
         #[doc = concat!("Writes a vector of `", stringify!($type), "` values")]
         pub fn $write_vec(&mut self, data: Vec<$type>) -> io::Result<()> {
             for value in data {
@@ -24,18 +24,18 @@ macro_rules! impl_numeric_writer {
 
             Ok(())
         }
-        
+
         #[doc = concat!("Reserves space at the current position, sized as `", stringify!($type), "`")]
         pub fn $reserve(&mut self) -> io::Result<Reservation> {
             self.add_reservation($reservation_size)
         }
-        
+
         #[doc = concat!("Fills specified reservation with a `", stringify!($type), "` value")]
         pub fn $fill(&mut self, reservation: Reservation, value: $type) -> io::Result<()> {
             self.free_reservation(reservation)?;
 
             let initial_position = self.position()?;
-            
+
             self.seek(reservation.position)?;
 
             self.$write(value)?;
@@ -50,7 +50,7 @@ pub struct BinaryWriter<W> {
     inner: W,
     endian: Endian,
     varint_i64: bool,
-    reservations: Vec<Reservation>
+    reservations: Vec<Reservation>,
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -61,7 +61,12 @@ pub struct Reservation {
 impl<W: Write + Seek> BinaryWriter<W> {
     /// Initializes the BinaryWriter from a generic implementing `Write + Seek`
     pub fn new(inner: W, endian: Endian, varint_i64: bool) -> Self {
-        Self { inner, endian, varint_i64, reservations: Vec::new() }
+        Self {
+            inner,
+            endian,
+            varint_i64,
+            reservations: Vec::new(),
+        }
     }
 
     /// Sets endianness of the stream
@@ -69,9 +74,14 @@ impl<W: Write + Seek> BinaryWriter<W> {
         self.endian = endian;
     }
 
+    /// Sets `varint_i64` to `behavior`
+    pub fn set_varint_behavior(&mut self, behavior: bool) {
+        self.varint_i64 = behavior;
+    }
+
     /// Returns current stream position
     pub fn position(&mut self) -> io::Result<u64> {
-        return self.inner.stream_position()
+        return self.inner.stream_position();
     }
 
     /// Returns total stream length
@@ -110,7 +120,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
     pub fn pad_00(&mut self, align: u64) -> io::Result<()> {
         self.pad(align, 0x00)
     }
-    
+
     /// Writes `0xFF` bytes until the stream position meets the specified alignment. BluePoint files do this
     pub fn pad_ff(&mut self, align: u64) -> io::Result<()> {
         self.pad(align, 0xFF)
@@ -131,9 +141,9 @@ impl<W: Write + Seek> BinaryWriter<W> {
         for reservation in &self.reservations {
             if reservation.position == position {
                 return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "tried to reserve already reserved position",
-            ))
+                    io::ErrorKind::InvalidData,
+                    "tried to reserve already reserved position",
+                ));
             }
         }
 
@@ -149,9 +159,10 @@ impl<W: Write + Seek> BinaryWriter<W> {
         if !self.reservations.contains(&reservation) {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
-                "tried to fill unreserved position"))
+                "tried to fill unreserved position",
+            ));
         }
-        
+
         if let Some(pos) = self.reservations.iter().position(|x| *x == reservation) {
             self.reservations.remove(pos);
         }
@@ -165,7 +176,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 "unable to close writer - not all reservations have been filled",
-            ))
+            ));
         }
 
         Ok(())
@@ -195,7 +206,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
         self.free_reservation(reservation)?;
 
         let initial_position = self.position()?;
-        
+
         self.seek(reservation.position)?;
 
         self.write_bool(value)?;
@@ -208,7 +219,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
     pub fn write_varint(&mut self, value: i64) -> io::Result<()> {
         match self.varint_i64 {
             true => self.write_i64(value)?,
-            false => self.write_i32(value as i32)?
+            false => self.write_i32(value as i32)?,
         }
 
         Ok(())
@@ -227,7 +238,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
     pub fn reserve_varint(&mut self) -> io::Result<Reservation> {
         match self.varint_i64 {
             true => self.reserve_i64(),
-            false => self.reserve_i32()
+            false => self.reserve_i32(),
         }
     }
 
@@ -235,7 +246,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
     pub fn fill_varint(&mut self, reservation: Reservation, value: i64) -> io::Result<()> {
         match self.varint_i64 {
             true => self.fill_i64(reservation, value)?,
-            false => self.fill_i32(reservation, value as i32)?
+            false => self.fill_i32(reservation, value as i32)?,
         }
 
         Ok(())
@@ -336,6 +347,45 @@ impl<W: Write + Seek> BinaryWriter<W> {
         self.write_u8(byte_vector4.y)?;
         self.write_u8(byte_vector4.z)?;
         self.write_u8(byte_vector4.w)
+    }
+
+    /// Writes a `ByteVector4` representing color as four `u8` numbers
+    pub fn write_byte_vector4_argb(&mut self, byte_vector4: ByteVector4) -> io::Result<()> {
+        self.write_u8(byte_vector4.w)?;
+        self.write_u8(byte_vector4.x)?;
+        self.write_u8(byte_vector4.y)?;
+        self.write_u8(byte_vector4.z)
+    }
+
+    /// Writes a `ByteVector4` representing color as four `u8` numbers
+    pub fn write_byte_vector4_abgr(&mut self, byte_vector4: ByteVector4) -> io::Result<()> {
+        self.write_u8(byte_vector4.w)?;
+        self.write_u8(byte_vector4.z)?;
+        self.write_u8(byte_vector4.y)?;
+        self.write_u8(byte_vector4.x)
+    }
+
+    /// Writes a `ByteVector4` representing color as four `u8` numbers
+    pub fn write_byte_vector4_rgba(&mut self, byte_vector4: ByteVector4) -> io::Result<()> {
+        self.write_u8(byte_vector4.x)?;
+        self.write_u8(byte_vector4.y)?;
+        self.write_u8(byte_vector4.z)?;
+        self.write_u8(byte_vector4.w)
+    }
+
+    /// Writes a `ByteVector4` representing color as four `u8` numbers
+    pub fn write_byte_vector4_bgra(&mut self, byte_vector4: ByteVector4) -> io::Result<()> {
+        self.write_u8(byte_vector4.z)?;
+        self.write_u8(byte_vector4.y)?;
+        self.write_u8(byte_vector4.x)?;
+        self.write_u8(byte_vector4.w)
+    }
+
+    /// Writes a `ByteVector3` as three `u8` numbers
+    pub fn write_byte_vector3(&mut self, byte_vector4: ByteVector3) -> io::Result<()> {
+        self.write_u8(byte_vector4.x)?;
+        self.write_u8(byte_vector4.y)?;
+        self.write_u8(byte_vector4.z)
     }
 
     /// Write `length` of the given `value`

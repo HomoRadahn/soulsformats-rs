@@ -41,14 +41,17 @@ fn read_boolean() {
     for endian in [Endian::Little, Endian::Big] {
         let byte_true = vec![0x1];
         let byte_false = vec![0x0];
-        let mut reader_true = BinaryReader::from_bytes(byte_true, endian, true);
-        let mut reader_false = BinaryReader::from_bytes(byte_false, endian, true);
+        let mut reader_true = BinaryReader::from_bytes(byte_true, endian, false);
+        let mut reader_false = BinaryReader::from_bytes(byte_false, endian, false);
         assert!(reader_true.read_bool().unwrap());
         assert!(!reader_false.read_bool().unwrap());
 
         let bytes = vec![0x1, 0x0, 0x1];
         let mut vec_reader = BinaryReader::from_bytes(bytes.clone(), endian, true);
-        assert_eq!(vec_reader.read_bool_vec(3).unwrap(), vec![true, false, true]);
+        assert_eq!(
+            vec_reader.read_bool_vec(3).unwrap(),
+            vec![true, false, true]
+        );
 
         let mut get_reader = BinaryReader::from_bytes(bytes.clone(), endian, true);
         assert!(!get_reader.get_bool(1).unwrap());
@@ -60,10 +63,8 @@ fn read_boolean() {
 
 #[test]
 fn read_from_file() {
-    let path = std::env::temp_dir().join(format!(
-        "soulsformats-rs-reader-{}.bin",
-        std::process::id()
-    ));
+    let path =
+        std::env::temp_dir().join(format!("soulsformats-rs-reader-{}.bin", std::process::id()));
     fs::write(&path, [0x12, 0x13]).unwrap();
 
     let mut reader = BinaryReader::from_file(&path, Endian::Little, true).unwrap();
@@ -82,7 +83,7 @@ fn read_uint8() {
         assert_eq!(reader.read_u8().unwrap(), 0x12);
 
         let bytes = vec![0x12, 0x13, 0x14];
-        let mut vec_reader = BinaryReader::from_bytes(bytes.clone(), endian,true);
+        let mut vec_reader = BinaryReader::from_bytes(bytes.clone(), endian, true);
         assert_eq!(vec_reader.read_u8_vec(3).unwrap(), vec![0x12, 0x13, 0x14]);
 
         let mut get_reader = BinaryReader::from_bytes(bytes.clone(), endian, true);
@@ -102,54 +103,80 @@ fn read_uint16() {
     assert_eq!(little_reader.read_u16().unwrap(), 0x1312);
 
     let mut little_vec_reader = BinaryReader::from_bytes(many.clone(), Endian::Little, true);
-    assert_eq!(little_vec_reader.read_u16_vec(2).unwrap(), vec![0x1312, 0x1514]);
+    assert_eq!(
+        little_vec_reader.read_u16_vec(2).unwrap(),
+        vec![0x1312, 0x1514]
+    );
 
     let mut little_get_reader = BinaryReader::from_bytes(many.clone(), Endian::Little, true);
     assert_eq!(little_get_reader.get_u16(2).unwrap(), 0x1514);
     assert_eq!(0, little_get_reader.position().unwrap());
-    assert_eq!(little_get_reader.get_u16_vec(1, 2).unwrap(), vec![0x1413, 0x1615]);
+    assert_eq!(
+        little_get_reader.get_u16_vec(1, 2).unwrap(),
+        vec![0x1413, 0x1615]
+    );
     assert_eq!(0, little_get_reader.position().unwrap());
 
     let mut big_reader = BinaryReader::from_bytes(single.clone(), Endian::Big, true);
     assert_eq!(big_reader.read_u16().unwrap(), 0x1213);
 
     let mut big_vec_reader = BinaryReader::from_bytes(many.clone(), Endian::Big, true);
-    assert_eq!(big_vec_reader.read_u16_vec(2).unwrap(), vec![0x1213, 0x1415]);
+    assert_eq!(
+        big_vec_reader.read_u16_vec(2).unwrap(),
+        vec![0x1213, 0x1415]
+    );
 
     let mut big_get_reader = BinaryReader::from_bytes(many.clone(), Endian::Big, true);
     assert_eq!(big_get_reader.get_u16(2).unwrap(), 0x1415);
     assert_eq!(0, big_get_reader.position().unwrap());
-    assert_eq!(big_get_reader.get_u16_vec(1, 2).unwrap(), vec![0x1314, 0x1516]);
+    assert_eq!(
+        big_get_reader.get_u16_vec(1, 2).unwrap(),
+        vec![0x1314, 0x1516]
+    );
     assert_eq!(0, big_get_reader.position().unwrap());
 }
 
 #[test]
 fn read_uint32() {
     let single = vec![0x12, 0x13, 0x14, 0x15];
-    let many = vec![0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x20, 0x21, 0x22, 0x23];
+    let many = vec![
+        0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x20, 0x21, 0x22, 0x23,
+    ];
 
     let mut little_reader = BinaryReader::from_bytes(single.clone(), Endian::Little, true);
     assert_eq!(little_reader.read_u32().unwrap(), 0x15141312);
 
     let mut little_vec_reader = BinaryReader::from_bytes(many.clone(), Endian::Little, true);
-    assert_eq!(little_vec_reader.read_u32_vec(2).unwrap(), vec![0x15141312, 0x19181716]);
+    assert_eq!(
+        little_vec_reader.read_u32_vec(2).unwrap(),
+        vec![0x15141312, 0x19181716]
+    );
 
     let mut little_get_reader = BinaryReader::from_bytes(many.clone(), Endian::Little, true);
     assert_eq!(little_get_reader.get_u32(2).unwrap(), 0x17161514);
     assert_eq!(0, little_get_reader.position().unwrap());
-    assert_eq!(little_get_reader.get_u32_vec(1, 2).unwrap(), vec![0x16151413, 0x20191817]);
+    assert_eq!(
+        little_get_reader.get_u32_vec(1, 2).unwrap(),
+        vec![0x16151413, 0x20191817]
+    );
     assert_eq!(0, little_get_reader.position().unwrap());
 
     let mut big_reader = BinaryReader::from_bytes(single.clone(), Endian::Big, true);
     assert_eq!(big_reader.read_u32().unwrap(), 0x12131415);
 
     let mut big_vec_reader = BinaryReader::from_bytes(many.clone(), Endian::Big, true);
-    assert_eq!(big_vec_reader.read_u32_vec(2).unwrap(), vec![0x12131415, 0x16171819]);
+    assert_eq!(
+        big_vec_reader.read_u32_vec(2).unwrap(),
+        vec![0x12131415, 0x16171819]
+    );
 
     let mut big_get_reader = BinaryReader::from_bytes(many.clone(), Endian::Big, true);
     assert_eq!(big_get_reader.get_u32(2).unwrap(), 0x14151617);
     assert_eq!(0, big_get_reader.position().unwrap());
-    assert_eq!(big_get_reader.get_u32_vec(1, 2).unwrap(), vec![0x13141516, 0x17181920]);
+    assert_eq!(
+        big_get_reader.get_u32_vec(1, 2).unwrap(),
+        vec![0x13141516, 0x17181920]
+    );
     assert_eq!(0, big_get_reader.position().unwrap());
 }
 
@@ -157,8 +184,8 @@ fn read_uint32() {
 fn read_uint64() {
     let single = vec![0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19];
     let many = vec![
-        0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19,
-        0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27,
+        0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26,
+        0x27,
     ];
 
     let mut little_reader = BinaryReader::from_bytes(single.clone(), Endian::Little, true);
@@ -224,10 +251,16 @@ fn read_int16() {
     let mut little_reader = BinaryReader::from_bytes(bytes.clone(), Endian::Little, true);
     assert_eq!(little_reader.read_i16().unwrap(), -2);
     let mut little_vec_reader = BinaryReader::from_bytes(bytes.clone(), Endian::Little, true);
-    assert_eq!(little_vec_reader.read_i16_vec(3).unwrap(), vec![-2, 512, 32767]);
+    assert_eq!(
+        little_vec_reader.read_i16_vec(3).unwrap(),
+        vec![-2, 512, 32767]
+    );
     let mut little_get_reader = BinaryReader::from_bytes(bytes.clone(), Endian::Little, true);
     assert_eq!(little_get_reader.get_i16(2).unwrap(), 512);
-    assert_eq!(little_get_reader.get_i16_vec(0, 3).unwrap(), vec![-2, 512, 32767]);
+    assert_eq!(
+        little_get_reader.get_i16_vec(0, 3).unwrap(),
+        vec![-2, 512, 32767]
+    );
     assert_eq!(0, little_get_reader.position().unwrap());
 
     let mut big_reader = BinaryReader::from_bytes(bytes.clone(), Endian::Big, true);
@@ -236,7 +269,10 @@ fn read_int16() {
     assert_eq!(big_vec_reader.read_i16_vec(3).unwrap(), vec![-257, 2, -129]);
     let mut big_get_reader = BinaryReader::from_bytes(bytes, Endian::Big, true);
     assert_eq!(big_get_reader.get_i16(2).unwrap(), 2);
-    assert_eq!(big_get_reader.get_i16_vec(0, 3).unwrap(), vec![-257, 2, -129]);
+    assert_eq!(
+        big_get_reader.get_i16_vec(0, 3).unwrap(),
+        vec![-257, 2, -129]
+    );
     assert_eq!(0, big_get_reader.position().unwrap());
 }
 
@@ -250,63 +286,82 @@ fn read_int32() {
     assert_eq!(little_vec_reader.read_i32_vec(2).unwrap(), vec![-2, 131072]);
     let mut little_get_reader = BinaryReader::from_bytes(bytes.clone(), Endian::Little, true);
     assert_eq!(little_get_reader.get_i32(4).unwrap(), 131072);
-    assert_eq!(little_get_reader.get_i32_vec(0, 2).unwrap(), vec![-2, 131072]);
+    assert_eq!(
+        little_get_reader.get_i32_vec(0, 2).unwrap(),
+        vec![-2, 131072]
+    );
     assert_eq!(0, little_get_reader.position().unwrap());
 
     let mut big_reader = BinaryReader::from_bytes(bytes.clone(), Endian::Big, true);
     assert_eq!(big_reader.read_i32().unwrap(), -16777217);
     let mut big_vec_reader = BinaryReader::from_bytes(bytes.clone(), Endian::Big, true);
-    assert_eq!(big_vec_reader.read_i32_vec(2).unwrap(), vec![-16777217, 512]);
+    assert_eq!(
+        big_vec_reader.read_i32_vec(2).unwrap(),
+        vec![-16777217, 512]
+    );
     let mut big_get_reader = BinaryReader::from_bytes(bytes, Endian::Big, true);
     assert_eq!(big_get_reader.get_i32(4).unwrap(), 512);
-    assert_eq!(big_get_reader.get_i32_vec(0, 2).unwrap(), vec![-16777217, 512]);
+    assert_eq!(
+        big_get_reader.get_i32_vec(0, 2).unwrap(),
+        vec![-16777217, 512]
+    );
     assert_eq!(0, big_get_reader.position().unwrap());
 }
 
 #[test]
 fn read_int64() {
     let bytes = vec![
-        0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00,
+        0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
+        0x00,
     ];
 
     let mut little_reader = BinaryReader::from_bytes(bytes.clone(), Endian::Little, true);
     assert_eq!(little_reader.read_i64().unwrap(), -2);
     let mut little_vec_reader = BinaryReader::from_bytes(bytes.clone(), Endian::Little, true);
-    assert_eq!(little_vec_reader.read_i64_vec(2).unwrap(), vec![-2, 562949953421312]);
+    assert_eq!(
+        little_vec_reader.read_i64_vec(2).unwrap(),
+        vec![-2, 562949953421312]
+    );
     let mut little_get_reader = BinaryReader::from_bytes(bytes.clone(), Endian::Little, true);
     assert_eq!(little_get_reader.get_i64(8).unwrap(), 562949953421312);
-    assert_eq!(little_get_reader.get_i64_vec(0, 2).unwrap(), vec![-2, 562949953421312]);
+    assert_eq!(
+        little_get_reader.get_i64_vec(0, 2).unwrap(),
+        vec![-2, 562949953421312]
+    );
     assert_eq!(0, little_get_reader.position().unwrap());
 
     let mut big_reader = BinaryReader::from_bytes(bytes.clone(), Endian::Big, true);
     assert_eq!(big_reader.read_i64().unwrap(), -72057594037927937);
     let mut big_vec_reader = BinaryReader::from_bytes(bytes.clone(), Endian::Big, true);
-    assert_eq!(big_vec_reader.read_i64_vec(2).unwrap(), vec![-72057594037927937, 512]);
+    assert_eq!(
+        big_vec_reader.read_i64_vec(2).unwrap(),
+        vec![-72057594037927937, 512]
+    );
     let mut big_get_reader = BinaryReader::from_bytes(bytes, Endian::Big, true);
     assert_eq!(big_get_reader.get_i64(8).unwrap(), 512);
-    assert_eq!(big_get_reader.get_i64_vec(0, 2).unwrap(), vec![-72057594037927937, 512]);
+    assert_eq!(
+        big_get_reader.get_i64_vec(0, 2).unwrap(),
+        vec![-72057594037927937, 512]
+    );
     assert_eq!(0, big_get_reader.position().unwrap());
 }
 
 #[test]
 fn read_float32() {
-    let little_bytes = vec![
-        0x00, 0x00, 0x80, 0x3F,
-        0x00, 0x00, 0x20, 0xC0,
-    ];
-    let big_bytes = vec![
-        0x3F, 0x80, 0x00, 0x00,
-        0xC0, 0x20, 0x00, 0x00,
-    ];
+    let little_bytes = vec![0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x20, 0xC0];
+    let big_bytes = vec![0x3F, 0x80, 0x00, 0x00, 0xC0, 0x20, 0x00, 0x00];
 
     let mut little_reader = BinaryReader::from_bytes(little_bytes.clone(), Endian::Little, true);
     assert_eq!(little_reader.read_f32().unwrap(), 1.0);
-    let mut little_vec_reader = BinaryReader::from_bytes(little_bytes.clone(), Endian::Little, true);
+    let mut little_vec_reader =
+        BinaryReader::from_bytes(little_bytes.clone(), Endian::Little, true);
     assert_eq!(little_vec_reader.read_f32_vec(2).unwrap(), vec![1.0, -2.5]);
     let mut little_get_reader = BinaryReader::from_bytes(little_bytes, Endian::Little, true);
     assert_eq!(little_get_reader.get_f32(4).unwrap(), -2.5);
-    assert_eq!(little_get_reader.get_f32_vec(0, 2).unwrap(), vec![1.0, -2.5]);
+    assert_eq!(
+        little_get_reader.get_f32_vec(0, 2).unwrap(),
+        vec![1.0, -2.5]
+    );
     assert_eq!(0, little_get_reader.position().unwrap());
 
     let mut big_reader = BinaryReader::from_bytes(big_bytes.clone(), Endian::Big, true);
@@ -322,21 +377,25 @@ fn read_float32() {
 #[test]
 fn read_float64() {
     let little_bytes = vec![
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF0, 0x3F,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0xC0,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF0, 0x3F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04,
+        0xC0,
     ];
     let big_bytes = vec![
-        0x3F, 0xF0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0xC0, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x3F, 0xF0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00,
     ];
 
     let mut little_reader = BinaryReader::from_bytes(little_bytes.clone(), Endian::Little, true);
     assert_eq!(little_reader.read_f64().unwrap(), 1.0);
-    let mut little_vec_reader = BinaryReader::from_bytes(little_bytes.clone(), Endian::Little, true);
+    let mut little_vec_reader =
+        BinaryReader::from_bytes(little_bytes.clone(), Endian::Little, true);
     assert_eq!(little_vec_reader.read_f64_vec(2).unwrap(), vec![1.0, -2.5]);
     let mut little_get_reader = BinaryReader::from_bytes(little_bytes, Endian::Little, true);
     assert_eq!(little_get_reader.get_f64(8).unwrap(), -2.5);
-    assert_eq!(little_get_reader.get_f64_vec(0, 2).unwrap(), vec![1.0, -2.5]);
+    assert_eq!(
+        little_get_reader.get_f64_vec(0, 2).unwrap(),
+        vec![1.0, -2.5]
+    );
     assert_eq!(0, little_get_reader.position().unwrap());
 
     let mut big_reader = BinaryReader::from_bytes(big_bytes.clone(), Endian::Big, true);
@@ -359,8 +418,8 @@ fn read_varint_vectors() {
     assert_eq!(0, short_get_reader.position().unwrap());
 
     let long_bytes = vec![
-        0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-        0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00,
     ];
     let mut long_reader = BinaryReader::from_bytes(long_bytes.clone(), Endian::Little, true);
     assert_eq!(long_reader.read_varint_vec(2).unwrap(), vec![-2, 2]);
@@ -380,11 +439,7 @@ fn read_enum_functions() {
     let mut reader = BinaryReader::from_bytes(vec![1, 0, 0, 0], Endian::Little, true);
     assert_eq!(reader.read_enum_u32::<EnumU32>().unwrap(), EnumU32::One);
 
-    let mut reader = BinaryReader::from_bytes(
-        vec![1, 0, 0, 0, 0, 0, 0, 0],
-        Endian::Little,
-        true,
-    );
+    let mut reader = BinaryReader::from_bytes(vec![1, 0, 0, 0, 0, 0, 0, 0], Endian::Little, true);
     assert_eq!(reader.read_enum_u64::<EnumU64>().unwrap(), EnumU64::One);
 
     let mut reader = BinaryReader::from_bytes(vec![1], Endian::Little, true);
@@ -396,11 +451,7 @@ fn read_enum_functions() {
     let mut reader = BinaryReader::from_bytes(vec![1, 0, 0, 0], Endian::Little, true);
     assert_eq!(reader.read_enum_i32::<EnumI32>().unwrap(), EnumI32::One);
 
-    let mut reader = BinaryReader::from_bytes(
-        vec![1, 0, 0, 0, 0, 0, 0, 0],
-        Endian::Little,
-        true,
-    );
+    let mut reader = BinaryReader::from_bytes(vec![1, 0, 0, 0, 0, 0, 0, 0], Endian::Little, true);
     assert_eq!(reader.read_enum_i64::<EnumI64>().unwrap(), EnumI64::One);
 
     macro_rules! assert_get_enum {
@@ -426,18 +477,35 @@ fn read_enum_functions() {
 
 #[test]
 fn read_vectors() {
-    let mut vector2_reader = BinaryReader::from_bytes(vec![0x00, 0x00, 0x80, 0x3F, 0xCD, 0xCC, 0x2C, 0x40], Endian::Little, true);
+    let mut vector2_reader = BinaryReader::from_bytes(
+        vec![0x00, 0x00, 0x80, 0x3F, 0xCD, 0xCC, 0x2C, 0x40],
+        Endian::Little,
+        true,
+    );
     let vector2 = vector2_reader.read_vector_2().unwrap();
     assert_eq!(vector2.x, 1.0);
     assert_eq!(vector2.y, 2.7);
-    
-    let mut vector3_reader = BinaryReader::from_bytes(vec![0x00, 0x00, 0x80, 0x3F, 0xCD, 0xCC, 0x2C, 0x40, 0x00, 0x00, 0x00, 0x00], Endian::Little, true);
+
+    let mut vector3_reader = BinaryReader::from_bytes(
+        vec![
+            0x00, 0x00, 0x80, 0x3F, 0xCD, 0xCC, 0x2C, 0x40, 0x00, 0x00, 0x00, 0x00,
+        ],
+        Endian::Little,
+        true,
+    );
     let vector3 = vector3_reader.read_vector_3().unwrap();
     assert_eq!(vector3.x, 1.0);
     assert_eq!(vector3.y, 2.7);
     assert_eq!(vector3.z, 0.0);
 
-    let mut vector4_reader = BinaryReader::from_bytes(vec![0x00, 0x00, 0x80, 0x3F, 0xCD, 0xCC, 0x2C, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], Endian::Little, true);
+    let mut vector4_reader = BinaryReader::from_bytes(
+        vec![
+            0x00, 0x00, 0x80, 0x3F, 0xCD, 0xCC, 0x2C, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00,
+        ],
+        Endian::Little,
+        true,
+    );
     let vector4 = vector4_reader.read_vector_4().unwrap();
     assert_eq!(vector4.x, 1.0);
     assert_eq!(vector4.y, 2.7);
@@ -454,7 +522,10 @@ fn read_strings() {
     let mut ascii_get_reader = BinaryReader::from_bytes(b"xMAGIC\0".to_vec(), Endian::Little, true);
     assert_eq!(ascii_get_reader.get_ascii_len(1, 5).unwrap(), "MAGIC");
     assert_eq!(ascii_get_reader.position().unwrap(), 0);
-    assert_eq!(ascii_get_reader.assert_ascii(&["xMAGIC", "OTHER"]).unwrap(), "xMAGIC");
+    assert_eq!(
+        ascii_get_reader.assert_ascii(&["xMAGIC", "OTHER"]).unwrap(),
+        "xMAGIC"
+    );
 
     let (shift_jis_bytes, _, _) = encoding_rs::SHIFT_JIS.encode("テスト");
     let mut shift_jis_data = shift_jis_bytes.into_owned();
@@ -477,11 +548,8 @@ fn read_strings() {
     assert_eq!(utf16_get_reader.get_utf16(2).unwrap(), "Hi");
     assert_eq!(utf16_get_reader.position().unwrap(), 0);
 
-    let mut fixed_reader = BinaryReader::from_bytes(
-        b"name\0padding".to_vec(),
-        Endian::Little,
-        true,
-    );
+    let mut fixed_reader =
+        BinaryReader::from_bytes(b"name\0padding".to_vec(), Endian::Little, true);
     assert_eq!(fixed_reader.read_fix_str(8).unwrap(), "name");
 
     let mut fixed_w_reader = BinaryReader::from_bytes(
@@ -497,11 +565,8 @@ fn assert_values() {
     let mut bool_reader = BinaryReader::from_bytes(vec![1], Endian::Little, true);
     assert_eq!(bool_reader.assert_bool(&[false, true]).unwrap(), true);
 
-    let mut integer_reader = BinaryReader::from_bytes(
-        vec![1, 0, 0, 0, 0, 0, 0, 0],
-        Endian::Little,
-        true,
-    );
+    let mut integer_reader =
+        BinaryReader::from_bytes(vec![1, 0, 0, 0, 0, 0, 0, 0], Endian::Little, true);
     assert_eq!(integer_reader.assert_u8(&[0, 1]).unwrap(), 1);
     assert_eq!(integer_reader.assert_u16(&[0, 1]).unwrap(), 0);
     assert_eq!(integer_reader.assert_u32(&[0, 1]).unwrap(), 0);
@@ -509,23 +574,20 @@ fn assert_values() {
     let mut signed_reader = BinaryReader::from_bytes(vec![0xFF], Endian::Little, true);
     assert_eq!(signed_reader.assert_i8(&[-1, 1]).unwrap(), -1);
 
-    let mut float_reader = BinaryReader::from_bytes(
-        vec![0x00, 0x00, 0x80, 0x3F],
-        Endian::Little,
-        true,
-    );
+    let mut float_reader =
+        BinaryReader::from_bytes(vec![0x00, 0x00, 0x80, 0x3F], Endian::Little, true);
     assert_eq!(float_reader.assert_f32(&[0.0, 1.0]).unwrap(), 1.0);
 
-    let mut varint_reader = BinaryReader::from_bytes(
-        vec![0xFF, 0xFF, 0xFF, 0xFF],
-        Endian::Little,
-        false,
-    );
+    let mut varint_reader =
+        BinaryReader::from_bytes(vec![0xFF, 0xFF, 0xFF, 0xFF], Endian::Little, false);
     assert_eq!(varint_reader.assert_varint(&[0, -1]).unwrap(), -1);
 
     let mut dcp_reader = BinaryReader::from_bytes(
-        vec![0x44, 0x43, 0x50, 0x00, 0x44, 0x46, 0x4C, 0x54, 0x00, 0x00, 0x00, 0x20],
-        Endian::Big, true
+        vec![
+            0x44, 0x43, 0x50, 0x00, 0x44, 0x46, 0x4C, 0x54, 0x00, 0x00, 0x00, 0x20,
+        ],
+        Endian::Big,
+        true,
     );
 
     dcp_reader.assert_ascii(&["DCP\0"]).unwrap();

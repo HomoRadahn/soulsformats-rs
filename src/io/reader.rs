@@ -1,7 +1,7 @@
+use crate::io::{ByteVector3, ByteVector4, Endian, Vector2, Vector3, Vector4};
 use std::fs::File;
-use std::io::{self, Read, Seek, SeekFrom, Cursor};
+use std::io::{self, Cursor, Read, Seek, SeekFrom};
 use std::path::Path;
-use crate::io::{Endian, Vector2, Vector3, Vector4, ByteVector4};
 
 macro_rules! impl_generic_enum_reader {
     ($type:ty, $read_value:ident, $get_value:ident, $read:ident, $get:ident) => {
@@ -29,41 +29,41 @@ macro_rules! impl_numeric_reader {
         pub fn $read(&mut self) -> io::Result<$type> {
             let mut buf = [0u8; $size];
             self.inner.read_exact(&mut buf)?;
-            
+
             Ok(match self.endian {
                 Endian::Little => <$type>::from_le_bytes(buf),
                 Endian::Big => <$type>::from_be_bytes(buf),
             })
         }
-        
+
         #[doc = concat!("Reads vector of `", stringify!($type) , "` values")]
         pub fn $read_vec(&mut self, count: u64) -> io::Result<Vec<$type>> {
             (0..count).map(|_| self.$read()).collect()
         }
-        
+
         #[doc = concat!("Reads `", stringify!($type), "` value from the specified offset without advancing the stream")]
         pub fn $get(&mut self, position: u64) -> io::Result<$type> {
             let initial = self.position()?;
             self.seek(position)?;
-            
+
             let result = self.$read();
             let restore = self.seek(initial);
-            
+
             result.and_then(|value| restore.map(|_| value))
         }
-        
+
         #[doc = concat!("Reads a vector of `", stringify!($type), "` values from the specified offset without advancing the stream")]
         pub fn $get_vec(&mut self, position: u64, count: u64) -> io::Result<Vec<$type>> {
             let initial = self.position()?;
             self.seek(position)?;
-            
+
             let result: io::Result<Vec<$type>> =
                 (0..count).map(|_| self.$read()).collect();
                 let restore = self.seek(initial);
 
                 result.and_then(|values| restore.map(|_| values))
         }
-            
+
         #[doc = concat!("Reads `", stringify!($type), "` value and validates it against the supplied values")]
         pub fn $assert(&mut self, expected: &[$type]) -> io::Result<$type>
         where
@@ -77,18 +77,27 @@ macro_rules! impl_numeric_reader {
 pub struct BinaryReader<R> {
     inner: R,
     endian: Endian,
-    varint_i64: bool
+    varint_i64: bool,
 }
 
 impl<R: Read + Seek> BinaryReader<R> {
     /// Initializes the `BinaryReader` from a generic implementing `Read + Seek`
     pub fn new(inner: R, endian: Endian, varint_i64: bool) -> Self {
-        Self { inner, endian, varint_i64 }
+        Self {
+            inner,
+            endian,
+            varint_i64,
+        }
     }
 
     /// Sets endianness of the stream
     pub fn set_endian(&mut self, endian: Endian) {
         self.endian = endian;
+    }
+
+    /// Sets `varint_i64` to `behavior`
+    pub fn set_varint_behavior(&mut self, behavior: bool) {
+        self.varint_i64 = behavior;
     }
 
     fn assert_value<T>(value: T, expected: &[T], type_name: &str) -> io::Result<T>
@@ -107,7 +116,7 @@ impl<R: Read + Seek> BinaryReader<R> {
 
     /// Returns current stream position
     pub fn position(&mut self) -> io::Result<u64> {
-        return self.inner.stream_position()
+        return self.inner.stream_position();
     }
 
     /// Returns total stream length
@@ -136,7 +145,7 @@ impl<R: Read + Seek> BinaryReader<R> {
     /// Advances the stream position until it meets the specified alignment
     pub fn pad(&mut self, align: u64) -> io::Result<u64> {
         if align == 0 {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "padding was 0"))
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "padding was 0"));
         }
         let pos = self.position()?;
         if pos % align > 0 {
@@ -149,7 +158,7 @@ impl<R: Read + Seek> BinaryReader<R> {
     /// Advances the stream position until it meets the specified alignment relative to the given starting position
     pub fn pad_relative(&mut self, start: u64, align: u64) -> io::Result<u64> {
         if align == 0 {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "padding was 0"))
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "padding was 0"));
         }
 
         let rel_pos = self.position()? - start;
@@ -169,7 +178,7 @@ impl<R: Read + Seek> BinaryReader<R> {
         match buf[0] {
             0 => Ok(false),
             1 => Ok(true),
-            _ => Err(io::Error::new(io::ErrorKind::InvalidData, "invalid bool"))
+            _ => Err(io::Error::new(io::ErrorKind::InvalidData, "invalid bool")),
         }
     }
 
@@ -202,7 +211,7 @@ impl<R: Read + Seek> BinaryReader<R> {
 
         let result = (0..count).map(|_| self.read_bool().unwrap()).collect();
 
-       self.seek(initial)?;
+        self.seek(initial)?;
 
         Ok(result)
     }
@@ -238,16 +247,13 @@ impl<R: Read + Seek> BinaryReader<R> {
             ));
         }
 
-        let code_units = bytes
-            .chunks_exact(2)
-            .map(|pair| match self.endian {
-                Endian::Little => u16::from_le_bytes([pair[0], pair[1]]),
-                Endian::Big => u16::from_be_bytes([pair[0], pair[1]]),
-            });
+        let code_units = bytes.chunks_exact(2).map(|pair| match self.endian {
+            Endian::Little => u16::from_le_bytes([pair[0], pair[1]]),
+            Endian::Big => u16::from_be_bytes([pair[0], pair[1]]),
+        });
 
-        String::from_utf16(&code_units.collect::<Vec<_>>()).map_err(|error| {
-            io::Error::new(io::ErrorKind::InvalidData, error)
-        })
+        String::from_utf16(&code_units.collect::<Vec<_>>())
+            .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))
     }
 
     /// Reads a null-terminated ASCII string
@@ -359,20 +365,87 @@ impl<R: Read + Seek> BinaryReader<R> {
         if values.iter().any(|expected| *expected == value) {
             Ok(value)
         } else {
-            Err(io::Error::new(io::ErrorKind::InvalidData, "unexpected ASCII value"))
+            Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "unexpected ASCII value",
+            ))
         }
     }
 
     impl_numeric_reader!(u8, 1, read_u8, read_u8_vec, get_u8, get_u8_vec, assert_u8);
-    impl_numeric_reader!(u16, 2, read_u16, read_u16_vec, get_u16, get_u16_vec, assert_u16);
-    impl_numeric_reader!(u32, 4, read_u32, read_u32_vec, get_u32, get_u32_vec, assert_u32);
-    impl_numeric_reader!(u64, 8, read_u64, read_u64_vec, get_u64, get_u64_vec, assert_u64);
+    impl_numeric_reader!(
+        u16,
+        2,
+        read_u16,
+        read_u16_vec,
+        get_u16,
+        get_u16_vec,
+        assert_u16
+    );
+    impl_numeric_reader!(
+        u32,
+        4,
+        read_u32,
+        read_u32_vec,
+        get_u32,
+        get_u32_vec,
+        assert_u32
+    );
+    impl_numeric_reader!(
+        u64,
+        8,
+        read_u64,
+        read_u64_vec,
+        get_u64,
+        get_u64_vec,
+        assert_u64
+    );
     impl_numeric_reader!(i8, 1, read_i8, read_i8_vec, get_i8, get_i8_vec, assert_i8);
-    impl_numeric_reader!(i16, 2, read_i16, read_i16_vec, get_i16, get_i16_vec, assert_i16);
-    impl_numeric_reader!(i32, 4, read_i32, read_i32_vec, get_i32, get_i32_vec, assert_i32);
-    impl_numeric_reader!(i64, 8, read_i64, read_i64_vec, get_i64, get_i64_vec, assert_i64);
-    impl_numeric_reader!(f32, 4, read_f32, read_f32_vec, get_f32, get_f32_vec, assert_f32);
-    impl_numeric_reader!(f64, 8, read_f64, read_f64_vec, get_f64, get_f64_vec, assert_f64);
+    impl_numeric_reader!(
+        i16,
+        2,
+        read_i16,
+        read_i16_vec,
+        get_i16,
+        get_i16_vec,
+        assert_i16
+    );
+    impl_numeric_reader!(
+        i32,
+        4,
+        read_i32,
+        read_i32_vec,
+        get_i32,
+        get_i32_vec,
+        assert_i32
+    );
+    impl_numeric_reader!(
+        i64,
+        8,
+        read_i64,
+        read_i64_vec,
+        get_i64,
+        get_i64_vec,
+        assert_i64
+    );
+    impl_numeric_reader!(
+        f32,
+        4,
+        read_f32,
+        read_f32_vec,
+        get_f32,
+        get_f32_vec,
+        assert_f32
+    );
+    impl_numeric_reader!(
+        f64,
+        8,
+        read_f64,
+        read_f64_vec,
+        get_f64,
+        get_f64_vec,
+        assert_f64
+    );
     impl_generic_enum_reader!(u8, read_u8, get_u8, read_enum8, get_enum8);
     impl_generic_enum_reader!(u16, read_u16, get_u16, read_enum_u16, get_enum_u16);
     impl_generic_enum_reader!(u32, read_u32, get_u32, read_enum_u32, get_enum_u32);
@@ -386,8 +459,7 @@ impl<R: Read + Seek> BinaryReader<R> {
     pub fn read_varint(&mut self) -> io::Result<i64> {
         if self.varint_i64 {
             self.read_i64()
-        }
-        else {
+        } else {
             self.read_i32().map(i64::from)
         }
     }
@@ -406,8 +478,7 @@ impl<R: Read + Seek> BinaryReader<R> {
     pub fn get_varint(&mut self, position: u64) -> io::Result<i64> {
         if self.varint_i64 {
             self.get_i64(position)
-        }
-        else {
+        } else {
             self.get_i32(position).map(i64::from)
         }
     }
@@ -417,8 +488,7 @@ impl<R: Read + Seek> BinaryReader<R> {
         let initial = self.position()?;
         self.seek(position)?;
 
-        let result: io::Result<Vec<i64>> =
-            (0..count).map(|_| self.read_varint()).collect();
+        let result: io::Result<Vec<i64>> = (0..count).map(|_| self.read_varint()).collect();
         let restore = self.seek(initial);
 
         result.and_then(|values| restore.map(|_| values))
@@ -428,7 +498,7 @@ impl<R: Read + Seek> BinaryReader<R> {
     pub fn read_vector_2(&mut self) -> io::Result<Vector2> {
         Ok(Vector2 {
             x: self.read_f32()?,
-            y: self.read_f32()?
+            y: self.read_f32()?,
         })
     }
 
@@ -437,7 +507,7 @@ impl<R: Read + Seek> BinaryReader<R> {
         Ok(Vector3 {
             x: self.read_f32()?,
             y: self.read_f32()?,
-            z: self.read_f32()?
+            z: self.read_f32()?,
         })
     }
 
@@ -447,7 +517,7 @@ impl<R: Read + Seek> BinaryReader<R> {
             x: self.read_f32()?,
             y: self.read_f32()?,
             z: self.read_f32()?,
-            w: self.read_f32()?
+            w: self.read_f32()?,
         })
     }
 
@@ -457,7 +527,60 @@ impl<R: Read + Seek> BinaryReader<R> {
             x: self.read_u8()?,
             y: self.read_u8()?,
             z: self.read_u8()?,
-            w: self.read_u8()?
+            w: self.read_u8()?,
+        })
+    }
+
+    /// Reads a `ByteVector4` - used to represent color
+    pub fn read_byte_vector_4_argb(&mut self) -> io::Result<ByteVector4> {
+        let bytes = self.read_u8_vec(4)?;
+        Ok(ByteVector4 {
+            x: bytes[1],
+            y: bytes[2],
+            z: bytes[3],
+            w: bytes[0],
+        })
+    }
+
+    /// Reads a `ByteVector4` - used to represent color
+    pub fn read_byte_vector_4_abgr(&mut self) -> io::Result<ByteVector4> {
+        let bytes = self.read_u8_vec(4)?;
+        Ok(ByteVector4 {
+            x: bytes[3],
+            y: bytes[2],
+            z: bytes[1],
+            w: bytes[0],
+        })
+    }
+
+    /// Reads a `ByteVector4` - used to represent color
+    pub fn read_byte_vector_4_rgba(&mut self) -> io::Result<ByteVector4> {
+        let bytes = self.read_u8_vec(4)?;
+        Ok(ByteVector4 {
+            x: bytes[0],
+            y: bytes[1],
+            z: bytes[2],
+            w: bytes[3],
+        })
+    }
+
+    /// Reads a `ByteVector4` - used to represent color
+    pub fn read_byte_vector_4_bgra(&mut self) -> io::Result<ByteVector4> {
+        let bytes = self.read_u8_vec(4)?;
+        Ok(ByteVector4 {
+            x: bytes[2],
+            y: bytes[1],
+            z: bytes[0],
+            w: bytes[3],
+        })
+    }
+
+    /// Reads a `ByteVector3` value from three consecutive `u8` values
+    pub fn read_byte_vector_3(&mut self) -> io::Result<ByteVector3> {
+        Ok(ByteVector3 {
+            x: self.read_u8()?,
+            y: self.read_u8()?,
+            z: self.read_u8()?,
         })
     }
 
@@ -474,7 +597,6 @@ impl<R: Read + Seek> BinaryReader<R> {
 
         Ok(())
     }
-
 }
 
 impl BinaryReader<Cursor<Vec<u8>>> {
@@ -486,7 +608,11 @@ impl BinaryReader<Cursor<Vec<u8>>> {
 
 impl BinaryReader<File> {
     /// Initializes the `BinaryReader` from a file
-    pub fn from_file<P: AsRef<Path>>(path: P, endian: Endian, varint_i64: bool) -> io::Result<Self> {
+    pub fn from_file<P: AsRef<Path>>(
+        path: P,
+        endian: Endian,
+        varint_i64: bool,
+    ) -> io::Result<Self> {
         Ok(BinaryReader::new(File::open(path)?, endian, varint_i64))
     }
 }

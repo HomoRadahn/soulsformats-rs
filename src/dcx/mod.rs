@@ -1,25 +1,38 @@
-use std::{collections::HashMap, io::{self, Read, Seek, Write}};
+use std::{
+    collections::HashMap,
+    io::{self, Read, Seek, Write},
+};
 
-use crate::{dcx::{compression_info::*, deflate_helper::DeflateHelper, zlib_helper::ZlibHelper, zstd_helper::ZstdHelper}, io::{BinaryReader, BinaryWriter, Endian, writer::Reservation}};
+use crate::{
+    dcx::{
+        compression_info::*, deflate_helper::DeflateHelper, zlib_helper::ZlibHelper,
+        zstd_helper::ZstdHelper,
+    },
+    io::{BinaryReader, BinaryWriter, Endian, writer::Reservation},
+};
 pub mod compression_info;
+mod deflate_helper;
 mod zlib_helper;
 mod zstd_helper;
-mod deflate_helper;
-
 
 pub struct DCX {
     pub decompressed: Vec<u8>,
-    pub compression: Box<dyn CompressionInfo>
+    pub compression: Box<dyn CompressionInfo>,
 }
 
 impl DCX {
     /// Creates a new DCX from a decompressed vector of bytes and compression info
     pub fn new(decompressed: Vec<u8>, compression: Box<dyn CompressionInfo>) -> Self {
-        Self { decompressed, compression }
+        Self {
+            decompressed,
+            compression,
+        }
     }
-    fn is_base<R>(mut br: BinaryReader<R>) -> io::Result<bool>
+
+    /// Checks if the provided `BinaryReader` contains a valid DCX
+    pub fn is<R>(br: &mut BinaryReader<R>) -> io::Result<bool>
     where
-        R: Read + Seek
+        R: Read + Seek,
     {
         if br.length()? < 4 {
             return Ok(false);
@@ -32,51 +45,57 @@ impl DCX {
 
     /// Checks whether provided bytes are a valid dcx
     pub fn is_bytes(bytes: Vec<u8>) -> io::Result<bool> {
-        let br = BinaryReader::from_bytes(bytes, Endian::Big, true);
-        DCX::is_base(br)
+        let mut br = BinaryReader::from_bytes(bytes, Endian::Big, false);
+        DCX::is(&mut br)
     }
-    
+
     /// Checks whether provided file is a valid dcx
-    pub fn is_file(path: String) -> io::Result<bool> {
-        let br = BinaryReader::from_file(path, Endian::Big, true)?;
-        DCX::is_base(br)
+    pub fn is_file(path: &str) -> io::Result<bool> {
+        let mut br = BinaryReader::from_file(path, Endian::Big, false)?;
+        DCX::is(&mut br)
     }
 
     /// Decompress DCX from provided bytes
     pub fn decompress_bytes(data: Vec<u8>) -> io::Result<Self> {
-        let br = BinaryReader::from_bytes(data, Endian::Big, true);
+        let br = BinaryReader::from_bytes(data, Endian::Big, false);
         let (decompressed, compression) = DCX::decompress(br)?;
-        Ok(Self { decompressed, compression })
+        Ok(Self {
+            decompressed,
+            compression,
+        })
     }
 
     /// Decompress DCX from provided file
-    pub fn decompress_file(path: String) -> io::Result<Self> {
-        let br = BinaryReader::from_file(path, Endian::Big, true)?;
+    pub fn decompress_file(path: &str) -> io::Result<Self> {
+        let br = BinaryReader::from_file(path, Endian::Big, false)?;
         let (decompressed, compression) = DCX::decompress(br)?;
-        Ok(Self { decompressed, compression })
+        Ok(Self {
+            decompressed,
+            compression,
+        })
     }
 
-    pub fn compress_to_file(&self, path: String) -> io::Result<()> {
-        let mut bw = BinaryWriter::to_file(path, Endian::Big, true)?;
+    pub fn compress_to_file(&self, path: &str) -> io::Result<()> {
+        let mut bw = BinaryWriter::to_file(path, Endian::Big, false)?;
         let data = &self.decompressed;
         DCX::compress(&mut bw, data, &self.compression)?;
         Ok(())
     }
 
     pub fn compress_to_bytes(&self) -> io::Result<Vec<u8>> {
-        let mut bw = BinaryWriter::to_bytes(Endian::Big, true);
+        let mut bw = BinaryWriter::to_bytes(Endian::Big, false);
         let data = &self.decompressed;
         DCX::compress(&mut bw, data, &self.compression)?;
         bw.close_bytes()
-
     }
 }
 
 /// Decompression Internal Functions
 impl DCX {
-    fn decompress<R>(mut br: BinaryReader<R>) -> io::Result<(Vec<u8>, Box<dyn CompressionInfo>)>
+    /// Decompressed DCX from the provided `BinaryReader`. Generally recommended to use `decompress_file` or `decompress_bytes`
+    pub fn decompress<R>(mut br: BinaryReader<R>) -> io::Result<(Vec<u8>, Box<dyn CompressionInfo>)>
     where
-        R: Read + Seek
+        R: Read + Seek,
     {
         let mut compression: Box<dyn CompressionInfo> = Box::new(UnkCompressionInfo);
 
@@ -86,12 +105,14 @@ impl DCX {
             match format.as_str() {
                 "DFLT" => compression = Box::new(DcpDfltCompressionInfo),
                 "EDGE" => compression = Box::new(DcpEdgeCompressionInfo),
-                other => return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!("unrecognized DCP format: {}", other)))
+                other => {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!("unrecognized DCP format: {}", other),
+                    ));
+                }
             }
-        }
-        else if magic == "DCX\0" {
+        } else if magic == "DCX\0" {
             let format = br.get_ascii_len(0x28, 4)?;
 
             match format.as_str() {
@@ -101,20 +122,24 @@ impl DCX {
                     let unk14 = br.get_i32(0x14)?;
                     let unk30 = br.get_i32(0x30)?;
                     let unk38 = br.get_i32(0x38)?;
-                    compression = Box::new(DcxDfltCompressionInfo::new(unk04, unk10, unk14, unk30, unk38));
-                },
+                    compression = Box::new(DcxDfltCompressionInfo::new(
+                        unk04, unk10, unk14, unk30, unk38,
+                    ));
+                }
                 "EDGE" => compression = Box::new(DcxEdgeCompressionInfo),
                 "KRAK" => unimplemented!(),
                 "ZSTD" => {
                     let zstd_compression_level = br.get_u8(0x30)?;
                     compression = Box::new(DcxZstdCompressionInfo::new(zstd_compression_level));
-                },
-                other => return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!("unrecognized DCX format: {}", other)))
+                }
+                other => {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!("unrecognized DCX format: {}", other),
+                    ));
+                }
             }
-        }
-        else {
+        } else {
             let b0 = br.get_u8(0)?;
             let b1 = br.get_u8(1)?;
 
@@ -129,24 +154,27 @@ impl DCX {
             Type::Zlib => {
                 let size = br.length()?;
                 ZlibHelper::read_zlib(&mut br, size)?
-            },
+            }
             Type::DcpDflt => DCX::decompress_dcp_dflt(br)?,
             Type::DcpEdge => DCX::decompress_dcp_edge(br)?,
             Type::DcxEdge => DCX::decompress_dcx_edge(br)?,
             Type::DcxDflt => DCX::decompress_dcx_dflt(br, &compression)?,
             Type::DcxKrak => DCX::decompress_dcx_krak(br, &compression)?,
             Type::DcxZstd => DCX::decompress_dcx_zstd(br, &compression)?,
-            _ => return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "unrecognized DCX format"))
+            _ => {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "unrecognized DCX format",
+                ));
+            }
         };
 
         Ok((data, compression))
     }
 
     fn decompress_dcp_dflt<R>(mut br: BinaryReader<R>) -> io::Result<Vec<u8>>
-    where 
-        R: Read + Seek
+    where
+        R: Read + Seek,
     {
         br.assert_ascii(&["DCP\0"])?;
         br.assert_ascii(&["DFLT"])?;
@@ -160,26 +188,29 @@ impl DCX {
         // uncompressed size
         br.read_i32()?;
         let compressed = br.read_i32()?;
-        
+
         let output = ZlibHelper::read_zlib(&mut br, u64::try_from(compressed).unwrap())?;
-        
+
         br.assert_ascii(&["DCA\0"])?;
         br.assert_i32(&[8])?;
 
         return Ok(output);
     }
 
-    fn decompress_dcx_dflt<R>(mut br: BinaryReader<R>, compression: &Box<dyn CompressionInfo>) -> io::Result<Vec<u8>>
-    where 
-        R: Read + Seek
+    fn decompress_dcx_dflt<R>(
+        mut br: BinaryReader<R>,
+        compression: &Box<dyn CompressionInfo>,
+    ) -> io::Result<Vec<u8>>
+    where
+        R: Read + Seek,
     {
         let args = compression.get_dcx_dflt_args()?;
         br.assert_ascii(&["DCX\0"])?;
-        br.assert_i32(&[args.unk04])?;
+        br.assert_i32(&[args.unk_04])?;
         br.assert_i32(&[0x18])?;
         br.assert_i32(&[0x24])?;
-        br.assert_i32(&[args.unk10])?;
-        br.assert_i32(&[args.unk14])?;
+        br.assert_i32(&[args.unk_10])?;
+        br.assert_i32(&[args.unk_14])?;
 
         br.assert_ascii(&["DCS\0"])?;
         // uncompressed size
@@ -189,24 +220,24 @@ impl DCX {
         br.assert_ascii(&["DCP\0"])?;
         br.assert_ascii(&["DFLT"])?;
         br.assert_i32(&[0x20])?;
-        br.assert_i32(&[args.unk30])?;
+        br.assert_i32(&[args.unk_30])?;
         br.assert_i32(&[0x0])?;
-        br.assert_i32(&[args.unk38])?;
+        br.assert_i32(&[args.unk_38])?;
         br.assert_i32(&[0x0])?;
         br.assert_i32(&[0x00010100])?;
 
         br.assert_ascii(&["DCA\0"])?;
         // Compressed Header Length
         br.read_i32()?;
-        
+
         let len = br.length()?;
         let pos = br.position()?;
         ZlibHelper::read_zlib(&mut br, len - pos)
     }
 
     fn decompress_dcp_edge<R>(mut br: BinaryReader<R>) -> io::Result<Vec<u8>>
-    where 
-        R: Read + Seek
+    where
+        R: Read + Seek,
     {
         br.assert_ascii(&["DCP\0"])?;
         br.assert_ascii(&["EDGE"])?;
@@ -236,9 +267,11 @@ impl DCX {
         br.assert_i32(&[0x100000])?;
 
         if egdt_size != (0x20 + chunk_count * 0x10) {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "unexpected EdgT size in EDGE DCP"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "unexpected EdgT size in EDGE DCP",
+            ));
         }
-
 
         let mut output: Vec<u8> = Vec::with_capacity(uncompressed as usize);
 
@@ -248,7 +281,10 @@ impl DCX {
             let size = br.read_i32()? as usize;
             let compressed = br.assert_i32(&[0, 1])? == 1;
 
-            let mut chunk = br.get_u8_vec(data_start + u64::try_from(offset).unwrap(), u64::try_from(size).unwrap())?;
+            let mut chunk = br.get_u8_vec(
+                data_start + u64::try_from(offset).unwrap(),
+                u64::try_from(size).unwrap(),
+            )?;
 
             if compressed {
                 let mut data = DeflateHelper::decompress_deflate_bytes(&chunk[..])?;
@@ -257,13 +293,13 @@ impl DCX {
                 output.append(&mut chunk);
             }
         }
-        
+
         return Ok(output);
     }
 
     fn decompress_dcx_edge<R>(mut br: BinaryReader<R>) -> io::Result<Vec<u8>>
-    where 
-        R: Read + Seek
+    where
+        R: Read + Seek,
     {
         br.assert_ascii(&["DCX\0"])?;
         br.assert_i32(&[0x10000])?;
@@ -271,11 +307,11 @@ impl DCX {
         br.assert_i32(&[0x24])?;
         br.assert_i32(&[0x24])?;
         let unk1 = br.read_i32()?;
-        
+
         br.assert_ascii(&["DCS\0"])?;
         let uncompressed = br.read_i32()?;
         br.read_i32()?;
-        
+
         br.assert_ascii(&["DCP\0"])?;
         br.assert_ascii(&["EDGE"])?;
         br.assert_i32(&[0x20])?;
@@ -284,7 +320,7 @@ impl DCX {
         br.assert_i32(&[0x0])?;
         br.assert_i32(&[0x0])?;
         br.assert_i32(&[0x00100100])?;
-        
+
         let dca_start = br.position()?;
         br.assert_ascii(&["DCA\0"])?;
         let dca_size = br.read_i32()?;
@@ -302,11 +338,17 @@ impl DCX {
         br.assert_i32(&[0x100000])?;
 
         if unk1 != (0x50 + chunk_count * 0x10) {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "unexpected unk1 size in EDGE DCX"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "unexpected unk1 size in EDGE DCX",
+            ));
         }
-        
+
         if egdt_size != 0x24 + chunk_count * 0x10 {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "unexpected EgdT size in EDGE DCX"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "unexpected EgdT size in EDGE DCX",
+            ));
         }
 
         let mut output: Vec<u8> = Vec::with_capacity(uncompressed as usize);
@@ -317,7 +359,12 @@ impl DCX {
             let size = br.read_i32()? as usize;
             let compressed = br.assert_i32(&[0, 1])? == 1;
 
-            let mut chunk = br.get_u8_vec(u64::try_from(dca_start).unwrap() + u64::try_from(dca_size).unwrap() + u64::try_from(offset).unwrap(), u64::try_from(size).unwrap())?;
+            let mut chunk = br.get_u8_vec(
+                u64::try_from(dca_start).unwrap()
+                    + u64::try_from(dca_size).unwrap()
+                    + u64::try_from(offset).unwrap(),
+                u64::try_from(size).unwrap(),
+            )?;
 
             if compressed {
                 let mut data = DeflateHelper::decompress_deflate_bytes(&chunk[..])?;
@@ -326,18 +373,24 @@ impl DCX {
                 output.append(&mut chunk);
             }
         }
-        
+
         return Ok(output);
     }
 
     #[allow(dead_code, unused)]
-    fn decompress_dcx_krak<R>(mut br: BinaryReader<R>, compression: &Box<dyn CompressionInfo>) -> io::Result<Vec<u8>> {
+    fn decompress_dcx_krak<R>(
+        mut br: BinaryReader<R>,
+        compression: &Box<dyn CompressionInfo>,
+    ) -> io::Result<Vec<u8>> {
         unimplemented!()
     }
 
-    fn decompress_dcx_zstd<R>(mut br: BinaryReader<R>, compression: &Box<dyn CompressionInfo>) -> io::Result<Vec<u8>>
-    where 
-        R: Read + Seek
+    fn decompress_dcx_zstd<R>(
+        mut br: BinaryReader<R>,
+        compression: &Box<dyn CompressionInfo>,
+    ) -> io::Result<Vec<u8>>
+    where
+        R: Read + Seek,
     {
         let compression_level = compression.get_dcx_zstd_args()?;
         br.assert_ascii(&["DCX\0"])?;
@@ -364,19 +417,23 @@ impl DCX {
         br.assert_i32(&[0x0])?;
         br.assert_i32(&[0x0])?;
         br.assert_i32(&[0x010100])?;
-        
+
         br.assert_ascii(&["DCA\0"])?;
         br.assert_i32(&[8])?;
-        
+
         ZstdHelper::read_zstd(&mut br, u64::try_from(compressed).unwrap())
     }
 }
 
-/// Compression Internal Functions 
+/// Compression Internal Functions
 impl DCX {
-    fn compress<W>(bw: &mut BinaryWriter<W>, data: &Vec<u8>, compression: &Box<dyn CompressionInfo>) -> io::Result<()>
+    fn compress<W>(
+        bw: &mut BinaryWriter<W>,
+        data: &Vec<u8>,
+        compression: &Box<dyn CompressionInfo>,
+    ) -> io::Result<()>
     where
-        W: Write + Seek
+        W: Write + Seek,
     {
         match compression.get_type() {
             Type::Zlib => DCX::compress_zlib(bw, data)?,
@@ -386,17 +443,20 @@ impl DCX {
             Type::DcxDflt => DCX::compress_dcx_dflt(bw, data, &compression)?,
             Type::DcxKrak => DCX::compress_dcx_krak(bw, data, &compression)?,
             Type::DcxZstd => DCX::compress_dcx_zstd(bw, data, &compression)?,
-            _ => return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "unrecognized DCX format")),
+            _ => {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "unrecognized DCX format",
+                ));
+            }
         };
 
         Ok(())
     }
 
     fn compress_zlib<W>(bw: &mut BinaryWriter<W>, data: &Vec<u8>) -> io::Result<()>
-    where 
-        W: Write + Seek
+    where
+        W: Write + Seek,
     {
         ZlibHelper::write_zlib(bw, 0xDA, data)?;
         Ok(())
@@ -404,7 +464,7 @@ impl DCX {
 
     fn compress_dcp_dflt<W>(bw: &mut BinaryWriter<W>, data: &Vec<u8>) -> io::Result<()>
     where
-        W: Write + Seek
+        W: Write + Seek,
     {
         bw.write_ascii("DCP", true)?;
         bw.write_ascii("DFLT", false)?;
@@ -430,20 +490,24 @@ impl DCX {
         Ok(())
     }
 
-    fn compress_dcx_dflt<W>(bw: &mut BinaryWriter<W>, data: &Vec<u8>, compression: &Box<dyn CompressionInfo>) -> io::Result<()>
+    fn compress_dcx_dflt<W>(
+        bw: &mut BinaryWriter<W>,
+        data: &Vec<u8>,
+        compression: &Box<dyn CompressionInfo>,
+    ) -> io::Result<()>
     where
-        W: Write + Seek
+        W: Write + Seek,
     {
         let args = compression.get_dcx_dflt_args()?;
         bw.write_ascii("DCX", true)?;
 
-        bw.write_i32(args.unk04)?;
-        
+        bw.write_i32(args.unk_04)?;
+
         bw.write_i32(0x18)?;
         bw.write_i32(0x24)?;
-        
-        bw.write_i32(args.unk10)?;
-        bw.write_i32(args.unk14)?;
+
+        bw.write_i32(args.unk_10)?;
+        bw.write_i32(args.unk_14)?;
 
         bw.write_ascii("DCS", true)?;
         bw.write_i32(i32::try_from(data.len()).unwrap())?;
@@ -452,10 +516,10 @@ impl DCX {
         bw.write_ascii("DFLT", false)?;
         bw.write_i32(0x20)?;
 
-        bw.write_i32(args.unk30)?;
+        bw.write_i32(args.unk_30)?;
         bw.write_i32(0)?;
-        bw.write_i32(args.unk38)?;
-        
+        bw.write_i32(args.unk_38)?;
+
         bw.write_i32(0)?;
         bw.write_i32(0x00010100)?;
         bw.write_ascii("DCA", true)?;
@@ -466,7 +530,10 @@ impl DCX {
         ZlibHelper::write_zlib(bw, 0xDA, data)?;
 
         let pos = bw.position()?;
-        bw.fill_i32(compressed_size_res, i32::try_from(pos - compressed_start).unwrap())?;
+        bw.fill_i32(
+            compressed_size_res,
+            i32::try_from(pos - compressed_start).unwrap(),
+        )?;
 
         bw.finalize()?;
 
@@ -474,16 +541,20 @@ impl DCX {
     }
 
     #[allow(unused)]
-    fn compress_dcx_krak<W>(bw: &mut BinaryWriter<W>, data: &Vec<u8>, compression: &Box<dyn CompressionInfo>) -> io::Result<()>
+    fn compress_dcx_krak<W>(
+        bw: &mut BinaryWriter<W>,
+        data: &Vec<u8>,
+        compression: &Box<dyn CompressionInfo>,
+    ) -> io::Result<()>
     where
-        W: Write + Seek
+        W: Write + Seek,
     {
         unimplemented!()
     }
 
     fn compress_dcp_edge<W>(bw: &mut BinaryWriter<W>, data: &Vec<u8>) -> io::Result<()>
     where
-        W: Write + Seek
+        W: Write + Seek,
     {
         let mut chunk_count = data.len() / 0x10000;
         let chunk_remainder = data.len() % 0x10000;
@@ -533,11 +604,18 @@ impl DCX {
             bw.write_u8_vec(chunk)?;
             bw.pad_00(0x10)?;
 
-            chunk_headers.push(EdgeChunk{ compressed_offset: comp_chunk_offset, compressed_length: i32::try_from(comp_chunk_size).unwrap(), is_compressed: is_compressed });
+            chunk_headers.push(EdgeChunk {
+                compressed_offset: comp_chunk_offset,
+                compressed_length: i32::try_from(comp_chunk_size).unwrap(),
+                is_compressed: is_compressed,
+            });
         }
 
         let pos = bw.position()?;
-        bw.fill_i32(compressed_size_res, i32::try_from(pos - data_start).unwrap())?;
+        bw.fill_i32(
+            compressed_size_res,
+            i32::try_from(pos - data_start).unwrap(),
+        )?;
 
         let dca_start = bw.position()?;
         bw.write_ascii("DCA", true)?;
@@ -560,7 +638,7 @@ impl DCX {
             bw.write_i32(i.compressed_length)?;
             match i.is_compressed {
                 true => bw.write_i32(1)?,
-                false => bw.write_i32(0)?
+                false => bw.write_i32(0)?,
             };
         }
         let pos = bw.position()?;
@@ -573,7 +651,7 @@ impl DCX {
 
     fn compress_dcx_edge<W>(bw: &mut BinaryWriter<W>, data: &Vec<u8>) -> io::Result<()>
     where
-        W: Write + Seek
+        W: Write + Seek,
     {
         let mut chunk_count = data.len() / 0x10000;
         let chunk_remainder = data.len() % 0x10000;
@@ -653,12 +731,15 @@ impl DCX {
 
             match is_compressed {
                 true => bw.fill_i32(chunk_compressed_res[&i], 1)?,
-                false => bw.fill_i32(chunk_compressed_res[&i], 0)?
+                false => bw.fill_i32(chunk_compressed_res[&i], 0)?,
             };
-            
+
             compressed_size += i32::try_from(chunk.len()).unwrap();
             let pos = bw.position()?;
-            bw.fill_i32(chunk_offset_res[&i], i32::try_from(pos - data_start).unwrap())?;
+            bw.fill_i32(
+                chunk_offset_res[&i],
+                i32::try_from(pos - data_start).unwrap(),
+            )?;
             bw.fill_i32(chunk_size_res[&i], i32::try_from(chunk.len()).unwrap())?;
             bw.write_u8_vec(chunk)?;
             bw.pad_00(0x10)?;
@@ -671,9 +752,13 @@ impl DCX {
         Ok(())
     }
 
-    fn compress_dcx_zstd<W>(bw: &mut BinaryWriter<W>, data: &Vec<u8>, compression: &Box<dyn CompressionInfo>) -> io::Result<()>
+    fn compress_dcx_zstd<W>(
+        bw: &mut BinaryWriter<W>,
+        data: &Vec<u8>,
+        compression: &Box<dyn CompressionInfo>,
+    ) -> io::Result<()>
     where
-        W: Write + Seek
+        W: Write + Seek,
     {
         let compression_level = compression.get_dcx_zstd_args()?;
         let compressed = ZstdHelper::write_zstd(data, compression_level)?;
@@ -684,11 +769,11 @@ impl DCX {
         bw.write_i32(0x24)?;
         bw.write_i32(0x44)?;
         bw.write_i32(0x4C)?;
-        bw.write_ascii("DCS", true)?;        
+        bw.write_ascii("DCS", true)?;
         bw.write_u32(u32::try_from(data.len()).unwrap())?;
         bw.write_u32(u32::try_from(compressed.len()).unwrap())?;
-        bw.write_ascii("DCP", true)?;        
-        bw.write_ascii("ZSTD", false)?;        
+        bw.write_ascii("DCP", true)?;
+        bw.write_ascii("ZSTD", false)?;
         bw.write_i32(0x20)?;
         bw.write_u8(compression_level)?;
         bw.write_u8(0)?;

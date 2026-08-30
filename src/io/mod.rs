@@ -1,44 +1,58 @@
-pub mod writer;
 pub mod reader;
+pub mod writer;
 
-pub use writer::BinaryWriter;
 pub use reader::BinaryReader;
+pub use writer::BinaryWriter;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 #[allow(dead_code)]
+/// A collection of two `f32` numbers
 pub struct Vector2 {
     pub x: f32,
-    pub y: f32
+    pub y: f32,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 #[allow(dead_code)]
+/// A collection of three `f32` numbers
 pub struct Vector3 {
     pub x: f32,
     pub y: f32,
-    pub z: f32
+    pub z: f32,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 #[allow(dead_code)]
+/// A collection of four `f32` numbers
 pub struct Vector4 {
     pub x: f32,
     pub y: f32,
     pub z: f32,
-    pub w: f32
+    pub w: f32,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 #[allow(dead_code)]
+/// A collection of four `u8` numbers. When used to represent color, the value of `w` represents alpha
 pub struct ByteVector4 {
     pub x: u8,
     pub y: u8,
     pub z: u8,
-    pub w: u8
+    /// Used to represent alpha in colors
+    pub w: u8,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+#[allow(dead_code)]
+/// A collection of three `u8` numbers
+pub struct ByteVector3 {
+    pub x: u8,
+    pub y: u8,
+    pub z: u8,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub enum Endian {
     Big,
-    Little
+    Little,
 }
