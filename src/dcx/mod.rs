@@ -1,6 +1,6 @@
-use std::io::{self, Read, Seek, Write};
+use std::{collections::HashMap, io::{self, Read, Seek, Write}};
 
-use crate::{dcx::{compression_info::*, deflate_helper::DeflateHelper, zlib_helper::ZlibHelper, zstd_helper::ZstdHelper}, io::{BinaryReader, BinaryWriter, Endian}};
+use crate::{dcx::{compression_info::*, deflate_helper::DeflateHelper, zlib_helper::ZlibHelper, zstd_helper::ZstdHelper}, io::{BinaryReader, BinaryWriter, Endian, writer::Reservation}};
 pub mod compression_info;
 mod zlib_helper;
 mod zstd_helper;
@@ -379,16 +379,26 @@ impl DCX {
         W: Write + Seek
     {
         match compression.get_type() {
-            Type::Zlib => todo!(),
-            Type::DcpEdge => todo!(),
+            Type::Zlib => DCX::compress_zlib(bw, data)?,
+            Type::DcpEdge => DCX::compress_dcp_edge(bw, data)?,
             Type::DcpDflt => DCX::compress_dcp_dflt(bw, data)?,
-            Type::DcxEdge => todo!(),
-            Type::DcxDflt => todo!(),
-            Type::DcxKrak => todo!(),
-            Type::DcxZstd => todo!(),
-            _ => todo!(),
+            Type::DcxEdge => DCX::compress_dcx_edge(bw, data)?,
+            Type::DcxDflt => DCX::compress_dcx_dflt(bw, data, &compression)?,
+            Type::DcxKrak => DCX::compress_dcx_krak(bw, data, &compression)?,
+            Type::DcxZstd => DCX::compress_dcx_zstd(bw, data, &compression)?,
+            _ => return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "unrecognized DCX format")),
         };
 
+        Ok(())
+    }
+
+    fn compress_zlib<W>(bw: &mut BinaryWriter<W>, data: &Vec<u8>) -> io::Result<()>
+    where 
+        W: Write + Seek
+    {
+        ZlibHelper::write_zlib(bw, 0xDA, data)?;
         Ok(())
     }
 
@@ -396,7 +406,7 @@ impl DCX {
     where
         W: Write + Seek
     {
-        bw.write_ascii("DCP\0", false)?;
+        bw.write_ascii("DCP", true)?;
         bw.write_ascii("DFLT", false)?;
         bw.write_i32(0x20)?;
         bw.write_i32(0x9000000)?;
@@ -405,7 +415,7 @@ impl DCX {
         bw.write_i32(0)?;
         bw.write_i32(0x00010100)?;
 
-        bw.write_ascii("DCS\0", false)?;
+        bw.write_ascii("DCS", true)?;
         bw.write_i32(i32::try_from(data.len()).unwrap())?;
         let compressed_size_res = bw.reserve_i32()?;
 
@@ -413,8 +423,287 @@ impl DCX {
 
         bw.fill_i32(compressed_size_res, compressed_size)?;
 
-        bw.write_ascii("DCA\0", false)?;
+        bw.write_ascii("DCA", true)?;
         bw.write_i32(8)?;
+        bw.finalize()?;
+
+        Ok(())
+    }
+
+    fn compress_dcx_dflt<W>(bw: &mut BinaryWriter<W>, data: &Vec<u8>, compression: &Box<dyn CompressionInfo>) -> io::Result<()>
+    where
+        W: Write + Seek
+    {
+        let args = compression.get_dcx_dflt_args()?;
+        bw.write_ascii("DCX", true)?;
+
+        bw.write_i32(args.unk04)?;
+        
+        bw.write_i32(0x18)?;
+        bw.write_i32(0x24)?;
+        
+        bw.write_i32(args.unk10)?;
+        bw.write_i32(args.unk14)?;
+
+        bw.write_ascii("DCS", true)?;
+        bw.write_i32(i32::try_from(data.len()).unwrap())?;
+        let compressed_size_res = bw.reserve_i32()?;
+        bw.write_ascii("DCP", true)?;
+        bw.write_ascii("DFLT", false)?;
+        bw.write_i32(0x20)?;
+
+        bw.write_i32(args.unk30)?;
+        bw.write_i32(0)?;
+        bw.write_i32(args.unk38)?;
+        
+        bw.write_i32(0)?;
+        bw.write_i32(0x00010100)?;
+        bw.write_ascii("DCA", true)?;
+        bw.write_i32(8)?;
+
+        let compressed_start = bw.position()?;
+
+        ZlibHelper::write_zlib(bw, 0xDA, data)?;
+
+        let pos = bw.position()?;
+        bw.fill_i32(compressed_size_res, i32::try_from(pos - compressed_start).unwrap())?;
+
+        bw.finalize()?;
+
+        Ok(())
+    }
+
+    #[allow(unused)]
+    fn compress_dcx_krak<W>(bw: &mut BinaryWriter<W>, data: &Vec<u8>, compression: &Box<dyn CompressionInfo>) -> io::Result<()>
+    where
+        W: Write + Seek
+    {
+        unimplemented!()
+    }
+
+    fn compress_dcp_edge<W>(bw: &mut BinaryWriter<W>, data: &Vec<u8>) -> io::Result<()>
+    where
+        W: Write + Seek
+    {
+        let mut chunk_count = data.len() / 0x10000;
+        let chunk_remainder = data.len() % 0x10000;
+        if chunk_remainder > 0 {
+            chunk_count += 1;
+        }
+
+        bw.write_ascii("DCP", true)?;
+        bw.write_ascii("EDGE", false)?;
+        bw.write_i32(0x20)?;
+        bw.write_u8(9)?;
+        bw.write_u8(0)?;
+        bw.write_u8(0)?;
+        bw.write_u8(0)?;
+        bw.write_i32(0x10000)?;
+        bw.write_i32(0)?;
+        bw.write_i32(0)?;
+        bw.write_i32(0x100100)?;
+
+        bw.write_ascii("DCS", true)?;
+        bw.write_i32(i32::try_from(data.len()).unwrap())?;
+        let compressed_size_res = bw.reserve_i32()?;
+        bw.write_i32(0)?;
+
+        let data_start = bw.position()?;
+        let mut chunk_headers: Vec<EdgeChunk> = Vec::new();
+        for i in 0..chunk_count {
+            let mut chunk_size = 0x10000;
+
+            if i == chunk_count - 1 && chunk_remainder > 0 {
+                chunk_size = chunk_remainder;
+            }
+
+            let chunk_offset = i * 0x10000;
+
+            let input = &data[chunk_offset..(chunk_offset + chunk_size)];
+            let compressed = DeflateHelper::compress_deflate_bytes(input)?;
+
+            let (chunk, is_compressed) = if compressed.len() < chunk_size {
+                (compressed, true)
+            } else {
+                (input.to_vec(), false)
+            };
+
+            let comp_chunk_offset = i32::try_from(bw.position()? - data_start).unwrap();
+            let comp_chunk_size = chunk.len();
+            bw.write_u8_vec(chunk)?;
+            bw.pad_00(0x10)?;
+
+            chunk_headers.push(EdgeChunk{ compressed_offset: comp_chunk_offset, compressed_length: i32::try_from(comp_chunk_size).unwrap(), is_compressed: is_compressed });
+        }
+
+        let pos = bw.position()?;
+        bw.fill_i32(compressed_size_res, i32::try_from(pos - data_start).unwrap())?;
+
+        let dca_start = bw.position()?;
+        bw.write_ascii("DCA", true)?;
+        let dca_size_res = bw.reserve_i32()?;
+
+        let egdt_start = bw.position()?;
+
+        bw.write_ascii("EgdT", false)?;
+        bw.write_i32(0x10000)?;
+        bw.write_i32(0x20)?;
+        bw.write_i32(0x10)?;
+        bw.write_i32(0x10000)?;
+        let egdt_size_res = bw.reserve_i32()?;
+        bw.write_i32(i32::try_from(chunk_count).unwrap())?;
+        bw.write_i32(0x100000)?;
+
+        for i in chunk_headers {
+            bw.write_i32(0)?;
+            bw.write_i32(i.compressed_offset)?;
+            bw.write_i32(i.compressed_length)?;
+            match i.is_compressed {
+                true => bw.write_i32(1)?,
+                false => bw.write_i32(0)?
+            };
+        }
+        let pos = bw.position()?;
+        bw.fill_i32(egdt_size_res, i32::try_from(pos - egdt_start).unwrap())?;
+        bw.fill_i32(dca_size_res, i32::try_from(pos - dca_start).unwrap())?;
+        bw.finalize()?;
+
+        Ok(())
+    }
+
+    fn compress_dcx_edge<W>(bw: &mut BinaryWriter<W>, data: &Vec<u8>) -> io::Result<()>
+    where
+        W: Write + Seek
+    {
+        let mut chunk_count = data.len() / 0x10000;
+        let chunk_remainder = data.len() % 0x10000;
+        if chunk_remainder > 0 {
+            chunk_count += 1;
+        }
+
+        bw.write_ascii("DCX", true)?;
+        bw.write_i32(0x10000)?;
+        bw.write_i32(0x18)?;
+        bw.write_i32(0x24)?;
+        bw.write_i32(0x24)?;
+        bw.write_i32(i32::try_from(0x50 + chunk_count * 0x10).unwrap())?;
+
+        bw.write_ascii("DCS", true)?;
+        bw.write_i32(i32::try_from(data.len()).unwrap())?;
+        let compressed_size_res = bw.reserve_i32()?;
+
+        bw.write_ascii("DCP", true)?;
+        bw.write_ascii("EDGE", false)?;
+        bw.write_i32(0x20)?;
+        bw.write_i32(0x9000000)?;
+        bw.write_i32(0x10000)?;
+        bw.write_i32(0)?;
+        bw.write_i32(0)?;
+        bw.write_i32(0x00100100)?;
+
+        let dca_start = bw.position()?;
+        bw.write_ascii("DCA", true)?;
+        let dca_size_res = bw.reserve_i32()?;
+        let egdt_start = bw.position()?;
+        bw.write_ascii("EgdT", false)?;
+        bw.write_i32(0x00010100)?;
+        bw.write_i32(0x24)?;
+        bw.write_i32(0x10)?;
+        bw.write_i32(0x10000)?;
+        bw.write_i32(i32::try_from(chunk_remainder).unwrap())?;
+        let egdt_size_res = bw.reserve_i32()?;
+        bw.write_i32(i32::try_from(chunk_count).unwrap())?;
+        bw.write_i32(0x100000)?;
+
+        let mut chunk_size_res: HashMap<usize, Reservation> = HashMap::new();
+        let mut chunk_offset_res: HashMap<usize, Reservation> = HashMap::new();
+        let mut chunk_compressed_res: HashMap<usize, Reservation> = HashMap::new();
+
+        for i in 0..chunk_count {
+            bw.write_i32(0)?;
+            chunk_offset_res.insert(i, bw.reserve_i32()?);
+            chunk_size_res.insert(i, bw.reserve_i32()?);
+            chunk_compressed_res.insert(i, bw.reserve_i32()?);
+        }
+
+        let pos = bw.position()?;
+        bw.fill_i32(dca_size_res, i32::try_from(pos - dca_start).unwrap())?;
+        bw.fill_i32(egdt_size_res, i32::try_from(pos - egdt_start).unwrap())?;
+
+        let data_start = bw.position()?;
+
+        let mut compressed_size: i32 = 0;
+        for i in 0..chunk_count {
+            let mut chunk_size = 0x10000;
+
+            if i == chunk_count - 1 && chunk_remainder > 0 {
+                chunk_size = chunk_remainder;
+            }
+
+            let chunk_offset = i * 0x10000;
+
+            let input = &data[chunk_offset..(chunk_offset + chunk_size)];
+            let compressed = DeflateHelper::compress_deflate_bytes(input)?;
+
+            let (chunk, is_compressed) = if compressed.len() < chunk_size {
+                (compressed, true)
+            } else {
+                (input.to_vec(), false)
+            };
+
+            match is_compressed {
+                true => bw.fill_i32(chunk_compressed_res[&i], 1)?,
+                false => bw.fill_i32(chunk_compressed_res[&i], 0)?
+            };
+            
+            compressed_size += i32::try_from(chunk.len()).unwrap();
+            let pos = bw.position()?;
+            bw.fill_i32(chunk_offset_res[&i], i32::try_from(pos - data_start).unwrap())?;
+            bw.fill_i32(chunk_size_res[&i], i32::try_from(chunk.len()).unwrap())?;
+            bw.write_u8_vec(chunk)?;
+            bw.pad_00(0x10)?;
+        }
+
+        bw.fill_i32(compressed_size_res, compressed_size)?;
+
+        bw.finalize()?;
+
+        Ok(())
+    }
+
+    fn compress_dcx_zstd<W>(bw: &mut BinaryWriter<W>, data: &Vec<u8>, compression: &Box<dyn CompressionInfo>) -> io::Result<()>
+    where
+        W: Write + Seek
+    {
+        let compression_level = compression.get_dcx_zstd_args()?;
+        let compressed = ZstdHelper::write_zstd(data, compression_level)?;
+
+        bw.write_ascii("DCX", true)?;
+        bw.write_i32(0x11000)?;
+        bw.write_i32(0x18)?;
+        bw.write_i32(0x24)?;
+        bw.write_i32(0x44)?;
+        bw.write_i32(0x4C)?;
+        bw.write_ascii("DCS", true)?;        
+        bw.write_u32(u32::try_from(data.len()).unwrap())?;
+        bw.write_u32(u32::try_from(compressed.len()).unwrap())?;
+        bw.write_ascii("DCP", true)?;        
+        bw.write_ascii("ZSTD", false)?;        
+        bw.write_i32(0x20)?;
+        bw.write_u8(compression_level)?;
+        bw.write_u8(0)?;
+        bw.write_u8(0)?;
+        bw.write_u8(0)?;
+        bw.write_i32(0)?;
+        bw.write_i32(0)?;
+        bw.write_i32(0)?;
+        bw.write_i32(0x10100)?;
+        bw.write_ascii("DCA", true)?;
+        bw.write_i32(8)?;
+        bw.write_u8_vec(compressed)?;
+        bw.pad_00(0x10)?;
+
+        bw.finalize()?;
 
         Ok(())
     }

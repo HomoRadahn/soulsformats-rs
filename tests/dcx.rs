@@ -1,5 +1,5 @@
-use soulsformats_rs::dcx::compression_info::{DcpDfltCompressionInfo, Type};
-use soulsformats_rs::dcx::{DCX};
+use soulsformats_rs::dcx::compression_info::*;
+use soulsformats_rs::DCX;
 use soulsformats_rs::io::{BinaryWriter, Endian};
 
 #[test]
@@ -64,7 +64,59 @@ fn dcp_dflt_round_trip() {
 
     let output = dcx.compress_to_bytes().unwrap();
 
-    let round = DCX::decompress_bytes(output).unwrap();
+    let round_trip = DCX::decompress_bytes(output).unwrap();
 
-    assert_eq!(round.decompressed, b"hello, soulsformats-rs".to_vec());
+    assert_eq!(round_trip.decompressed, b"hello, soulsformats-rs".to_vec());
+}
+
+#[test]
+fn dcp_edge_round_trip() {
+    let dcx = DCX::new(b"hello, soulsformats-rs".to_vec(), Box::new(DcpEdgeCompressionInfo));
+
+    let output = dcx.compress_to_bytes().unwrap();
+
+    let round_trip = DCX::decompress_bytes(output).unwrap();
+
+    assert_eq!(round_trip.decompressed, b"hello, soulsformats-rs".to_vec());
+}
+
+#[test]
+fn dcx_edge_round_trip() {
+    let dcx = DCX::new(b"hello, soulsformats-rs".to_vec(), Box::new(DcxEdgeCompressionInfo));
+
+    let output = dcx.compress_to_bytes().unwrap();
+
+    let round_trip = DCX::decompress_bytes(output).unwrap();
+
+    assert_eq!(round_trip.decompressed, b"hello, soulsformats-rs".to_vec());
+}
+
+#[test]
+fn dcx_dftl_round_trip() {
+    let dcx = DCX::new(b"hello, soulsformats-rs".to_vec(), Box::new(DcxDfltCompressionInfo::from_preset(DfltCompressionPreset::DcxDflt10000_24_9)));
+
+    let output = dcx.compress_to_bytes().unwrap();
+
+    let round_trip = DCX::decompress_bytes(output).unwrap();
+
+    assert_eq!(round_trip.decompressed, b"hello, soulsformats-rs".to_vec());
+}
+
+#[test]
+#[should_panic]
+fn dcx_krak_round_trip() {
+    let dcx = DCX::new(b"hello, soulsformats-rs".to_vec(), Box::new(DcxKrakCompressionInfo));
+
+    dcx.compress_to_bytes().unwrap();
+}
+
+#[test]
+fn dcx_zstd_round_trip() {
+    let dcx = DCX::new(b"hello, soulsformats-rs".to_vec(), Box::new(DcxZstdCompressionInfo {compression_level: 6}));
+
+    let output = dcx.compress_to_bytes().unwrap();
+
+    let round_trip = DCX::decompress_bytes(output).unwrap();
+
+    assert_eq!(round_trip.decompressed, b"hello, soulsformats-rs".to_vec());
 }

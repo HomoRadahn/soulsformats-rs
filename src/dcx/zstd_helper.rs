@@ -1,6 +1,8 @@
 use std::io::{self, Read, Seek};
 use crate::{io::BinaryReader};
 use zstd;
+use zstd::bulk::Compressor;
+use zstd::zstd_safe::CParameter;
 
 pub struct ZstdHelper;
 
@@ -12,5 +14,13 @@ impl ZstdHelper {
     {
         let compressed = br.read_u8_vec(compressed_size)?;
         zstd::decode_all(compressed.as_slice())
+    }
+
+    /// Writes `data` as Zstd with `compression_level`
+    pub fn write_zstd(data: &Vec<u8>, compression_level: u8) -> io::Result<Vec<u8>> {
+        let mut compressor = Compressor::new(compression_level as i32)?;
+        compressor.set_parameter(CParameter::ContentSizeFlag(false))?;
+        compressor.set_parameter(CParameter::WindowLog(16))?;
+        compressor.compress(&data[..])
     }
 }
