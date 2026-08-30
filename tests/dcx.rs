@@ -1,4 +1,4 @@
-use soulsformats_rs::dcx::compression_info::{Type};
+use soulsformats_rs::dcx::compression_info::{DcpDfltCompressionInfo, Type};
 use soulsformats_rs::dcx::{DCX};
 use soulsformats_rs::io::{BinaryWriter, Endian};
 
@@ -56,4 +56,15 @@ fn dcx_dflt() {
 fn dcx_zstd() {
     let dcx = DCX::decompress_file("./tests/files/dcx_zstd.dcx".into()).unwrap();
     assert_eq!(dcx.compression.get_type(), Type::DcxZstd);
+}
+
+#[test]
+fn dcp_dflt_round_trip() {
+    let dcx = DCX::new(b"hello, soulsformats-rs".to_vec(), Box::new(DcpDfltCompressionInfo));
+
+    let output = dcx.compress_to_bytes().unwrap();
+
+    let round = DCX::decompress_bytes(output).unwrap();
+
+    assert_eq!(round.decompressed, b"hello, soulsformats-rs".to_vec());
 }

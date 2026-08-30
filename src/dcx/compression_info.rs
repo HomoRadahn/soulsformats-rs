@@ -164,6 +164,7 @@ impl DcxZstdCompressionInfo {
     }
 }
 
+#[allow(dead_code)]
 pub struct EdgeChunk {
     compressed_offset: u64,
     compressed_length: u64,

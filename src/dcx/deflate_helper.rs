@@ -1,10 +1,12 @@
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 use flate2::read::DeflateDecoder;
+use flate2::write::DeflateEncoder;
+use flate2::Compression;
 
 pub struct DeflateHelper;
 
 impl DeflateHelper {
-    /// Decompresses zlib bytes coming after a zlib header
+    /// Decompresses deflate bytes
     pub fn decompress_deflate_bytes(compressed_bytes: &[u8]) -> io::Result<Vec<u8>> {
         let mut decoder = DeflateDecoder::new(compressed_bytes);
         let mut decompressed = Vec::new();
@@ -12,5 +14,13 @@ impl DeflateHelper {
         decoder.read_to_end(&mut decompressed)?;
 
         Ok(decompressed)
+    }
+
+    pub fn compress_deflate_bytes(data: &[u8]) -> io::Result<Vec<u8>> {
+        let mut encoder = DeflateEncoder::new(Vec::new(), Compression::default());
+        encoder.write_all(&data)?;
+        let output = encoder.finish()?;
+
+        Ok(output)
     }
 }
