@@ -229,10 +229,10 @@ impl<R: Read + Seek> BinaryReader<R> {
         let initial = self.position()?;
         self.seek(position)?;
 
-        let result = read(self);
-        let restore = self.seek(initial);
-
-        result.and_then(|value| restore.map(|_| value))
+        let result = read(self)?;
+        self.seek(initial)?;
+        
+        Ok(result)
     }
 
     fn decode_shift_jis(bytes: &[u8]) -> String {
@@ -251,7 +251,7 @@ impl<R: Read + Seek> BinaryReader<R> {
             Endian::Little => u16::from_le_bytes([pair[0], pair[1]]),
             Endian::Big => u16::from_be_bytes([pair[0], pair[1]]),
         });
-
+        
         String::from_utf16(&code_units.collect::<Vec<_>>())
             .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))
     }
@@ -323,6 +323,7 @@ impl<R: Read + Seek> BinaryReader<R> {
             }
             bytes.extend_from_slice(&pair);
         }
+        
         self.decode_utf16(&bytes)
     }
 

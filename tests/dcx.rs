@@ -1,4 +1,4 @@
-use soulsformats_rs::DCX;
+use soulsformats_rs::{DCX};
 use soulsformats_rs::dcx::compression_info::*;
 use soulsformats_rs::io::{BinaryWriter, Endian};
 

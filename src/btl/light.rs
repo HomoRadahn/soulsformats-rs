@@ -2,7 +2,7 @@ use std::io::{self, Read, Seek, Write};
 
 use crate::io::{BinaryReader, BinaryWriter, ByteVector3, ByteVector4, Vector3};
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 /// Type of a light source
 pub enum LightType {
     #[default]
@@ -30,7 +30,7 @@ impl TryFrom<u32> for LightType {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Light {
     pub unk_00: Vec<u8>,
     /// Name of this light
@@ -146,7 +146,8 @@ impl Light {
         }
     }
 
-    fn read<R>(br: &mut BinaryReader<R>, names_start: i64, version: i32) -> io::Result<Self>
+    /// Reads the `Light` from the supplied `BinaryReader`
+    pub fn read<R>(br: &mut BinaryReader<R>, names_start: i64, version: i32) -> io::Result<Self>
     where
         R: Read + Seek,
     {
@@ -190,7 +191,7 @@ impl Light {
         output.sharpness = br.read_f32()?;
         br.assert_i32(&[0])?;
         output.unk_ac = br.read_f32()?;
-        br.assert_i32(&[0])?;
+        br.assert_varint(&[0])?;
         output.width = br.read_f32()?;
         output.unk_bc = br.read_f32()?;
         output.unk_c0 = br.read_u8_vec(4)?;
@@ -219,10 +220,95 @@ impl Light {
         Ok(output)
     }
 
-    fn write<W>(br: &mut BinaryWriter<W>) -> io::Result<()>
+    pub fn write<W>(&mut self, bw: &mut BinaryWriter<W>, name_offset: i64) -> io::Result<()>
     where
         W: Write + Seek,
     {
+        let out = self.clone();
+        bw.write_u8_vec(out.unk_00)?;
+        bw.write_varint(name_offset)?;
+        bw.write_u32(out.light_type as u32)?;
+        bw.write_bool(out.unk_1c)?;
+        bw.write_byte_vector3(out.diffuse_color)?;
+        bw.write_f32(out.diffuse_power)?;
+        bw.write_byte_vector3(out.specular_color)?;
+        bw.write_bool(out.cast_shadows)?;
+        bw.write_f32(out.specular_power)?;
+        bw.write_f32(out.cone_angle)?;
+        bw.write_f32(out.unk_30)?;
+        bw.write_f32(out.unk_34)?;
+        bw.write_vector3(out.position)?;
+        bw.write_vector3(out.rotation)?;
+        bw.write_i32(out.unk_50)?;
+        bw.write_f32(out.unk_54)?;
+        bw.write_f32(out.radius)?;
+        bw.write_i32(out.unk_5c)?;
+        bw.write_i32(0)?;
+        bw.write_u8_vec(out.unk_64)?;
+        bw.write_f32(out.unk_68)?;
+        bw.write_byte_vector4_rgba(out.shadow_color)?;
+        bw.write_f32(out.unk_70)?;
+        bw.write_f32(out.flicker_interval_min)?;
+        bw.write_f32(out.flicker_interval_max)?;
+        bw.write_f32(out.flicker_brightness_multiplier)?;
+        bw.write_i32(out.unk_80)?;
+        bw.write_u8_vec(out.unk_84)?;
+        bw.write_f32(out.unk_88)?;
+        bw.write_i32(0)?;
+        bw.write_f32(out.unk_90)?;
+        bw.write_i32(0)?;
+        bw.write_f32(out.unk_98)?;
+        bw.write_f32(out.near_clip)?;
+        bw.write_u8_vec(out.unk_a0)?;
+        bw.write_f32(out.sharpness)?;
+        bw.write_i32(0)?;
+        bw.write_f32(out.unk_ac)?;
+        bw.write_varint(0)?;
+        bw.write_f32(out.width)?;
+        bw.write_f32(out.unk_bc)?;
+        bw.write_u8_vec(out.unk_c0)?;
+        bw.write_f32(out.unk_c4)?;
+
+        match out.unk_c8 {
+            Some(value) => bw.write_f32(value)?,
+            None => ()
+        };
+
+        match out.unk_cc {
+            Some(value) => bw.write_f32(value)?,
+            None => ()
+        };
+
+        match out.unk_d0 {
+            Some(value) => bw.write_f32(value)?,
+            None => ()
+        };
+
+        match out.unk_d4 {
+            Some(value) => bw.write_f32(value)?,
+            None => ()
+        };
+
+        match out.unk_d8 {
+            Some(value) => bw.write_f32(value)?,
+            None => ()
+        };
+
+        match out.unk_dc {
+            Some(value) => bw.write_i32(value)?,
+            None => ()
+        };
+
+        match out.unk_e0 {
+            Some(value) => bw.write_f32(value)?,
+            None => ()
+        };
+
+        match out.unk_e4 {
+            Some(value) => bw.write_i32(value)?,
+            None => ()
+        };
+
         Ok(())
     }
 }

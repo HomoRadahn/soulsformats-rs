@@ -244,14 +244,14 @@ macro_rules! test_numeric_reservation {
 
 #[test]
 fn write_varint_i64() {
-    let mut big_writer = BinaryWriter::to_bytes(Endian::Big, false);
+    let mut big_writer = BinaryWriter::to_bytes(Endian::Big, true);
     big_writer.write_varint(-2).unwrap();
     assert_eq!(
         big_writer.get_ref_bytes(),
         &[0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE][..]
     );
 
-    let mut big_vec_writer = BinaryWriter::to_bytes(Endian::Big, false);
+    let mut big_vec_writer = BinaryWriter::to_bytes(Endian::Big, true);
     big_vec_writer
         .write_varint_vec(vec![-2, 562949953421312])
         .unwrap();
@@ -263,14 +263,14 @@ fn write_varint_i64() {
         ][..]
     );
 
-    let mut little_writer = BinaryWriter::to_bytes(Endian::Little, false);
+    let mut little_writer = BinaryWriter::to_bytes(Endian::Little, true);
     little_writer.write_varint(-2).unwrap();
     assert_eq!(
         little_writer.get_ref_bytes(),
         &[0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF][..]
     );
 
-    let mut little_vec_writer = BinaryWriter::to_bytes(Endian::Little, false);
+    let mut little_vec_writer = BinaryWriter::to_bytes(Endian::Little, true);
     little_vec_writer
         .write_varint_vec(vec![-2, 562949953421312])
         .unwrap();

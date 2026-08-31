@@ -8,16 +8,17 @@ pub struct Util;
 
 impl Util {
     pub fn get_decompressed_binary_reader<R>(
-        mut br: BinaryReader<R>,
+        br: &mut BinaryReader<R>,
     ) -> io::Result<(BinaryReader<Cursor<Vec<u8>>>, Box<dyn CompressionInfo>)>
     where
         R: Read + Seek,
     {
-        if DCX::is(&mut br)? {
-            let (bytes, compression) = DCX::decompress(br)?;
+        if DCX::is(br)? {
+            let len = br.length()?;
+            let dcx = DCX::decompress_bytes(br.get_u8_vec(0, len)?)?;
             return Ok((
-                BinaryReader::from_bytes(bytes, Endian::Little, true),
-                compression,
+                BinaryReader::from_bytes(dcx.decompressed, Endian::Little, false),
+                dcx.compression,
             ));
         } else {
             let len = br.length()?;

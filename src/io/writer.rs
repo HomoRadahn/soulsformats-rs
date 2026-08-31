@@ -382,10 +382,10 @@ impl<W: Write + Seek> BinaryWriter<W> {
     }
 
     /// Writes a `ByteVector3` as three `u8` numbers
-    pub fn write_byte_vector3(&mut self, byte_vector4: ByteVector3) -> io::Result<()> {
-        self.write_u8(byte_vector4.x)?;
-        self.write_u8(byte_vector4.y)?;
-        self.write_u8(byte_vector4.z)
+    pub fn write_byte_vector3(&mut self, byte_vector3: ByteVector3) -> io::Result<()> {
+        self.write_u8(byte_vector3.x)?;
+        self.write_u8(byte_vector3.y)?;
+        self.write_u8(byte_vector3.z)
     }
 
     /// Write `length` of the given `value`
