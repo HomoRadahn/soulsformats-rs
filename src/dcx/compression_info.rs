@@ -25,6 +25,8 @@ pub enum DfltCompressionPreset {
 pub trait CompressionInfo {
     fn get_type(&self) -> Type;
 
+    fn box_clone(&self) -> Box<dyn CompressionInfo>;
+
     fn get_dcx_dflt_args(&self) -> io::Result<DcxDfltCompressionArgs> {
         Err(io::Error::new(InvalidData, "not implemented for this type"))
     }
@@ -34,54 +36,85 @@ pub trait CompressionInfo {
     }
 }
 
+#[derive(Clone)]
 pub struct UnkCompressionInfo;
 
 impl CompressionInfo for UnkCompressionInfo {
     fn get_type(&self) -> Type {
         Type::Unknown
     }
+
+    fn box_clone(&self) -> Box<dyn CompressionInfo> {
+        Box::new(self.clone())
+    }
 }
 
+#[derive(Clone)]
 pub struct NoCompressionInfo;
 
 impl CompressionInfo for NoCompressionInfo {
     fn get_type(&self) -> Type {
         Type::None
     }
+
+    fn box_clone(&self) -> Box<dyn CompressionInfo> {
+        Box::new(self.clone())
+    }
 }
 
+#[derive(Clone)]
 pub struct DcpDfltCompressionInfo;
 
 impl CompressionInfo for DcpDfltCompressionInfo {
     fn get_type(&self) -> Type {
         Type::DcpDflt
     }
+
+    fn box_clone(&self) -> Box<dyn CompressionInfo> {
+        Box::new(self.clone())
+    }
 }
 
+#[derive(Clone)]
 pub struct DcpEdgeCompressionInfo;
 
 impl CompressionInfo for DcpEdgeCompressionInfo {
     fn get_type(&self) -> Type {
         Type::DcpEdge
     }
+
+    fn box_clone(&self) -> Box<dyn CompressionInfo> {
+        Box::new(self.clone())
+    }
 }
 
+#[derive(Clone)]
 pub struct ZlibCompressionInfo;
 
 impl CompressionInfo for ZlibCompressionInfo {
     fn get_type(&self) -> Type {
         Type::Zlib
     }
+
+    fn box_clone(&self) -> Box<dyn CompressionInfo> {
+        Box::new(self.clone())
+    }
 }
 
+#[derive(Clone)]
 pub struct DcxEdgeCompressionInfo;
 
 impl CompressionInfo for DcxEdgeCompressionInfo {
     fn get_type(&self) -> Type {
         Type::DcxEdge
     }
+
+    fn box_clone(&self) -> Box<dyn CompressionInfo> {
+        Box::new(self.clone())
+    }
 }
 
+#[derive(Clone)]
 pub struct DcxDfltCompressionInfo {
     pub args: DcxDfltCompressionArgs,
 }
@@ -98,6 +131,10 @@ pub struct DcxDfltCompressionArgs {
 impl CompressionInfo for DcxDfltCompressionInfo {
     fn get_type(&self) -> Type {
         Type::DcxDflt
+    }
+
+    fn box_clone(&self) -> Box<dyn CompressionInfo> {
+        Box::new(self.clone())
     }
 
     fn get_dcx_dflt_args(&self) -> io::Result<DcxDfltCompressionArgs> {
@@ -171,16 +208,22 @@ impl DcxDfltCompressionInfo {
     }
 }
 
+#[derive(Clone)]
 pub enum KrakCompressionPreset {
     EldenRing,
     ArmoredCore6,
 }
 
+#[derive(Clone)]
 pub struct DcxKrakCompressionInfo;
 
 impl CompressionInfo for DcxKrakCompressionInfo {
     fn get_type(&self) -> Type {
         unimplemented!()
+    }
+
+    fn box_clone(&self) -> Box<dyn CompressionInfo> {
+        Box::new(self.clone())
     }
 }
 
@@ -190,6 +233,7 @@ impl DcxKrakCompressionInfo {
     }
 }
 
+#[derive(Clone)]
 pub struct DcxZstdCompressionInfo {
     pub compression_level: u8,
 }
@@ -197,6 +241,10 @@ pub struct DcxZstdCompressionInfo {
 impl CompressionInfo for DcxZstdCompressionInfo {
     fn get_type(&self) -> Type {
         Type::DcxZstd
+    }
+
+    fn box_clone(&self) -> Box<dyn CompressionInfo> {
+        Box::new(self.clone())
     }
 
     fn get_dcx_zstd_args(&self) -> io::Result<u8> {

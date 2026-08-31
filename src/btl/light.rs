@@ -2,7 +2,7 @@ use std::io::{self, Read, Seek, Write};
 
 use crate::io::{BinaryReader, BinaryWriter, ByteVector3, ByteVector4, Vector3};
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, PartialEq, Debug)]
 /// Type of a light source
 pub enum LightType {
     #[default]
@@ -30,7 +30,7 @@ impl TryFrom<u32> for LightType {
     }
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, PartialEq, Debug)]
 pub struct Light {
     pub unk_00: Vec<u8>,
     /// Name of this light
@@ -220,7 +220,7 @@ impl Light {
         Ok(output)
     }
 
-    pub fn write<W>(&mut self, bw: &mut BinaryWriter<W>, name_offset: i64) -> io::Result<()>
+    pub fn write<W>(&self, bw: &mut BinaryWriter<W>, name_offset: i64) -> io::Result<()>
     where
         W: Write + Seek,
     {
