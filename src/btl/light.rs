@@ -271,42 +271,42 @@ impl Light {
 
         match out.unk_c8 {
             Some(value) => bw.write_f32(value)?,
-            None => ()
+            None => (),
         };
 
         match out.unk_cc {
             Some(value) => bw.write_f32(value)?,
-            None => ()
+            None => (),
         };
 
         match out.unk_d0 {
             Some(value) => bw.write_f32(value)?,
-            None => ()
+            None => (),
         };
 
         match out.unk_d4 {
             Some(value) => bw.write_f32(value)?,
-            None => ()
+            None => (),
         };
 
         match out.unk_d8 {
             Some(value) => bw.write_f32(value)?,
-            None => ()
+            None => (),
         };
 
         match out.unk_dc {
             Some(value) => bw.write_i32(value)?,
-            None => ()
+            None => (),
         };
 
         match out.unk_e0 {
             Some(value) => bw.write_f32(value)?,
-            None => ()
+            None => (),
         };
 
         match out.unk_e4 {
             Some(value) => bw.write_i32(value)?,
-            None => ()
+            None => (),
         };
 
         Ok(())

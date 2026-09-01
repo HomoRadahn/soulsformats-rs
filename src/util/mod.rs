@@ -1,8 +1,11 @@
 use std::io::{self, Cursor, Read, Seek};
 
-use crate::dcx::compression_info::NoCompressionInfo;
 use crate::io::Endian;
-use crate::{DCX, dcx::compression_info::CompressionInfo, io::BinaryReader};
+use crate::{
+    DCX,
+    dcx::compression_info::{CompressionInfo, NoCompressionInfo},
+    io::BinaryReader,
+};
 
 pub struct Util;
 
