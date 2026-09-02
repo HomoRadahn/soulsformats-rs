@@ -1,6 +1,6 @@
 use crate::{
     DCX,
-    dcx::compression_info::{CompressionInfo, Type},
+    dcx::compression_info::{CompressionInfo},
     io::{BinaryReader, BinaryWriter, Endian},
 };
 use std::{
@@ -12,7 +12,7 @@ pub trait SoulsFile<T>
 where
     T: SoulsFile<T>,
 {
-    fn get_compression(&self) -> Box<dyn CompressionInfo>;
+    fn get_compression(&self) -> CompressionInfo;
     fn read<R>(br: &mut BinaryReader<R>) -> io::Result<T>
     where
         R: Read + Seek;
@@ -34,22 +34,22 @@ where
     fn to_bytes(&self) -> io::Result<Vec<u8>> {
         let mut bw = BinaryWriter::to_bytes(Endian::Little, false);
         self.write(&mut bw)?;
-        if self.get_compression().get_type() == Type::None {
+        if self.get_compression() == CompressionInfo::None {
             return Ok(bw.close_bytes()?);
         }
 
-        let dcx = DCX::new(bw.close_bytes()?, self.get_compression().box_clone());
+        let dcx = DCX::new(bw.close_bytes()?, self.get_compression());
         return dcx.compress_to_bytes();
     }
 
     fn to_file(&self, path: &str) -> io::Result<()> {
         let mut bw = BinaryWriter::to_bytes(Endian::Little, false);
         self.write(&mut bw)?;
-        if self.get_compression().get_type() == Type::None {
+        if self.get_compression() == CompressionInfo::None {
             fs::write(path, bw.close_bytes()?)?;
         }
 
-        let dcx = DCX::new(bw.close_bytes()?, self.get_compression().box_clone());
+        let dcx = DCX::new(bw.close_bytes()?, self.get_compression());
         return dcx.compress_to_file(path);
     }
 }

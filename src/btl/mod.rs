@@ -4,7 +4,7 @@ use crate::{
     SoulsFile,
     dcx::compression_info::*,
     io::{BinaryReader, BinaryWriter, Endian},
-    util::Util,
+    util,
 };
 
 pub mod light;
@@ -13,7 +13,7 @@ pub use light::Light;
 pub use light::LightType;
 
 pub struct BTL {
-    pub compression: Box<dyn CompressionInfo>,
+    pub compression: CompressionInfo,
     pub version: i32,
     pub offsets_64bit: bool,
     pub lights: Vec<Light>,
@@ -22,7 +22,7 @@ pub struct BTL {
 impl BTL {
     pub fn new(version: i32, offsets_64bit: bool) -> Self {
         Self {
-            compression: Box::new(NoCompressionInfo),
+            compression: CompressionInfo::None,
             version,
             offsets_64bit,
             lights: Vec::new(),
@@ -31,15 +31,15 @@ impl BTL {
 }
 
 impl SoulsFile<BTL> for BTL {
-    fn get_compression(&self) -> Box<dyn CompressionInfo> {
-        self.compression.box_clone()
+    fn get_compression(&self) -> CompressionInfo {
+        self.compression
     }
 
     fn read<R>(br: &mut BinaryReader<R>) -> io::Result<Self>
     where
         R: Read + Seek,
     {
-        let (mut reader, compression) = Util::get_decompressed_binary_reader(br)?;
+        let (mut reader, compression) = util::get_decompressed_binary_reader(br)?;
         reader.set_endian(Endian::Little);
         reader.assert_i32(&[2])?;
         let version = reader.assert_i32(&[1, 2, 5, 6, 16, 18])?;

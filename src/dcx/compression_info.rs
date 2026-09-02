@@ -1,20 +1,84 @@
-use std::io::{self, ErrorKind::InvalidData};
-
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub enum Type {
+pub enum CompressionInfo {
     Unknown,
     None,
     Zlib,
     DcpEdge,
     DcpDflt,
     DcxEdge,
-    DcxDflt,
+    DcxDflt(DcxDfltCompressionArgs),
     DcxKrak,
-    DcxZstd,
+    DcxZstd(u8),
+}
+
+impl CompressionInfo {
+    /// Initializes `DcxDfltCompressionInfo` from given values
+    pub fn new_dcx_dflt(unk04: i32, unk10: i32, unk14: i32, unk30: i32, unk38: i32) -> Self {
+        Self::DcxDflt( 
+            DcxDfltCompressionArgs {
+                unk_04: unk04,
+                unk_10: unk10,
+                unk_14: unk14,
+                unk_30: unk30,
+                unk_38: unk38,
+            }
+        )
+    }
+
+    /// Initializes `DcxDfltCompressionInfo` from given preset
+    pub fn dcx_dflt_from_preset(preset: DcxDfltCompressionPreset) -> Self {
+        match preset {
+            DcxDfltCompressionPreset::DcxDflt10000_24_9 => Self::DcxDflt(
+                DcxDfltCompressionArgs {
+                    unk_04: 0x10000,
+                    unk_10: 0x24,
+                    unk_14: 0x2C,
+                    unk_30: 9,
+                    unk_38: 0,
+                }
+            ),
+            DcxDfltCompressionPreset::DcxDflt10000_44_9 => Self::DcxDflt(
+                DcxDfltCompressionArgs {
+                    unk_04: 0x10000,
+                    unk_10: 0x44,
+                    unk_14: 0x4C,
+                    unk_30: 9,
+                    unk_38: 0,
+                }
+            ),
+            DcxDfltCompressionPreset::DcxDflt11000_44_8 => Self::DcxDflt(
+                DcxDfltCompressionArgs {
+                    unk_04: 0x11000,
+                    unk_10: 0x44,
+                    unk_14: 0x4C,
+                    unk_30: 8,
+                    unk_38: 0,
+                }
+            ),
+            DcxDfltCompressionPreset::DcxDflt11000_44_9 => Self::DcxDflt(
+                DcxDfltCompressionArgs {
+                    unk_04: 0x11000,
+                    unk_10: 0x44,
+                    unk_14: 0x4C,
+                    unk_30: 9,
+                    unk_38: 0,
+                }
+            ),
+            DcxDfltCompressionPreset::DcxDflt11000_44_9_15 => Self::DcxDflt(
+                DcxDfltCompressionArgs {
+                    unk_04: 0x11000,
+                    unk_10: 0x44,
+                    unk_14: 0x4C,
+                    unk_30: 8,
+                    unk_38: 15,
+                }
+            ),
+        }
+    }
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum DfltCompressionPreset {
+pub enum DcxDfltCompressionPreset {
     DcxDflt10000_24_9,
     DcxDflt10000_44_9,
     DcxDflt11000_44_8,
@@ -22,104 +86,7 @@ pub enum DfltCompressionPreset {
     DcxDflt11000_44_9_15,
 }
 
-pub trait CompressionInfo {
-    fn get_type(&self) -> Type;
-
-    fn box_clone(&self) -> Box<dyn CompressionInfo>;
-
-    fn get_dcx_dflt_args(&self) -> io::Result<DcxDfltCompressionArgs> {
-        Err(io::Error::new(InvalidData, "not implemented for this type"))
-    }
-
-    fn get_dcx_zstd_args(&self) -> io::Result<u8> {
-        Err(io::Error::new(InvalidData, "not implemented for this type"))
-    }
-}
-
-#[derive(Clone)]
-pub struct UnkCompressionInfo;
-
-impl CompressionInfo for UnkCompressionInfo {
-    fn get_type(&self) -> Type {
-        Type::Unknown
-    }
-
-    fn box_clone(&self) -> Box<dyn CompressionInfo> {
-        Box::new(self.clone())
-    }
-}
-
-#[derive(Clone)]
-pub struct NoCompressionInfo;
-
-impl CompressionInfo for NoCompressionInfo {
-    fn get_type(&self) -> Type {
-        Type::None
-    }
-
-    fn box_clone(&self) -> Box<dyn CompressionInfo> {
-        Box::new(self.clone())
-    }
-}
-
-#[derive(Clone)]
-pub struct DcpDfltCompressionInfo;
-
-impl CompressionInfo for DcpDfltCompressionInfo {
-    fn get_type(&self) -> Type {
-        Type::DcpDflt
-    }
-
-    fn box_clone(&self) -> Box<dyn CompressionInfo> {
-        Box::new(self.clone())
-    }
-}
-
-#[derive(Clone)]
-pub struct DcpEdgeCompressionInfo;
-
-impl CompressionInfo for DcpEdgeCompressionInfo {
-    fn get_type(&self) -> Type {
-        Type::DcpEdge
-    }
-
-    fn box_clone(&self) -> Box<dyn CompressionInfo> {
-        Box::new(self.clone())
-    }
-}
-
-#[derive(Clone)]
-pub struct ZlibCompressionInfo;
-
-impl CompressionInfo for ZlibCompressionInfo {
-    fn get_type(&self) -> Type {
-        Type::Zlib
-    }
-
-    fn box_clone(&self) -> Box<dyn CompressionInfo> {
-        Box::new(self.clone())
-    }
-}
-
-#[derive(Clone)]
-pub struct DcxEdgeCompressionInfo;
-
-impl CompressionInfo for DcxEdgeCompressionInfo {
-    fn get_type(&self) -> Type {
-        Type::DcxEdge
-    }
-
-    fn box_clone(&self) -> Box<dyn CompressionInfo> {
-        Box::new(self.clone())
-    }
-}
-
-#[derive(Clone)]
-pub struct DcxDfltCompressionInfo {
-    pub args: DcxDfltCompressionArgs,
-}
-
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DcxDfltCompressionArgs {
     pub unk_04: i32,
     pub unk_10: i32,
@@ -128,137 +95,12 @@ pub struct DcxDfltCompressionArgs {
     pub unk_38: i32,
 }
 
-impl CompressionInfo for DcxDfltCompressionInfo {
-    fn get_type(&self) -> Type {
-        Type::DcxDflt
-    }
-
-    fn box_clone(&self) -> Box<dyn CompressionInfo> {
-        Box::new(self.clone())
-    }
-
-    fn get_dcx_dflt_args(&self) -> io::Result<DcxDfltCompressionArgs> {
-        Ok(self.args)
-    }
-}
-
-impl DcxDfltCompressionInfo {
-    /// Initializes `DcxDfltCompressionInfo` from given values
-    pub fn new(unk04: i32, unk10: i32, unk14: i32, unk30: i32, unk38: i32) -> Self {
-        Self {
-            args: DcxDfltCompressionArgs {
-                unk_04: unk04,
-                unk_10: unk10,
-                unk_14: unk14,
-                unk_30: unk30,
-                unk_38: unk38,
-            },
-        }
-    }
-
-    /// Initializes `DcxDfltCompressionInfo` from given preset
-    pub fn from_preset(preset: DfltCompressionPreset) -> Self {
-        match preset {
-            DfltCompressionPreset::DcxDflt10000_24_9 => Self {
-                args: DcxDfltCompressionArgs {
-                    unk_04: 0x10000,
-                    unk_10: 0x24,
-                    unk_14: 0x2C,
-                    unk_30: 9,
-                    unk_38: 0,
-                },
-            },
-            DfltCompressionPreset::DcxDflt10000_44_9 => Self {
-                args: DcxDfltCompressionArgs {
-                    unk_04: 0x10000,
-                    unk_10: 0x44,
-                    unk_14: 0x4C,
-                    unk_30: 9,
-                    unk_38: 0,
-                },
-            },
-            DfltCompressionPreset::DcxDflt11000_44_8 => Self {
-                args: DcxDfltCompressionArgs {
-                    unk_04: 0x11000,
-                    unk_10: 0x44,
-                    unk_14: 0x4C,
-                    unk_30: 8,
-                    unk_38: 0,
-                },
-            },
-            DfltCompressionPreset::DcxDflt11000_44_9 => Self {
-                args: DcxDfltCompressionArgs {
-                    unk_04: 0x11000,
-                    unk_10: 0x44,
-                    unk_14: 0x4C,
-                    unk_30: 9,
-                    unk_38: 0,
-                },
-            },
-            DfltCompressionPreset::DcxDflt11000_44_9_15 => Self {
-                args: DcxDfltCompressionArgs {
-                    unk_04: 0x11000,
-                    unk_10: 0x44,
-                    unk_14: 0x4C,
-                    unk_30: 8,
-                    unk_38: 15,
-                },
-            },
-        }
-    }
-}
-
 #[derive(Clone)]
 pub enum KrakCompressionPreset {
     EldenRing,
     ArmoredCore6,
 }
 
-#[derive(Clone)]
-pub struct DcxKrakCompressionInfo;
-
-impl CompressionInfo for DcxKrakCompressionInfo {
-    fn get_type(&self) -> Type {
-        unimplemented!()
-    }
-
-    fn box_clone(&self) -> Box<dyn CompressionInfo> {
-        Box::new(self.clone())
-    }
-}
-
-impl DcxKrakCompressionInfo {
-    pub fn new() -> Self {
-        unimplemented!()
-    }
-}
-
-#[derive(Clone)]
-pub struct DcxZstdCompressionInfo {
-    pub compression_level: u8,
-}
-
-impl CompressionInfo for DcxZstdCompressionInfo {
-    fn get_type(&self) -> Type {
-        Type::DcxZstd
-    }
-
-    fn box_clone(&self) -> Box<dyn CompressionInfo> {
-        Box::new(self.clone())
-    }
-
-    fn get_dcx_zstd_args(&self) -> io::Result<u8> {
-        Ok(self.compression_level)
-    }
-}
-
-impl DcxZstdCompressionInfo {
-    pub fn new(compression_level: u8) -> Self {
-        Self { compression_level }
-    }
-}
-
-#[allow(dead_code)]
 pub struct EdgeChunk {
     pub compressed_offset: i32,
     pub compressed_length: i32,

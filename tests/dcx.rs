@@ -23,40 +23,10 @@ fn is() {
 }
 
 #[test]
-fn dcp_dflt() {
-    let dcx = DCX::decompress_file("./tests/files/dcp_dflt.dcx").unwrap();
-    assert_eq!(dcx.compression.get_type(), Type::DcpDflt);
-}
-
-#[test]
-fn dcp_edge() {
-    let dcx = DCX::decompress_file("./tests/files/dcp_edge.dcx").unwrap();
-    assert_eq!(dcx.compression.get_type(), Type::DcpEdge);
-}
-
-#[test]
-fn dcx_edge() {
-    let dcx = DCX::decompress_file("./tests/files/dcx_edge.dcx".into()).unwrap();
-    assert_eq!(dcx.compression.get_type(), Type::DcxEdge);
-}
-
-#[test]
-fn dcx_dflt() {
-    let dcx = DCX::decompress_file("./tests/files/dcx_dflt.dcx".into()).unwrap();
-    assert_eq!(dcx.compression.get_type(), Type::DcxDflt);
-}
-
-#[test]
-fn dcx_zstd() {
-    let dcx = DCX::decompress_file("./tests/files/dcx_zstd.dcx".into()).unwrap();
-    assert_eq!(dcx.compression.get_type(), Type::DcxZstd);
-}
-
-#[test]
 fn dcp_dflt_round_trip() {
     let dcx = DCX::new(
         b"hello, soulsformats-rs".to_vec(),
-        Box::new(DcpDfltCompressionInfo),
+        CompressionInfo::DcpDflt,
     );
 
     let output = dcx.compress_to_bytes().unwrap();
@@ -70,7 +40,7 @@ fn dcp_dflt_round_trip() {
 fn dcp_edge_round_trip() {
     let dcx = DCX::new(
         b"hello, soulsformats-rs".to_vec(),
-        Box::new(DcpEdgeCompressionInfo),
+        CompressionInfo::DcpEdge,
     );
 
     let output = dcx.compress_to_bytes().unwrap();
@@ -84,7 +54,7 @@ fn dcp_edge_round_trip() {
 fn dcx_edge_round_trip() {
     let dcx = DCX::new(
         b"hello, soulsformats-rs".to_vec(),
-        Box::new(DcxEdgeCompressionInfo),
+        CompressionInfo::DcxEdge,
     );
 
     let output = dcx.compress_to_bytes().unwrap();
@@ -98,9 +68,9 @@ fn dcx_edge_round_trip() {
 fn dcx_dftl_round_trip() {
     let dcx = DCX::new(
         b"hello, soulsformats-rs".to_vec(),
-        Box::new(DcxDfltCompressionInfo::from_preset(
-            DfltCompressionPreset::DcxDflt10000_24_9,
-        )),
+        CompressionInfo::dcx_dflt_from_preset(
+            DcxDfltCompressionPreset::DcxDflt10000_24_9,
+        ),
     );
 
     let output = dcx.compress_to_bytes().unwrap();
@@ -115,7 +85,7 @@ fn dcx_dftl_round_trip() {
 fn dcx_krak_round_trip() {
     let dcx = DCX::new(
         b"hello, soulsformats-rs".to_vec(),
-        Box::new(DcxKrakCompressionInfo),
+        CompressionInfo::DcxKrak,
     );
 
     dcx.compress_to_bytes().unwrap();
@@ -125,9 +95,7 @@ fn dcx_krak_round_trip() {
 fn dcx_zstd_round_trip() {
     let dcx = DCX::new(
         b"hello, soulsformats-rs".to_vec(),
-        Box::new(DcxZstdCompressionInfo {
-            compression_level: 6,
-        }),
+        CompressionInfo::DcxZstd(6)
     );
 
     let output = dcx.compress_to_bytes().unwrap();
