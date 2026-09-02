@@ -122,8 +122,8 @@ impl DCX {
                     let unk14 = br.get_i32(0x14)?;
                     let unk30 = br.get_i32(0x30)?;
                     let unk38 = br.get_i32(0x38)?;
-                    compression = CompressionInfo::new_dcx_dflt(
-                        unk04, unk10, unk14, unk30, unk38,
+                    compression = CompressionInfo::DcxDflt(
+                        DcxDfltArgs::new(unk04, unk10, unk14, unk30, unk38)
                     );
                 }
                 "EDGE" => compression = CompressionInfo::DcxEdge,
@@ -199,7 +199,7 @@ impl DCX {
 
     fn decompress_dcx_dflt<R>(
         mut br: BinaryReader<R>,
-        args: DcxDfltCompressionArgs,
+        args: DcxDfltArgs,
     ) -> io::Result<Vec<u8>>
     where
         R: Read + Seek,
@@ -491,7 +491,7 @@ impl DCX {
     fn compress_dcx_dflt<W>(
         bw: &mut BinaryWriter<W>,
         data: &Vec<u8>,
-        args: DcxDfltCompressionArgs,
+        args: DcxDfltArgs,
     ) -> io::Result<()>
     where
         W: Write + Seek,

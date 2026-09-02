@@ -68,8 +68,8 @@ fn dcx_edge_round_trip() {
 fn dcx_dftl_round_trip() {
     let dcx = DCX::new(
         b"hello, soulsformats-rs".to_vec(),
-        CompressionInfo::dcx_dflt_from_preset(
-            DcxDfltCompressionPreset::DcxDflt10000_24_9,
+        CompressionInfo::DcxDflt(
+            DcxDfltArgs::from_preset(DcxDfltPreset::DcxDflt10000_24_9)
         ),
     );
 
