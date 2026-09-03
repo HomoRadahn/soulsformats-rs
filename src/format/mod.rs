@@ -8,15 +8,26 @@ use std::{
     io::{self, Read, Seek, Write},
 };
 
-pub trait SoulsFile<T>
+pub(crate) trait SoulsFileInternal<T>
 where
-    T: SoulsFile<T>,
+    T: SoulsFileInternal<T>
 {
     fn get_compression(&self) -> CompressionInfo;
     fn read<R>(br: &mut BinaryReader<R>) -> io::Result<T>
     where
         R: Read + Seek;
 
+    fn write<W>(&self, bw: &mut BinaryWriter<W>) -> io::Result<()>
+    where
+        W: Write + Seek;
+}
+
+/// Trait allowing for reading and writing to bytes / files. Not for actual implementation on your own structs
+#[allow(private_bounds)]
+pub trait SoulsFile<T>: SoulsFileInternal<T>
+where
+    T: SoulsFile<T>,
+{
     fn from_bytes(data: Vec<u8>) -> io::Result<T> {
         let mut br = BinaryReader::from_bytes(data, Endian::Little, false);
         T::read(&mut br)
@@ -27,29 +38,20 @@ where
         T::read(&mut br)
     }
 
-    fn write<W>(&self, bw: &mut BinaryWriter<W>) -> io::Result<()>
-    where
-        W: Write + Seek;
-
     fn to_bytes(&self) -> io::Result<Vec<u8>> {
         let mut bw = BinaryWriter::to_bytes(Endian::Little, false);
         self.write(&mut bw)?;
-        if self.get_compression() == CompressionInfo::None {
-            return Ok(bw.close_bytes()?);
-        }
-
-        let dcx = DCX::new(bw.close_bytes()?, self.get_compression());
-        return dcx.compress_to_bytes();
+        let data = bw.close_bytes()?;
+        
+        return Ok(data);
     }
 
     fn to_file(&self, path: &str) -> io::Result<()> {
         let mut bw = BinaryWriter::to_bytes(Endian::Little, false);
         self.write(&mut bw)?;
-        if self.get_compression() == CompressionInfo::None {
-            fs::write(path, bw.close_bytes()?)?;
-        }
+        let data = bw.close_bytes()?;
 
-        let dcx = DCX::new(bw.close_bytes()?, self.get_compression());
-        return dcx.compress_to_file(path);
+        fs::write(path, data)?;
+        return Ok(());
     }
 }

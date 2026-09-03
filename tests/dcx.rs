@@ -12,7 +12,7 @@ fn dcp_dflt_round_trip() {
 
     let round_trip = DCX::decompress_bytes(output).unwrap();
 
-    assert_eq!(round_trip.decompressed, b"hello, soulsformats-rs".to_vec());
+    assert_eq!(round_trip.data, b"hello, soulsformats-rs".to_vec());
 }
 
 #[test]
@@ -26,7 +26,7 @@ fn dcp_edge_round_trip() {
 
     let round_trip = DCX::decompress_bytes(output).unwrap();
 
-    assert_eq!(round_trip.decompressed, b"hello, soulsformats-rs".to_vec());
+    assert_eq!(round_trip.data, b"hello, soulsformats-rs".to_vec());
 }
 
 #[test]
@@ -40,7 +40,7 @@ fn dcx_edge_round_trip() {
 
     let round_trip = DCX::decompress_bytes(output).unwrap();
 
-    assert_eq!(round_trip.decompressed, b"hello, soulsformats-rs".to_vec());
+    assert_eq!(round_trip.data, b"hello, soulsformats-rs".to_vec());
 }
 
 #[test]
@@ -56,7 +56,7 @@ fn dcx_dftl_round_trip() {
 
     let round_trip = DCX::decompress_bytes(output).unwrap();
 
-    assert_eq!(round_trip.decompressed, b"hello, soulsformats-rs".to_vec());
+    assert_eq!(round_trip.data, b"hello, soulsformats-rs".to_vec());
 }
 
 #[test]
@@ -81,5 +81,5 @@ fn dcx_zstd_round_trip() {
 
     let round_trip = DCX::decompress_bytes(output).unwrap();
 
-    assert_eq!(round_trip.decompressed, b"hello, soulsformats-rs".to_vec());
+    assert_eq!(round_trip.data, b"hello, soulsformats-rs".to_vec());
 }

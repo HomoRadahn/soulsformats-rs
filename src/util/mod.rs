@@ -17,7 +17,7 @@ where
         let len = br.length()?;
         let dcx = DCX::decompress_bytes(br.get_u8_vec(0, len)?)?;
         return Ok((
-            BinaryReader::from_bytes(dcx.decompressed, Endian::Little, false),
+            BinaryReader::from_bytes(dcx.data, Endian::Little, false),
             dcx.compression,
         ));
     } else {
