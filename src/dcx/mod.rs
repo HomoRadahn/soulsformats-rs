@@ -8,7 +8,7 @@ use crate::{
         compression_info::*,
         zstd_helper::ZstdHelper,
     },
-    io::{BinaryReader, BinaryWriter, Endian, writer::Reservation},
+    io::{BinaryReader, BinaryWriter, Endian, Reservation},
 };
 pub mod compression_info;
 mod deflate_helper;
@@ -30,7 +30,7 @@ impl DCX {
     }
 
     /// Checks if the provided `BinaryReader` contains a valid DCX
-    pub fn is<R>(br: &mut BinaryReader<R>) -> io::Result<bool>
+    pub(crate) fn is<R>(br: &mut BinaryReader<R>) -> io::Result<bool>
     where
         R: Read + Seek,
     {
@@ -92,8 +92,8 @@ impl DCX {
 
 /// Decompression Internal Functions
 impl DCX {
-    /// Decompressed DCX from the provided `BinaryReader`. Generally recommended to use `decompress_file` or `decompress_bytes`
-    pub fn decompress<R>(mut br: BinaryReader<R>) -> io::Result<(Vec<u8>, CompressionInfo)>
+    /// Decompressed DCX from the provided `BinaryReader`
+    fn decompress<R>(mut br: BinaryReader<R>) -> io::Result<(Vec<u8>, CompressionInfo)>
     where
         R: Read + Seek,
     {

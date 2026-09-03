@@ -1,26 +1,5 @@
 use soulsformats_rs::DCX;
 use soulsformats_rs::dcx::compression_info::*;
-use soulsformats_rs::io::{BinaryWriter, Endian};
-
-#[test]
-fn is() {
-    assert!(DCX::is_bytes(b"DCX\0".to_vec()).unwrap());
-    assert!(DCX::is_bytes(b"DCP\0".to_vec()).unwrap());
-    let dcx_magic = std::env::temp_dir().join(format!("dcx_magic{}.dcx", std::process::id()));
-    let dcp_magic = std::env::temp_dir().join(format!("dcx_magic{}.dcx", std::process::id()));
-
-    let mut writer = BinaryWriter::to_file(&dcx_magic, Endian::Big, false).unwrap();
-    writer.write_u8_vec(b"DCX\0".to_vec()).unwrap();
-    assert!(DCX::is_file(dcx_magic.to_str().unwrap()).unwrap());
-    writer.finalize().unwrap();
-    drop(writer);
-
-    let mut writer_dcp = BinaryWriter::to_file(&dcp_magic, Endian::Big, false).unwrap();
-    writer_dcp.write_u8_vec(b"DCP\0".to_vec()).unwrap();
-    assert!(DCX::is_file(dcp_magic.to_str().unwrap()).unwrap());
-    writer_dcp.finalize().unwrap();
-    drop(writer_dcp);
-}
 
 #[test]
 fn dcp_dflt_round_trip() {

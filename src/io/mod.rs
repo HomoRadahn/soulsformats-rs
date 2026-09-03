@@ -1,8 +1,9 @@
-pub mod reader;
-pub mod writer;
+mod reader;
+mod writer;
 
-pub use reader::BinaryReader;
-pub use writer::BinaryWriter;
+pub(crate) use reader::BinaryReader;
+pub(crate) use writer::BinaryWriter;
+pub(crate) use writer::Reservation;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 #[allow(dead_code)]
