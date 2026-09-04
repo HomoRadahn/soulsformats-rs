@@ -3,7 +3,6 @@ mod writer;
 
 pub(crate) use reader::BinaryReader;
 pub(crate) use writer::BinaryWriter;
-pub(crate) use writer::Reservation;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 #[allow(dead_code)]

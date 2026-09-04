@@ -18,9 +18,9 @@ where
 
     bw.write_u8_vec(deflate_helper::compress_deflate_bytes(input.as_slice())?)?;
 
-    bw.write_u32(adler32(&input))?;
+    bw.write_u32(adler32(&input)?)?;
 
-    Ok(i32::try_from(bw.position()? - start).unwrap())
+    Ok(i32::try_from(bw.position()? - start).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?)
 }
 
 /// Reads a Zlib block from a `BinaryReader` and returns the uncompressed data
@@ -34,14 +34,14 @@ where
     deflate_helper::decompress_deflate_bytes(&br.read_u8_vec(compressed_size - 2)?)
 }
 
-fn adler32(data: &Vec<u8>) -> u32 {
+fn adler32(data: &Vec<u8>) -> Result<u32, io::Error> {
     let mut adler_a: u32 = 1;
     let mut adler_b: u32 = 0;
 
     for byte in data {
-        adler_a = (adler_a + u32::try_from(*byte).unwrap()) % 65521;
+        adler_a = (adler_a + u32::try_from(*byte).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?) % 65521;
         adler_b = (adler_b + adler_a) % 65521;
     }
 
-    (adler_b << 16) | adler_a
+    Ok((adler_b << 16) | adler_a)
 }

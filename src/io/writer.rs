@@ -1,4 +1,5 @@
 use crate::io::{ByteVector3, ByteVector4, Endian, Vector2, Vector3, Vector4};
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, Cursor, Seek, SeekFrom, Write};
 use std::path::Path;
@@ -26,17 +27,17 @@ macro_rules! impl_numeric_writer {
         }
 
         #[doc = concat!("Reserves space at the current position, sized as `", stringify!($type), "`")]
-        pub fn $reserve(&mut self) -> io::Result<Reservation> {
-            self.add_reservation($reservation_size)
+        pub fn $reserve(&mut self, name: impl Into<String>) -> io::Result<()> {
+            self.add_reservation(name, $reservation_size)
         }
 
         #[doc = concat!("Fills specified reservation with a `", stringify!($type), "` value")]
-        pub fn $fill(&mut self, reservation: Reservation, value: $type) -> io::Result<()> {
-            self.free_reservation(reservation)?;
+        pub fn $fill(&mut self, name: &str, value: $type) -> io::Result<()> {
+            let position = self.free_reservation(name)?;
 
             let initial_position = self.position()?;
 
-            self.seek(reservation.position)?;
+            self.seek(position)?;
 
             self.$write(value)?;
 
@@ -50,12 +51,7 @@ pub struct BinaryWriter<W> {
     inner: W,
     endian: Endian,
     varint_i64: bool,
-    reservations: Vec<Reservation>,
-}
-
-#[derive(Clone, Copy, PartialEq)]
-pub struct Reservation {
-    position: u64,
+    reservations: HashMap<String, u64>,
 }
 
 impl<W: Write + Seek> BinaryWriter<W> {
@@ -65,7 +61,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
             inner,
             endian,
             varint_i64,
-            reservations: Vec::new(),
+            reservations: HashMap::new(),
         }
     }
 
@@ -136,43 +132,34 @@ impl<W: Write + Seek> BinaryWriter<W> {
     }
 
     /// Adds reservation at a specified position if that position is not added to current reservation list
-    fn add_reservation(&mut self, size: usize) -> io::Result<Reservation> {
-        let position = self.position()?;
-        for reservation in &self.reservations {
-            if reservation.position == position {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    "tried to reserve already reserved position",
-                ));
-            }
-        }
-
-        self.write_u8_vec(vec![0xFE; size])?;
-
-        self.reservations.push(Reservation { position });
-
-        Ok(Reservation { position })
-    }
-
-    /// Frees a reservation from the list
-    fn free_reservation(&mut self, reservation: Reservation) -> io::Result<()> {
-        if !self.reservations.contains(&reservation) {
+    fn add_reservation(&mut self, name: impl Into<String>, size: usize) -> io::Result<()> {
+        let name = name.into();
+        if self.reservations.contains_key(&name) {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
-                "tried to fill unreserved position",
+                "tried to reserve an already reserved name",
             ));
         }
 
-        if let Some(pos) = self.reservations.iter().position(|x| *x == reservation) {
-            self.reservations.remove(pos);
-        }
+        let position = self.position()?;
 
+        self.write_u8_vec(vec![0xFE; size])?;
+
+        self.reservations.insert(name, position);
         Ok(())
+    }
+
+    /// Frees a reservation from the list
+    fn free_reservation(&mut self, name: &str) -> io::Result<u64> {
+        self.reservations.remove(name).ok_or_else(|| io::Error::new(
+            io::ErrorKind::InvalidData,
+            "tried to fill an unreserved name",
+        ))
     }
 
     /// Finalize the BinaryWriter - recommended to call before dropping
     pub fn finalize(&mut self) -> io::Result<()> {
-        if self.reservations.len() != 0 {
+        if !self.reservations.is_empty() {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 "unable to close writer - not all reservations have been filled",
@@ -197,17 +184,17 @@ impl<W: Write + Seek> BinaryWriter<W> {
     }
 
     /// Reserves space at the current position, sized as `bool`
-    pub fn reserve_bool(&mut self) -> io::Result<Reservation> {
-        self.add_reservation(1)
+    pub fn reserve_bool(&mut self, name: impl Into<String>) -> io::Result<()> {
+        self.add_reservation(name, 1)
     }
 
     /// Fills specified reservation with a `bool` value
-    pub fn fill_bool(&mut self, reservation: Reservation, value: bool) -> io::Result<()> {
-        self.free_reservation(reservation)?;
+    pub fn fill_bool(&mut self, name: &str, value: bool) -> io::Result<()> {
+        let position = self.free_reservation(name)?;
 
         let initial_position = self.position()?;
 
-        self.seek(reservation.position)?;
+        self.seek(position)?;
 
         self.write_bool(value)?;
 
@@ -235,18 +222,18 @@ impl<W: Write + Seek> BinaryWriter<W> {
     }
 
     /// Reserves space at the current position, sized as `varint`
-    pub fn reserve_varint(&mut self) -> io::Result<Reservation> {
+    pub fn reserve_varint(&mut self, name: impl Into<String>) -> io::Result<()> {
         match self.varint_i64 {
-            true => self.reserve_i64(),
-            false => self.reserve_i32(),
+            true => self.reserve_i64(name),
+            false => self.reserve_i32(name),
         }
     }
 
     /// Fills specified reservation with a `varint` value
-    pub fn fill_varint(&mut self, reservation: Reservation, value: i64) -> io::Result<()> {
+    pub fn fill_varint(&mut self, name: &str, value: i64) -> io::Result<()> {
         match self.varint_i64 {
-            true => self.fill_i64(reservation, value)?,
-            false => self.fill_i32(reservation, value as i32)?,
+            true => self.fill_i64(name, value)?,
+            false => self.fill_i32(name, value as i32)?,
         }
 
         Ok(())
@@ -646,13 +633,13 @@ mod tests {
         let mut writer = BinaryWriter::to_bytes(Endian::Big, false);
 
         writer.write_u8_vec(vec![0x00, 0x00, 0x00, 0x00]).unwrap();
-        let sample_reservation = writer.reserve_bool().unwrap();
+        writer.reserve_bool("sample").unwrap();
         writer.write_u8_vec(vec![0x00, 0x00, 0x00, 0x00]).unwrap();
         assert_eq!(
             writer.get_ref_bytes(),
             &vec![0x00, 0x00, 0x00, 0x00, 0xFE, 0x00, 0x00, 0x00, 0x00]
         );
-        writer.fill_bool(sample_reservation, true).unwrap();
+        writer.fill_bool("sample", true).unwrap();
         assert_eq!(writer.position().unwrap(), writer.length().unwrap());
 
         assert_eq!(
@@ -670,10 +657,10 @@ mod tests {
                 for (endian, expected_single) in [(Endian::Little, $little), (Endian::Big, $big)] {
                     let mut writer = BinaryWriter::to_bytes(endian, false);
                     writer.write_u8_vec(vec![0x00, 0x00, 0x00, 0x00]).unwrap();
-                    let sample_reservation = writer.$reserve().unwrap();
+                    writer.$reserve(stringify!($name)).unwrap();
                     writer.write_u8_vec(vec![0x00, 0x00, 0x00, 0x00]).unwrap();
                     assert_eq!(writer.get_ref_bytes(), $expected_middle);
-                    writer.$fill(sample_reservation, $single).unwrap();
+                    writer.$fill(stringify!($name), $single).unwrap();
                     assert_eq!(writer.position().unwrap(), writer.length().unwrap());
 
                     assert_eq!(writer.get_ref_bytes(), expected_single);
@@ -900,17 +887,17 @@ mod tests {
     #[should_panic]
     fn already_reserved() {
         let mut writer = BinaryWriter::to_bytes(Endian::Big, false);
-        writer.reserve_bool().unwrap();
+        writer.reserve_bool("sample").unwrap();
 
         writer.seek(0).unwrap();
-        writer.reserve_bool().unwrap();
+        writer.reserve_bool("sample").unwrap();
     }
 
     #[test]
     #[should_panic]
     fn closing_with_reservations() {
         let mut writer = BinaryWriter::to_bytes(Endian::Big, false);
-        writer.reserve_bool().unwrap();
+        writer.reserve_bool("sample").unwrap();
 
         writer.close_bytes().unwrap();
     }

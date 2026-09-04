@@ -1,14 +1,11 @@
-use std::{
-    collections::HashMap,
-    io::{self, Read, Seek, Write},
-};
+use std::io::{self, Read, Seek, Write};
 
 use crate::{
     dcx::{
         compression_info::*,
         zstd_helper::ZstdHelper,
     },
-    io::{BinaryReader, BinaryWriter, Endian, Reservation},
+    io::{BinaryReader, BinaryWriter, Endian},
 };
 pub mod compression_info;
 mod deflate_helper;
@@ -191,7 +188,7 @@ impl DCX {
         br.read_i32()?;
         let compressed = br.read_i32()?;
 
-        let output = zlib_helper::read_zlib(&mut br, u64::try_from(compressed).unwrap())?;
+        let output = zlib_helper::read_zlib(&mut br, u64::try_from(compressed).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?)?;
 
         br.assert_ascii(&["DCA\0"])?;
         br.assert_i32(&[8])?;
@@ -283,8 +280,8 @@ impl DCX {
             let compressed = br.assert_i32(&[0, 1])? == 1;
 
             let mut chunk = br.get_u8_vec(
-                data_start + u64::try_from(offset).unwrap(),
-                u64::try_from(size).unwrap(),
+                data_start + u64::try_from(offset).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?,
+                u64::try_from(size).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?,
             )?;
 
             if compressed {
@@ -361,10 +358,10 @@ impl DCX {
             let compressed = br.assert_i32(&[0, 1])? == 1;
 
             let mut chunk = br.get_u8_vec(
-                u64::try_from(dca_start).unwrap()
-                    + u64::try_from(dca_size).unwrap()
-                    + u64::try_from(offset).unwrap(),
-                u64::try_from(size).unwrap(),
+                u64::try_from(dca_start).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?
+                    + u64::try_from(dca_size).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?
+                    + u64::try_from(offset).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?,
+                u64::try_from(size).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?,
             )?;
 
             if compressed {
@@ -421,7 +418,7 @@ impl DCX {
         br.assert_ascii(&["DCA\0"])?;
         br.assert_i32(&[8])?;
 
-        ZstdHelper::read_zstd(&mut br, u64::try_from(compressed).unwrap())
+        ZstdHelper::read_zstd(&mut br, u64::try_from(compressed).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?)
     }
 }
 
@@ -477,12 +474,12 @@ impl DCX {
         bw.write_i32(0x00010100)?;
 
         bw.write_ascii("DCS", true)?;
-        bw.write_i32(i32::try_from(data.len()).unwrap())?;
-        let compressed_size_res = bw.reserve_i32()?;
+        bw.write_i32(i32::try_from(data.len()).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?)?;
+        bw.reserve_i32("compressed_size")?;
 
         let compressed_size = zlib_helper::write_zlib(bw, 0xDA, data)?;
 
-        bw.fill_i32(compressed_size_res, compressed_size)?;
+        bw.fill_i32("compressed_size", compressed_size)?;
 
         bw.write_ascii("DCA", true)?;
         bw.write_i32(8)?;
@@ -510,8 +507,8 @@ impl DCX {
         bw.write_i32(args.unk_14)?;
 
         bw.write_ascii("DCS", true)?;
-        bw.write_i32(i32::try_from(data.len()).unwrap())?;
-        let compressed_size_res = bw.reserve_i32()?;
+        bw.write_i32(i32::try_from(data.len()).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?)?;
+        bw.reserve_i32("compressed_size")?;
         bw.write_ascii("DCP", true)?;
         bw.write_ascii("DFLT", false)?;
         bw.write_i32(0x20)?;
@@ -531,8 +528,8 @@ impl DCX {
 
         let pos = bw.position()?;
         bw.fill_i32(
-            compressed_size_res,
-            i32::try_from(pos - compressed_start).unwrap(),
+            "compressed_size",
+            i32::try_from(pos - compressed_start).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?,
         )?;
 
         bw.finalize()?;
@@ -575,8 +572,8 @@ impl DCX {
         bw.write_i32(0x100100)?;
 
         bw.write_ascii("DCS", true)?;
-        bw.write_i32(i32::try_from(data.len()).unwrap())?;
-        let compressed_size_res = bw.reserve_i32()?;
+        bw.write_i32(i32::try_from(data.len()).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?)?;
+        bw.reserve_i32("compressed_size")?;
         bw.write_i32(0)?;
 
         let data_start = bw.position()?;
@@ -599,27 +596,27 @@ impl DCX {
                 (input.to_vec(), false)
             };
 
-            let comp_chunk_offset = i32::try_from(bw.position()? - data_start).unwrap();
+            let comp_chunk_offset = i32::try_from(bw.position()? - data_start).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
             let comp_chunk_size = chunk.len();
             bw.write_u8_vec(chunk)?;
             bw.pad_00(0x10)?;
 
             chunk_headers.push(EdgeChunk {
                 compressed_offset: comp_chunk_offset,
-                compressed_length: i32::try_from(comp_chunk_size).unwrap(),
+                compressed_length: i32::try_from(comp_chunk_size).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?,
                 is_compressed: is_compressed,
             });
         }
 
         let pos = bw.position()?;
         bw.fill_i32(
-            compressed_size_res,
-            i32::try_from(pos - data_start).unwrap(),
+            "compressed_size",
+            i32::try_from(pos - data_start).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?,
         )?;
 
         let dca_start = bw.position()?;
         bw.write_ascii("DCA", true)?;
-        let dca_size_res = bw.reserve_i32()?;
+        bw.reserve_i32("dca_size")?;
 
         let egdt_start = bw.position()?;
 
@@ -628,8 +625,8 @@ impl DCX {
         bw.write_i32(0x20)?;
         bw.write_i32(0x10)?;
         bw.write_i32(0x10000)?;
-        let egdt_size_res = bw.reserve_i32()?;
-        bw.write_i32(i32::try_from(chunk_count).unwrap())?;
+        bw.reserve_i32("egdt_size")?;
+        bw.write_i32(i32::try_from(chunk_count).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?)?;
         bw.write_i32(0x100000)?;
 
         for i in chunk_headers {
@@ -642,8 +639,8 @@ impl DCX {
             };
         }
         let pos = bw.position()?;
-        bw.fill_i32(egdt_size_res, i32::try_from(pos - egdt_start).unwrap())?;
-        bw.fill_i32(dca_size_res, i32::try_from(pos - dca_start).unwrap())?;
+        bw.fill_i32("egdt_size", i32::try_from(pos - egdt_start).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?)?;
+        bw.fill_i32("dca_size", i32::try_from(pos - dca_start).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?)?;
         bw.finalize()?;
 
         Ok(())
@@ -664,11 +661,11 @@ impl DCX {
         bw.write_i32(0x18)?;
         bw.write_i32(0x24)?;
         bw.write_i32(0x24)?;
-        bw.write_i32(i32::try_from(0x50 + chunk_count * 0x10).unwrap())?;
+        bw.write_i32(i32::try_from(0x50 + chunk_count * 0x10).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?)?;
 
         bw.write_ascii("DCS", true)?;
-        bw.write_i32(i32::try_from(data.len()).unwrap())?;
-        let compressed_size_res = bw.reserve_i32()?;
+        bw.write_i32(i32::try_from(data.len()).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?)?;
+        bw.reserve_i32("compressed_size")?;
 
         bw.write_ascii("DCP", true)?;
         bw.write_ascii("EDGE", false)?;
@@ -681,32 +678,28 @@ impl DCX {
 
         let dca_start = bw.position()?;
         bw.write_ascii("DCA", true)?;
-        let dca_size_res = bw.reserve_i32()?;
+        bw.reserve_i32("dca_size")?;
         let egdt_start = bw.position()?;
         bw.write_ascii("EgdT", false)?;
         bw.write_i32(0x00010100)?;
         bw.write_i32(0x24)?;
         bw.write_i32(0x10)?;
         bw.write_i32(0x10000)?;
-        bw.write_i32(i32::try_from(chunk_remainder).unwrap())?;
-        let egdt_size_res = bw.reserve_i32()?;
-        bw.write_i32(i32::try_from(chunk_count).unwrap())?;
+        bw.write_i32(i32::try_from(chunk_remainder).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?)?;
+        bw.reserve_i32("egdt_size")?;
+        bw.write_i32(i32::try_from(chunk_count).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?)?;
         bw.write_i32(0x100000)?;
-
-        let mut chunk_size_res: HashMap<usize, Reservation> = HashMap::new();
-        let mut chunk_offset_res: HashMap<usize, Reservation> = HashMap::new();
-        let mut chunk_compressed_res: HashMap<usize, Reservation> = HashMap::new();
 
         for i in 0..chunk_count {
             bw.write_i32(0)?;
-            chunk_offset_res.insert(i, bw.reserve_i32()?);
-            chunk_size_res.insert(i, bw.reserve_i32()?);
-            chunk_compressed_res.insert(i, bw.reserve_i32()?);
+            bw.reserve_i32(format!("chunk_{i}_offset"))?;
+            bw.reserve_i32(format!("chunk_{i}_size"))?;
+            bw.reserve_i32(format!("chunk_{i}_compressed"))?;
         }
 
         let pos = bw.position()?;
-        bw.fill_i32(dca_size_res, i32::try_from(pos - dca_start).unwrap())?;
-        bw.fill_i32(egdt_size_res, i32::try_from(pos - egdt_start).unwrap())?;
+        bw.fill_i32("dca_size", i32::try_from(pos - dca_start).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?)?;
+        bw.fill_i32("egdt_size", i32::try_from(pos - egdt_start).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?)?;
 
         let data_start = bw.position()?;
 
@@ -730,22 +723,22 @@ impl DCX {
             };
 
             match is_compressed {
-                true => bw.fill_i32(chunk_compressed_res[&i], 1)?,
-                false => bw.fill_i32(chunk_compressed_res[&i], 0)?,
+                true => bw.fill_i32(&format!("chunk_{i}_compressed"), 1)?,
+                false => bw.fill_i32(&format!("chunk_{i}_compressed"), 0)?,
             };
 
-            compressed_size += i32::try_from(chunk.len()).unwrap();
+            compressed_size += i32::try_from(chunk.len()).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
             let pos = bw.position()?;
             bw.fill_i32(
-                chunk_offset_res[&i],
-                i32::try_from(pos - data_start).unwrap(),
+                &format!("chunk_{i}_offset"),
+                i32::try_from(pos - data_start).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?,
             )?;
-            bw.fill_i32(chunk_size_res[&i], i32::try_from(chunk.len()).unwrap())?;
+            bw.fill_i32(&format!("chunk_{i}_size"), i32::try_from(chunk.len()).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?)?;
             bw.write_u8_vec(chunk)?;
             bw.pad_00(0x10)?;
         }
 
-        bw.fill_i32(compressed_size_res, compressed_size)?;
+        bw.fill_i32("compressed_size", compressed_size)?;
 
         bw.finalize()?;
 
@@ -769,8 +762,8 @@ impl DCX {
         bw.write_i32(0x44)?;
         bw.write_i32(0x4C)?;
         bw.write_ascii("DCS", true)?;
-        bw.write_u32(u32::try_from(data.len()).unwrap())?;
-        bw.write_u32(u32::try_from(compressed.len()).unwrap())?;
+        bw.write_u32(u32::try_from(data.len()).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?)?;
+        bw.write_u32(u32::try_from(compressed.len()).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?)?;
         bw.write_ascii("DCP", true)?;
         bw.write_ascii("ZSTD", false)?;
         bw.write_i32(0x20)?;

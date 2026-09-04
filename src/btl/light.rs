@@ -154,7 +154,7 @@ impl Light {
         let mut output = Self::new();
         output.unk_00 = br.read_u8_vec(16)?;
         let varint = br.read_varint()?;
-        output.name = br.get_utf16(u64::try_from(names_start + varint).unwrap())?;
+        output.name = br.get_utf16(u64::try_from(names_start + varint).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?)?;
         output.light_type = br.read_enum_u32::<LightType>()?;
         output.unk_1c = br.read_bool()?;
         output.diffuse_color = br.read_byte_vector_3()?;
