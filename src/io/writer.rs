@@ -32,7 +32,7 @@ macro_rules! impl_numeric_writer {
         }
 
         #[doc = concat!("Fills specified reservation with a `", stringify!($type), "` value")]
-        pub fn $fill(&mut self, name: &str, value: $type) -> io::Result<()> {
+        pub fn $fill(&mut self, name: impl Into<String>, value: $type) -> io::Result<()> {
             let position = self.free_reservation(name)?;
 
             let initial_position = self.position()?;
@@ -152,8 +152,9 @@ impl<W: Write + Seek> BinaryWriter<W> {
     }
 
     /// Frees a reservation from the list
-    fn free_reservation(&mut self, name: &str) -> io::Result<u64> {
-        self.reservations.remove(name).ok_or_else(|| io::Error::new(
+    fn free_reservation(&mut self, name: impl Into<String>) -> io::Result<u64> {
+        let name = name.into();
+        self.reservations.remove(&name).ok_or_else(|| io::Error::new(
             io::ErrorKind::InvalidData,
             "tried to fill an unreserved name",
         ))
@@ -191,7 +192,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
     }
 
     /// Fills specified reservation with a `bool` value
-    pub fn fill_bool(&mut self, name: &str, value: bool) -> io::Result<()> {
+    pub fn fill_bool(&mut self, name: impl Into<String>, value: bool) -> io::Result<()> {
         let position = self.free_reservation(name)?;
 
         let initial_position = self.position()?;
@@ -232,7 +233,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
     }
 
     /// Fills specified reservation with a `varint` value
-    pub fn fill_varint(&mut self, name: &str, value: i64) -> io::Result<()> {
+    pub fn fill_varint(&mut self, name: impl Into<String>, value: i64) -> io::Result<()> {
         match self.varint_i64 {
             true => self.fill_i64(name, value)?,
             false => self.fill_i32(name, value as i32)?,
@@ -250,20 +251,23 @@ impl<W: Write + Seek> BinaryWriter<W> {
     }
 
     /// Writes an ASCII string, with a null terminator when requested
-    pub fn write_ascii(&mut self, text: &str, terminate: bool) -> io::Result<()> {
-        self.write_chars(terminate, String::from(text).into_bytes())
+    pub fn write_ascii(&mut self, text: impl Into<String>, terminate: bool) -> io::Result<()> {
+        let write_text = text.into();
+        self.write_chars(terminate, String::from(&write_text).into_bytes())
     }
 
     /// Writes a Shift-JIS string, with a null terminator when requested
-    pub fn write_shift_jis(&mut self, text: &str, terminate: bool) -> io::Result<()> {
-        let bytes = encoding_rs::SHIFT_JIS.encode(text).0.to_vec();
+    pub fn write_shift_jis(&mut self, text: impl Into<String>, terminate: bool) -> io::Result<()> {
+        let write_text = text.into();
+        let bytes = encoding_rs::SHIFT_JIS.encode(&write_text).0.to_vec();
         self.write_chars(terminate, bytes)
     }
 
     /// Writes a UTF-16 string, with a null terminator when requested
-    pub fn write_utf16(&mut self, text: &str, terminate: bool) -> io::Result<()> {
+    pub fn write_utf16(&mut self, text: impl Into<String>, terminate: bool) -> io::Result<()> {
         let mut bytes = Vec::new();
-        for code_unit in text.encode_utf16() {
+        let write_text = text.into();
+        for code_unit in write_text.encode_utf16() {
             match self.endian {
                 Endian::Little => bytes.extend_from_slice(&code_unit.to_le_bytes()),
                 Endian::Big => bytes.extend_from_slice(&code_unit.to_be_bytes()),
@@ -279,9 +283,10 @@ impl<W: Write + Seek> BinaryWriter<W> {
     }
 
     /// Writes a null-terminated Shift-JIS string in a fixed-size field
-    pub fn write_fix_str(&mut self, text: &str, size: usize, padding: u8) -> io::Result<()> {
+    pub fn write_fix_str(&mut self, text: impl Into<String>, size: usize, padding: u8) -> io::Result<()> {
         let mut fixstr = vec![padding; size];
-        let mut bytes = encoding_rs::SHIFT_JIS.encode(text).0.to_vec();
+        let write_text = text.into(); 
+        let mut bytes = encoding_rs::SHIFT_JIS.encode(&write_text).0.to_vec();
         bytes.push(0);
         for (index, byte) in bytes.iter().take(size).enumerate() {
             fixstr[index] = *byte;
@@ -290,10 +295,11 @@ impl<W: Write + Seek> BinaryWriter<W> {
     }
 
     /// Writes a null-terminated UTF-16 string in a fixed-size field
-    pub fn write_fix_str_w(&mut self, text: &str, size: usize, padding: u8) -> io::Result<()> {
+    pub fn write_fix_str_w(&mut self, text: impl Into<String>, size: usize, padding: u8) -> io::Result<()> {
         let mut fixstr = vec![padding; size];
         let mut bytes = Vec::new();
-        for code_unit in text.encode_utf16() {
+        let write_text = text.into();
+        for code_unit in write_text.encode_utf16() {
             match self.endian {
                 Endian::Little => bytes.extend_from_slice(&code_unit.to_le_bytes()),
                 Endian::Big => bytes.extend_from_slice(&code_unit.to_be_bytes()),
