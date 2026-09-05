@@ -1,4 +1,4 @@
-use crate::dcx::deflate_helper;
+use crate::{dcx::deflate_helper, util};
 use std::io::{self, Read, Seek, Write};
 
 use crate::io::{BinaryReader, BinaryWriter};
@@ -20,7 +20,7 @@ where
 
     bw.write_u32(adler32(&input)?)?;
 
-    Ok(i32::try_from(bw.position()? - start).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?)
+    Ok(util::try_from_to_io_result(bw.position()? - start)?)
 }
 
 /// Reads a Zlib block from a `BinaryReader` and returns the uncompressed data
@@ -39,7 +39,7 @@ fn adler32(data: &Vec<u8>) -> Result<u32, io::Error> {
     let mut adler_b: u32 = 0;
 
     for byte in data {
-        adler_a = (adler_a + u32::try_from(*byte).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?) % 65521;
+        adler_a = (adler_a + util::try_from_to_io_result::<u8, u32>(*byte)?) % 65521;
         adler_b = (adler_b + adler_a) % 65521;
     }
 

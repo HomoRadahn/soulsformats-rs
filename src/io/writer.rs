@@ -47,13 +47,14 @@ macro_rules! impl_numeric_writer {
     };
 }
 
-pub struct BinaryWriter<W> {
+pub(crate) struct BinaryWriter<W> {
     inner: W,
     endian: Endian,
     varint_i64: bool,
     reservations: HashMap<String, u64>,
 }
 
+#[allow(unused)]
 impl<W: Write + Seek> BinaryWriter<W> {
     /// Initializes the BinaryWriter from a generic implementing `Write + Seek`
     pub fn new(inner: W, endian: Endian, varint_i64: bool) -> Self {
@@ -81,6 +82,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
     }
 
     /// Returns total stream length
+    
     pub fn length(&mut self) -> io::Result<u64> {
         let initial = self.position()?;
         let length = self.inner.seek(SeekFrom::End(0))?;
@@ -393,6 +395,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
     impl_numeric_writer!(f64, 8, write_f64, write_f64_vec, reserve_f64, fill_f64);
 }
 
+#[allow(unused)]
 impl BinaryWriter<Cursor<Vec<u8>>> {
     /// Initializes the `BinaryWriter` to write into a vector of bytes
     pub fn to_bytes(endian: Endian, varint_i64: bool) -> Self {
@@ -411,6 +414,7 @@ impl BinaryWriter<Cursor<Vec<u8>>> {
     }
 }
 
+#[allow(unused)]
 impl BinaryWriter<File> {
     /// Initializes the `BinaryWriter`, writing to a specified file. Make sure to call `self.assert_closing()` before dropping the BinaryWriter
     pub fn to_file<P: AsRef<Path>>(path: P, endian: Endian, varint_i64: bool) -> io::Result<Self> {

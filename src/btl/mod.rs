@@ -50,13 +50,13 @@ impl SoulsFileInternal<BTL> for BTL {
         reader.set_varint_behavior(light_res);
 
         let names_start = reader.position()?;
-        reader.skip(i64::try_from(names_length).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?)?;
+        reader.skip(names_length as i64)?;
         let mut lights: Vec<Light> = Vec::with_capacity(lights_count as usize);
 
         for _ in 0..lights_count {
             lights.push(Light::read(
                 &mut reader,
-                i64::try_from(names_start).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?,
+                util::try_from_to_io_result(names_start)?,
                 version,
             )?);
         }
@@ -78,7 +78,7 @@ impl SoulsFileInternal<BTL> for BTL {
 
         bw.write_i32(2)?;
         bw.write_i32(self.version)?;
-        bw.write_i32(i32::try_from(self.lights.len()).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?)?;
+        bw.write_i32(util::try_from_to_io_result(self.lights.len())?)?;
         bw.reserve_i32("names_length")?;
         bw.write_i32(0)?;
         let next_var = if self.version >= 16 {
@@ -95,16 +95,16 @@ impl SoulsFileInternal<BTL> for BTL {
         let mut name_offsets: Vec<i64> = Vec::with_capacity(self.lights.len());
 
         for entry in &self.lights {
-            let name_offset = i64::try_from(bw.position()? - names_start).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
+            let name_offset: i64 = util::try_from_to_io_result(bw.position()? - names_start)?;
             name_offsets.push(name_offset);
             bw.write_utf16(&entry.name, true)?;
             if name_offset % 0x10 != 0 {
-                bw.write_pattern(usize::try_from(0x10 - (name_offset % 0x10)).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?, 0x00)?;
+                bw.write_pattern(util::try_from_to_io_result(0x10 - (name_offset % 0x10))?, 0x00)?;
             }
         }
 
         let pos = bw.position()?;
-        bw.fill_i32("names_length", i32::try_from(pos - names_start).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?)?;
+        bw.fill_i32("names_length", util::try_from_to_io_result(pos - names_start)?)?;
 
         for i in 0..self.lights.len() {
             self.lights[i].write(bw, name_offsets[i])?;

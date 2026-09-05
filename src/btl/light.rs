@@ -1,6 +1,6 @@
 use std::io::{self, Read, Seek, Write};
 
-use crate::io::{BinaryReader, BinaryWriter, ByteVector3, ByteVector4, Vector3};
+use crate::{io::{BinaryReader, BinaryWriter, ByteVector3, ByteVector4, Vector3}, util};
 
 #[derive(Default, Clone, PartialEq, Debug)]
 /// Type of a light source
@@ -147,14 +147,14 @@ impl Light {
     }
 
     /// Reads the `Light` from the supplied `BinaryReader`
-    pub fn read<R>(br: &mut BinaryReader<R>, names_start: i64, version: i32) -> io::Result<Self>
+    pub(crate) fn read<R>(br: &mut BinaryReader<R>, names_start: i64, version: i32) -> io::Result<Self>
     where
         R: Read + Seek,
     {
         let mut output = Self::new();
         output.unk_00 = br.read_u8_vec(16)?;
         let varint = br.read_varint()?;
-        output.name = br.get_utf16(u64::try_from(names_start + varint).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?)?;
+        output.name = br.get_utf16(util::try_from_to_io_result(names_start + varint)?)?;
         output.light_type = br.read_enum_u32::<LightType>()?;
         output.unk_1c = br.read_bool()?;
         output.diffuse_color = br.read_byte_vector_3()?;
@@ -220,7 +220,7 @@ impl Light {
         Ok(output)
     }
 
-    pub fn write<W>(&self, bw: &mut BinaryWriter<W>, name_offset: i64) -> io::Result<()>
+    pub(crate) fn write<W>(&self, bw: &mut BinaryWriter<W>, name_offset: i64) -> io::Result<()>
     where
         W: Write + Seek,
     {
