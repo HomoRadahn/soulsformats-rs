@@ -255,8 +255,127 @@ impl BinderFileHeader {
             bw.pad_00(0x10)?;
         }
 
-        self.data_offset = util::try_from_to_io_result(bytes.len())?;
-        // self.uncompressed_size = bytes.len();
+        self.data_offset = util::try_from_to_io_result(bw.position()?)?;
+        self.uncompressed_size = util::try_from_to_io_result(bytes.len())?;
+
+        if self.flags.contains(FileFlags::Compressed) {
+            let compressed = DCX::new(bytes, self.compression).compress_to_bytes()?;
+            self.compressed_size = util::try_from_to_io_result(compressed.len())?;
+            bw.write_u8_vec(compressed)?;
+        }
+        else {
+            self.compressed_size = util::try_from_to_io_result(bytes.len())?;
+            bw.write_u8_vec(bytes)?;
+        }
+
+        Ok(())
+    }
+
+    /// Writes `BND3` file data
+    pub(crate) fn write_bnd3_file_data<W>(&mut self, bw: &mut BinaryWriter<W>, format: &Format, index: i32, bytes: Vec<u8>) -> io::Result<()>
+    where 
+        W: Write + Seek
+    {
+        self.write_file_data(bw, bytes)?;
+
+        bw.fill_i32(format!("file_{index}_compressed_size"), util::try_from_to_io_result(self.compressed_size)?)?;
+
+        if format.contains(Format::Compression) {
+            bw.fill_i32(format!("file_{index}_uncompressed_size"), util::try_from_to_io_result(self.uncompressed_size)?)?;
+        }
+
+        if format.contains(Format::LongOffsets) {
+            bw.fill_i64(format!("file_{index}_data_offset"), self.data_offset)?;
+        }
+        else {
+            bw.fill_u32(format!("file_{index}_data_offset"), util::try_from_to_io_result(self.data_offset)?)?;
+        }
+
+        Ok(())
+    }
+
+    /// Writes `BXF3` file data - which requires two separate `BinaryWriter` references
+    pub(crate) fn write_bxf3_file_data<W>(&mut self, bw_header: &mut BinaryWriter<W>, bw_data: &mut BinaryWriter<W>, format: &Format, index: i32, bytes: Vec<u8>) -> io::Result<()>
+    where 
+        W: Write + Seek
+    {
+        self.write_file_data(bw_data, bytes)?;
+
+        bw_header.fill_i32(format!("file_{index}_compressed_size"), util::try_from_to_io_result(self.compressed_size)?)?;
+
+        if format.contains(Format::Compression) {
+            bw_header.fill_i32(format!("file_{index}_uncompressed_size"), util::try_from_to_io_result(self.uncompressed_size)?)?;
+        }
+
+        if format.contains(Format::LongOffsets) {
+            bw_header.fill_i64(format!("file_{index}_data_offset"), self.data_offset)?;
+        }
+        else {
+            bw_header.fill_u32(format!("file_{index}_data_offset"), util::try_from_to_io_result(self.data_offset)?)?;
+        }
+
+        Ok(())
+    }
+
+    /// Writes `BND4` file data
+    pub(crate) fn write_bnd4_file_data<W>(&mut self, bw: &mut BinaryWriter<W>, format: &Format, index: i32, bytes: Vec<u8>) -> io::Result<()>
+    where 
+        W: Write + Seek
+    {
+        self.write_file_data(bw, bytes)?;
+
+        bw.fill_i64(format!("file_{index}_compressed_size"), self.compressed_size)?;
+
+        if format.contains(Format::Compression) {
+            bw.fill_i64(format!("file_{index}_uncompressed_size"), self.uncompressed_size)?;
+        }
+
+        if format.contains(Format::LongOffsets) {
+            bw.fill_i64(format!("file_{index}_data_offset"), self.data_offset)?;
+        }
+        else {
+            bw.fill_u32(format!("file_{index}_data_offset"), util::try_from_to_io_result(self.data_offset)?)?;
+        }
+
+        Ok(())
+    }
+
+    /// Writes `BXF4` file data - which requires two separate `BinaryWriter` references
+    pub(crate) fn write_bxf4_file_data<W>(&mut self, bw_header: &mut BinaryWriter<W>, bw_data: &mut BinaryWriter<W>, format: &Format, index: i32, bytes: Vec<u8>) -> io::Result<()>
+    where 
+        W: Write + Seek
+    {
+        self.write_file_data(bw_data, bytes)?;
+
+        bw_header.fill_i64(format!("file_{index}_compressed_size"), self.compressed_size)?;
+
+        if format.contains(Format::Compression) {
+            bw_header.fill_i64(format!("file_{index}_uncompressed_size"), self.uncompressed_size)?;
+        }
+
+        if format.contains(Format::LongOffsets) {
+            bw_header.fill_i64(format!("file_{index}_data_offset"), self.data_offset)?;
+        }
+        else {
+            bw_header.fill_u32(format!("file_{index}_data_offset"), util::try_from_to_io_result(self.data_offset)?)?;
+        }
+
+        Ok(())
+    }
+
+    pub(crate) fn write_file_name<W>(&mut self, bw: &mut BinaryWriter<W>, format: &Format, index: i32, unicode: bool) -> io::Result<()>
+    where 
+        W: Write + Seek
+    {
+        // Calling bare unwrap(), since name can only be none if format doesn't have names
+        if format.contains(Format::Names1 | Format::Names2) {
+            let pos = bw.position()?;
+            bw.fill_i32(format!("file_{index}_name_offset"), util::try_from_to_io_result(pos)?)?;
+            match unicode {
+                true => bw.write_utf16(self.name.clone().unwrap(), true)?,
+                false => bw.write_shift_jis(self.name.clone().unwrap(), true)?,
+            };
+        }
 
         Ok(())
     }
