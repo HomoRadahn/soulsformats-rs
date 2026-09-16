@@ -47,7 +47,7 @@ impl TryFrom<u8> for Format {
 
 impl Format {
     /// Reads `Format` from `BinaryReader`
-    pub fn read<R>(br: &mut BinaryReader<R>, bit_endian: Endian) -> io::Result<Self>
+    pub(crate) fn read<R>(br: &mut BinaryReader<R>, bit_endian: Endian) -> io::Result<Self>
     where 
         R: Read + Seek
     {
@@ -65,7 +65,7 @@ impl Format {
     }
 
     /// Writes `Format` to `BinaryWriter`
-    pub fn write<W>(&self, bw: &mut BinaryWriter<W>, bit_endian: Endian) -> io::Result<()>
+    pub(crate) fn write<W>(&self, bw: &mut BinaryWriter<W>, bit_endian: Endian) -> io::Result<()>
     where 
         W: Write + Seek
     {
@@ -151,7 +151,7 @@ impl TryFrom<u8> for FileFlags {
 
 impl FileFlags {
     /// Reads `FileFlags` from `BinaryReader`
-    pub fn read<R>(br: &mut BinaryReader<R>, bit_endian: Endian) -> io::Result<Self>
+    pub(crate) fn read<R>(br: &mut BinaryReader<R>, bit_endian: Endian) -> io::Result<Self>
     where 
         R: Read + Seek
     {
@@ -163,7 +163,7 @@ impl FileFlags {
     }
 
     /// Writes `FileFlags` to `BinaryWriter`
-    pub fn write<W>(&self, bw: &mut BinaryWriter<W>, bit_endian: Endian) -> io::Result<()> 
+    pub(crate) fn write<W>(&self, bw: &mut BinaryWriter<W>, bit_endian: Endian) -> io::Result<()> 
     where 
         W: Write + Seek
     {
@@ -179,36 +179,38 @@ impl FileFlags {
 #[derive(Debug, Clone, Copy)]
 /// Used for writing to `BND` / `BXF` timestamp string. Implementation is sloppy on purpose, as it is not widely used
 pub struct DateTime {
-    year: u16,
-    month: u32,
-    day: u32,
+    pub year: u16,
+    pub month: u32,
+    pub day: u32,
 
-    hour: u32,
-    minute: u32,
+    pub hour: u32,
+    pub minute: u32,
 }
 
-/// Converts `DateTime` to a `BND` / `BXF` timestamp string
-pub(crate) fn date_to_bnd_timestamp(dt: &DateTime) -> String {
-    let mut year = dt.year - 2000;
+impl DateTime {
+    /// Converts `DateTime` to a `BND` / `BXF` timestamp string
+    pub fn to_bnd_timestamp(&self) -> String {
+        let mut year = self.year - 2000;
 
-    if year > 99 {
-        year = 0;
-    }
+        if year > 99 {
+            year = 0;
+        }
 
-    let month = char::from_u32(dt.month + 'A' as u32).unwrap_or('1');
-    let hour = char::from_u32(dt.hour + 'A' as u32).unwrap_or('1');
+        let month = char::from_u32(self.month + 'A' as u32).unwrap_or('1');
+        let hour = char::from_u32(self.hour + 'A' as u32).unwrap_or('1');
 
-    let string: String = format!("{}{}{}{}{}", year, month, dt.day, hour, dt.minute);
-    
-    let len = string.chars().count();
+        let string: String = format!("{}{}{}{}{}", year, month, self.day, hour, self.minute);
+        
+        let len = string.chars().count();
 
-    if len >= 8 {
-        string
-    } else {
-        let padding_count = 8 - len;
-        let mut result = String::with_capacity(string.len() + padding_count);
-        result.push_str(&string);
-        result.extend(std::iter::repeat_n('\0', padding_count));
-        result
+        if len >= 8 {
+            string
+        } else {
+            let padding_count = 8 - len;
+            let mut result = String::with_capacity(string.len() + padding_count);
+            result.push_str(&string);
+            result.extend(std::iter::repeat_n('\0', padding_count));
+            result
+        }
     }
 }

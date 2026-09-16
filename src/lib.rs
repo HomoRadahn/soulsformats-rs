@@ -8,3 +8,4 @@ mod util;
 pub use btl::BTL;
 pub use dcx::DCX;
 pub use format::SoulsFile;
+pub use bnd::BND4;

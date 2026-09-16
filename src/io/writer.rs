@@ -50,18 +50,18 @@ macro_rules! impl_numeric_writer {
 pub(crate) struct BinaryWriter<W> {
     inner: W,
     endian: Endian,
-    varint_i64: bool,
+    varint_64bit: bool,
     reservations: HashMap<String, u64>,
 }
 
 #[allow(unused)]
 impl<W: Write + Seek> BinaryWriter<W> {
     /// Initializes the BinaryWriter from a generic implementing `Write + Seek`
-    pub fn new(inner: W, endian: Endian, varint_i64: bool) -> Self {
+    pub fn new(inner: W, endian: Endian, varint_64bit: bool) -> Self {
         Self {
             inner,
             endian,
-            varint_i64,
+            varint_64bit,
             reservations: HashMap::new(),
         }
     }
@@ -71,9 +71,9 @@ impl<W: Write + Seek> BinaryWriter<W> {
         self.endian = endian;
     }
 
-    /// Sets `varint_i64` to `behavior`
-    pub fn set_varint_behavior(&mut self, behavior: bool) {
-        self.varint_i64 = behavior;
+    /// Sets `varint_64bit` to `behavior`
+    pub fn set_varint_64bit(&mut self, behavior: bool) {
+        self.varint_64bit = behavior;
     }
 
     /// Returns current stream position
@@ -207,7 +207,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
 
     /// Writes `varint` value
     pub fn write_varint(&mut self, value: i64) -> io::Result<()> {
-        match self.varint_i64 {
+        match self.varint_64bit {
             true => self.write_i64(value)?,
             false => self.write_i32(value as i32)?,
         }
@@ -226,7 +226,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
 
     /// Reserves space at the current position, sized as `varint`
     pub fn reserve_varint(&mut self, name: impl Into<String>) -> io::Result<()> {
-        match self.varint_i64 {
+        match self.varint_64bit {
             true => self.reserve_i64(name),
             false => self.reserve_i32(name),
         }
@@ -234,7 +234,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
 
     /// Fills specified reservation with a `varint` value
     pub fn fill_varint(&mut self, name: impl Into<String>, value: i64) -> io::Result<()> {
-        match self.varint_i64 {
+        match self.varint_64bit {
             true => self.fill_i64(name, value)?,
             false => self.fill_i32(name, value as i32)?,
         }
@@ -404,8 +404,8 @@ impl<W: Write + Seek> BinaryWriter<W> {
 #[allow(unused)]
 impl BinaryWriter<Cursor<Vec<u8>>> {
     /// Initializes the `BinaryWriter` to write into a vector of bytes
-    pub fn to_bytes(endian: Endian, varint_i64: bool) -> Self {
-        BinaryWriter::new(Cursor::new(Vec::new()), endian, varint_i64)
+    pub fn to_bytes(endian: Endian, varint_64bit: bool) -> Self {
+        BinaryWriter::new(Cursor::new(Vec::new()), endian, varint_64bit)
     }
 
     /// Gets currently written bytes as a reference
@@ -423,8 +423,8 @@ impl BinaryWriter<Cursor<Vec<u8>>> {
 #[allow(unused)]
 impl BinaryWriter<File> {
     /// Initializes the `BinaryWriter`, writing to a specified file. Make sure to call `self.assert_closing()` before dropping the BinaryWriter
-    pub fn to_file<P: AsRef<Path>>(path: P, endian: Endian, varint_i64: bool) -> io::Result<Self> {
-        Ok(BinaryWriter::new(File::create(path)?, endian, varint_i64))
+    pub fn to_file<P: AsRef<Path>>(path: P, endian: Endian, varint_64bit: bool) -> io::Result<Self> {
+        Ok(BinaryWriter::new(File::create(path)?, endian, varint_64bit))
     }
 
     /// Gets the file that the writer is currently writing to
@@ -681,7 +681,7 @@ mod tests {
     }
 
     #[test]
-    fn write_varint_i64() {
+    fn write_varint_64bit() {
         let mut big_writer = BinaryWriter::to_bytes(Endian::Big, true);
         big_writer.write_varint(-2).unwrap();
         assert_eq!(

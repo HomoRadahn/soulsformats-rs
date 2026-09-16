@@ -103,7 +103,7 @@ impl BinderFileHeader {
     }
 
     /// Reads a `BND4` `BinderFileHeader` from `BinaryReader`
-    pub(crate) fn read_bnd4_header<R>(br: &mut BinaryReader<R>, format: &Format, bit_endian: Endian, unicode: bool) -> io::Result<Self>
+    pub(crate) fn read_bnd4_header<R>(br: &mut BinaryReader<R>, format: Format, bit_endian: Endian, unicode: bool) -> io::Result<Self>
     where 
         R: Read + Seek
     {
@@ -113,10 +113,10 @@ impl BinderFileHeader {
         br.assert_u8(&[0])?;
         br.assert_i32(&[-1])?;
 
-        let compressed_size = br.read_i32()? as i64;
+        let compressed_size = br.read_i64()?;
 
         let uncompressed_size = if format.contains(Format::Compression) {
-            br.read_i32()? as i64
+            br.read_i64()?
         }
         else {
             -1
@@ -149,7 +149,7 @@ impl BinderFileHeader {
             None
         };
 
-        if *format == Format::Names1 {
+        if format == Format::Names1 {
             id = br.read_i32()?;
             br.assert_i32(&[0])?;
         };

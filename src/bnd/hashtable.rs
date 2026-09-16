@@ -32,6 +32,16 @@ where
         return Err(io::Error::new(io::ErrorKind::InvalidData, "unable to determine hash group count"));
     }
 
+    let mut hash_lists: Vec<Vec<PathHash>> = Vec::with_capacity(group_count as usize);
+
+    for i in 0..group_count {
+        hash_lists[i as usize] = Vec::new();
+    }
+
+    for i in 0..util::try_from_to_io_result(files.len())? {
+
+    }
+
     Ok(())
 }
 

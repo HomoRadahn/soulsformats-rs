@@ -77,17 +77,17 @@ macro_rules! impl_numeric_reader {
 pub(crate) struct BinaryReader<R> {
     inner: R,
     endian: Endian,
-    varint_i64: bool,
+    varint_64bit: bool,
 }
 
 #[allow(unused)]
 impl<R: Read + Seek> BinaryReader<R> {
     /// Initializes the `BinaryReader` from a generic implementing `Read + Seek`
-    pub fn new(inner: R, endian: Endian, varint_i64: bool) -> Self {
+    pub fn new(inner: R, endian: Endian, varint_64bit: bool) -> Self {
         Self {
             inner,
             endian,
-            varint_i64,
+            varint_64bit,
         }
     }
 
@@ -96,9 +96,9 @@ impl<R: Read + Seek> BinaryReader<R> {
         self.endian = endian;
     }
 
-    /// Sets `varint_i64` to `behavior`
-    pub fn set_varint_behavior(&mut self, behavior: bool) {
-        self.varint_i64 = behavior;
+    /// Sets `varint_64bit` to `behavior`
+    pub fn set_varint_64bit(&mut self, behavior: bool) {
+        self.varint_64bit = behavior;
     }
 
     fn assert_value<T>(value: T, expected: &[T], type_name: &str) -> io::Result<T>
@@ -452,16 +452,16 @@ impl<R: Read + Seek> BinaryReader<R> {
     impl_generic_enum_reader!(i32, read_i32, get_i32, read_enum_i32, get_enum_i32);
     impl_generic_enum_reader!(i64, read_i64, get_i64, read_enum_i64, get_enum_i64);
 
-    /// Reads either `i32` or `i64` depending on `varint_i64`
+    /// Reads either `i32` or `i64` depending on `varint_64bit`
     pub fn read_varint(&mut self) -> io::Result<i64> {
-        if self.varint_i64 {
+        if self.varint_64bit {
             self.read_i64()
         } else {
             self.read_i32().map(i64::from)
         }
     }
 
-    /// Reads a vector of either `i32` or `i64` depending on `varint_i64`
+    /// Reads a vector of either `i32` or `i64` depending on `varint_64bit`
     pub fn read_varint_vec(&mut self, count: u64) -> io::Result<Vec<i64>> {
         (0..count).map(|_| self.read_varint()).collect()
     }
@@ -471,16 +471,16 @@ impl<R: Read + Seek> BinaryReader<R> {
         Self::assert_value(self.read_varint()?, expected, "varint")
     }
 
-    /// Reads either `i32` or `i64` depending on `varint_i64` from the specified position without advancing the stream
+    /// Reads either `i32` or `i64` depending on `varint_64bit` from the specified position without advancing the stream
     pub fn get_varint(&mut self, position: u64) -> io::Result<i64> {
-        if self.varint_i64 {
+        if self.varint_64bit {
             self.get_i64(position)
         } else {
             self.get_i32(position).map(i64::from)
         }
     }
 
-    /// Reads a vector of either `i32` or `i64` depending on `varint_i64` from the specified position without advancing the stream
+    /// Reads a vector of either `i32` or `i64` depending on `varint_64bit` from the specified position without advancing the stream
     pub fn get_varint_vec(&mut self, position: u64, count: u64) -> io::Result<Vec<i64>> {
         let initial = self.position()?;
         self.seek(position)?;
@@ -598,8 +598,8 @@ impl<R: Read + Seek> BinaryReader<R> {
 
 impl BinaryReader<Cursor<Vec<u8>>> {
     /// Initializes the `BinaryReader` from a vector of bytes
-    pub fn from_bytes(bytes: Vec<u8>, endian: Endian, varint_i64: bool) -> Self {
-        BinaryReader::new(Cursor::new(bytes), endian, varint_i64)
+    pub fn from_bytes(bytes: Vec<u8>, endian: Endian, varint_64bit: bool) -> Self {
+        BinaryReader::new(Cursor::new(bytes), endian, varint_64bit)
     }
 }
 
@@ -608,9 +608,9 @@ impl BinaryReader<File> {
     pub fn from_file<P: AsRef<Path>>(
         path: P,
         endian: Endian,
-        varint_i64: bool,
+        varint_64bit: bool,
     ) -> io::Result<Self> {
-        Ok(BinaryReader::new(File::open(path)?, endian, varint_i64))
+        Ok(BinaryReader::new(File::open(path)?, endian, varint_64bit))
     }
 }
 

@@ -9,10 +9,15 @@ pub mod light;
 pub use light::Light;
 pub use light::LightType;
 
+/// Point light sources in a map, used in BB, DS3, and Sekiro
 pub struct BTL {
+    /// Compression of this BTL
     pub compression: CompressionInfo,
+    /// Version
     pub version: i32,
+    /// Whether offsets are 64-bit; set to false for Dark Souls 2
     pub offsets_64bit: bool,
+    /// Light sources in this BT
     pub lights: Vec<Light>,
 }
 
@@ -28,10 +33,6 @@ impl BTL {
 }
 
 impl SoulsFileInternal<BTL> for BTL {
-    fn get_compression(&self) -> CompressionInfo {
-        self.compression
-    }
-
     fn read<R>(br: &mut BinaryReader<R>) -> io::Result<Self>
     where
         R: Read + Seek,
@@ -47,7 +48,7 @@ impl SoulsFileInternal<BTL> for BTL {
         reader.assert_pattern(0x24, 0x00)?;
         let light_res = light_size != 0xC0;
         let offsets_64bit = light_res.clone();
-        reader.set_varint_behavior(light_res);
+        reader.set_varint_64bit(light_res);
 
         let names_start = reader.position()?;
         reader.skip(names_length as i64)?;
@@ -74,7 +75,7 @@ impl SoulsFileInternal<BTL> for BTL {
         W: Write + Seek,
     {
         bw.set_endian(Endian::Little);
-        bw.set_varint_behavior(self.offsets_64bit);
+        bw.set_varint_64bit(self.offsets_64bit);
 
         bw.write_i32(2)?;
         bw.write_i32(self.version)?;
