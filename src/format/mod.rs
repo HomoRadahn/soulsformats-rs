@@ -1,5 +1,5 @@
 use crate::{
-    io::{BinaryReader, BinaryWriter, Endian},
+    DCX, dcx::compression_info::CompressionInfo, io::{BinaryReader, BinaryWriter, Endian},
 };
 use std::{
     fs, io::{self, Read, Seek, Write},
@@ -9,6 +9,7 @@ pub(crate) trait SoulsFileInternal<T>
 where
     T: SoulsFileInternal<T>
 {
+    fn get_compression(&self) -> CompressionInfo;
     fn read<R>(br: &mut BinaryReader<R>) -> io::Result<T>
     where
         R: Read + Seek;
@@ -63,8 +64,11 @@ where
         let mut bw = BinaryWriter::to_bytes(Endian::Little, false);
         self.write(&mut bw)?;
         let data = bw.close_bytes()?;
+
+        let dcx = DCX::new(data, self.get_compression());
+        let out = dcx.compress_to_bytes()?;
         
-        return Ok(data);
+        Ok(out)
     }
 
     /// Writes the format to a file
@@ -74,7 +78,10 @@ where
         self.write(&mut bw)?;
         let data = bw.close_bytes()?;
 
-        fs::write(path_into, data)?;
-        return Ok(());
+        let dcx = DCX::new(data, self.get_compression());
+        let out = dcx.compress_to_bytes()?;
+        fs::write(path_into, out)?;
+        
+        Ok(())
     }
 }

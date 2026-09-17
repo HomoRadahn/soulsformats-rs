@@ -113,6 +113,10 @@ impl SoulsFileInternal<BTL> for BTL {
 
         Ok(())
     }
+
+    fn get_compression(&self) -> CompressionInfo {
+        self.compression
+    }
 }
 
 impl SoulsFile<BTL> for BTL {}

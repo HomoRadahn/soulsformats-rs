@@ -105,12 +105,79 @@ impl BND4 {
         Ok(file_headers)
 
     }
+
+    fn write_header<W>(&self, bw: &mut BinaryWriter<W>, file_headers: &mut Vec<BinderFileHeader>) -> io::Result<()>
+    where 
+        W: Write + Seek
+    {
+        bw.set_endian(self.endian);
+
+        bw.write_ascii("BND4", false)?;
+
+        bw.write_bool(self.unk04)?;
+        bw.write_bool(self.unk05)?;
+        bw.write_u8(0)?;
+        bw.write_u8(0)?;
+        
+        bw.write_u8(0)?;
+        match self.endian {
+            Endian::Big => bw.write_bool(true)?,
+            Endian::Little => bw.write_bool(false)?
+        }
+        match self.bit_endian {
+            Endian::Big => bw.write_bool(false)?,
+            Endian::Little => bw.write_bool(true)?
+        }
+        bw.write_u8(0)?;
+
+        bw.write_i32(util::try_from_to_io_result(file_headers.len())?)?;
+        bw.write_i64(0x40)?;
+        bw.write_fix_str(self.version.clone(), 8, 0)?;
+        bw.write_i64(binder::get_bnd4_file_header_size(self.format))?;
+        bw.reserve_i64("headers-end")?;
+
+        bw.write_bool(self.unicode)?;
+        self.format.write(bw, self.bit_endian)?;
+        bw.write_u8(self.extended)?;
+        bw.write_u8(0)?;
+
+        bw.write_i32(0)?;
+        bw.reserve_i64("hash-table-offset")?;
+
+        for i in 0..file_headers.len() {
+            file_headers[i].write_bnd4_header(bw, self.format, self.bit_endian, util::try_from_to_io_result(i)?)?;
+        }
+
+        for i in 0..self.files.len() {
+            file_headers[i].write_bnd4_file_data(bw, self.format, i as i32, self.files[i].bytes.clone())?;
+        }
+
+        for i in 0..file_headers.len() {
+            file_headers[i].write_file_name(bw, self.format, util::try_from_to_io_result(i)?, self.unicode)?;
+        }
+
+        if self.extended == 4 {
+            bw.pad_00(0x8)?;
+            let pos = bw.position()?;
+            bw.fill_i64("hash-table-offset", util::try_from_to_io_result(pos)?)?;
+            hashtable::write(bw, &file_headers)?;
+        }
+        else {
+            bw.fill_i64("hash-table-offset", 0)?;
+        }
+
+        let pos = bw.position()?;
+        bw.fill_i64("headers-end", util::try_from_to_io_result(pos)?)?;
+
+        Ok(())
+    }
 }
 
 impl SoulsFileInternal<BND4> for BND4 {
     fn read<R>(br: &mut BinaryReader<R>) -> io::Result<BND4>
     where
-        R: Read + Seek {
+        R: Read + Seek
+    {
         let (mut reader, compression) = util::get_decompressed_binary_reader(br)?;
         let mut bnd = BND4::new(compression);
         
@@ -127,8 +194,17 @@ impl SoulsFileInternal<BND4> for BND4 {
 
     fn write<W>(&self, bw: &mut BinaryWriter<W>) -> io::Result<()>
     where
-        W: Write + Seek {
-        todo!()
+        W: Write + Seek
+    {
+        let mut file_headers: Vec<BinderFileHeader> = Vec::with_capacity(self.files.len());
+
+        for file in &self.files {
+            file_headers.push(BinderFileHeader::from_binder_file(&file));
+        }
+
+        BND4::write_header(&self, bw, &mut file_headers)?;
+
+        Ok(())
     }
 
     fn is<R>(br: &mut BinaryReader<R>) -> io::Result<bool>
@@ -137,6 +213,10 @@ impl SoulsFileInternal<BND4> for BND4 {
     {
         let len = br.length()?;
         Ok(len >= 4 && br.get_ascii_len(0, 4)? == "BND4")    
+    }
+    
+    fn get_compression(&self) -> CompressionInfo {
+        self.compression
     }
 }
 

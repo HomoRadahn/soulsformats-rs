@@ -6,14 +6,14 @@ use crate::{DCX, bnd::binder::{FileFlags, Format}, dcx::compression_info::Compre
 pub struct BinderFile {
     pub flags: FileFlags,
     pub id: i32,
-    pub name: Option<String>,
+    pub name: String,
     pub bytes: Vec<u8>,
     pub compression: CompressionInfo
 }
 
 impl BinderFile {
     /// Creates a new `BinderFile`, with `Zlib` compression
-    pub fn new(flags: FileFlags, id: i32, name: Option<String>, bytes: Vec<u8>, compression: CompressionInfo) -> Self {
+    pub fn new(flags: FileFlags, id: i32, name: String, bytes: Vec<u8>, compression: CompressionInfo) -> Self {
         Self {
             flags, id, name, bytes, compression
         }
@@ -24,7 +24,7 @@ impl BinderFile {
 pub(crate) struct BinderFileHeader {
     pub flags: FileFlags,
     pub id: i32,
-    pub name: Option<String>,
+    pub name: String,
     pub compression: CompressionInfo,
     pub compressed_size: i64,
     pub uncompressed_size: i64,
@@ -33,7 +33,7 @@ pub(crate) struct BinderFileHeader {
 
 impl BinderFileHeader {
     /// Creates a new `BinderFileHeader`, with `Zlib` compression
-    pub(crate) fn new(flags: FileFlags, id: i32, name: Option<String>, compressed_size: i64, uncompressed_size: i64, data_offset: i64) -> Self {
+    pub(crate) fn new(flags: FileFlags, id: i32, name: String, compressed_size: i64, uncompressed_size: i64, data_offset: i64) -> Self {
         Self {
             flags,
             id,
@@ -59,7 +59,7 @@ impl BinderFileHeader {
     }
 
     /// Reads a `BND3` `BinderFileHeader` from `BinaryReader`
-    pub(crate) fn read_bnd3_header<R>(br: &mut BinaryReader<R>, format: &Format, bit_endian: Endian) -> io::Result<Self>
+    pub(crate) fn read_bnd3_header<R>(br: &mut BinaryReader<R>, format: Format, bit_endian: Endian) -> io::Result<Self>
     where 
         R: Read + Seek
     {
@@ -86,10 +86,10 @@ impl BinderFileHeader {
 
         let name = if format.contains(Format::Names1 | Format::Names2) {
             let name_offset = util::try_from_to_io_result(br.read_i32()?)?;
-            Some(br.get_shift_jis(name_offset)?)
+            br.get_shift_jis(name_offset)?
         }
         else {
-            None
+            "".to_string()
         };
 
         let uncompressed_size = if format.contains(Format::Compression) {
@@ -139,14 +139,14 @@ impl BinderFileHeader {
         let name = if format.contains(Format::Names1 | Format::Names2) {
             let name_offset = br.read_u32()? as u64;
             if unicode {
-                Some(br.get_utf16(name_offset)?)
+                br.get_utf16(name_offset)?
             }
             else {
-                Some(br.get_shift_jis(name_offset)?)
+                br.get_shift_jis(name_offset)?
             }
         }
         else {
-            None
+            "".to_string()
         };
 
         if format == Format::Names1 {
@@ -175,7 +175,7 @@ impl BinderFileHeader {
         Ok(BinderFile::new(self.flags, self.id, self.name.clone(), bytes, compression))
     }
 
-    pub(crate) fn write_bnd3_header<W>(&self, bw: &mut BinaryWriter<W>, format: &Format, bit_endian: Endian, index: i32) -> io::Result<()>
+    pub(crate) fn write_bnd3_header<W>(&self, bw: &mut BinaryWriter<W>, format: Format, bit_endian: Endian, index: i32) -> io::Result<()>
     where 
         W: Write + Seek
     {
@@ -208,7 +208,7 @@ impl BinderFileHeader {
         Ok(())
     }
 
-    pub(crate) fn write_bnd4_header<W>(&self, bw: &mut BinaryWriter<W>, format: &Format, bit_endian: Endian, index: i32) -> io::Result<()>
+    pub(crate) fn write_bnd4_header<W>(&self, bw: &mut BinaryWriter<W>, format: Format, bit_endian: Endian, index: i32) -> io::Result<()>
     where 
         W: Write + Seek
     {
@@ -239,7 +239,7 @@ impl BinderFileHeader {
             bw.reserve_i32(format!("file_{index}_name_offset"))?;
         }
 
-        if *format == Format::Names1 {
+        if format == Format::Names1 {
             bw.write_i32(self.id)?;
             bw.write_i32(0)?;
         }
@@ -272,7 +272,7 @@ impl BinderFileHeader {
     }
 
     /// Writes `BND3` file data
-    pub(crate) fn write_bnd3_file_data<W>(&mut self, bw: &mut BinaryWriter<W>, format: &Format, index: i32, bytes: Vec<u8>) -> io::Result<()>
+    pub(crate) fn write_bnd3_file_data<W>(&mut self, bw: &mut BinaryWriter<W>, format: Format, index: i32, bytes: Vec<u8>) -> io::Result<()>
     where 
         W: Write + Seek
     {
@@ -295,7 +295,7 @@ impl BinderFileHeader {
     }
 
     /// Writes `BXF3` file data - which requires two separate `BinaryWriter` references
-    pub(crate) fn write_bxf3_file_data<W>(&mut self, bw_header: &mut BinaryWriter<W>, bw_data: &mut BinaryWriter<W>, format: &Format, index: i32, bytes: Vec<u8>) -> io::Result<()>
+    pub(crate) fn write_bxf3_file_data<W>(&mut self, bw_header: &mut BinaryWriter<W>, bw_data: &mut BinaryWriter<W>, format: Format, index: i32, bytes: Vec<u8>) -> io::Result<()>
     where 
         W: Write + Seek
     {
@@ -318,7 +318,7 @@ impl BinderFileHeader {
     }
 
     /// Writes `BND4` file data
-    pub(crate) fn write_bnd4_file_data<W>(&mut self, bw: &mut BinaryWriter<W>, format: &Format, index: i32, bytes: Vec<u8>) -> io::Result<()>
+    pub(crate) fn write_bnd4_file_data<W>(&mut self, bw: &mut BinaryWriter<W>, format: Format, index: i32, bytes: Vec<u8>) -> io::Result<()>
     where 
         W: Write + Seek
     {
@@ -341,7 +341,7 @@ impl BinderFileHeader {
     }
 
     /// Writes `BXF4` file data - which requires two separate `BinaryWriter` references
-    pub(crate) fn write_bxf4_file_data<W>(&mut self, bw_header: &mut BinaryWriter<W>, bw_data: &mut BinaryWriter<W>, format: &Format, index: i32, bytes: Vec<u8>) -> io::Result<()>
+    pub(crate) fn write_bxf4_file_data<W>(&mut self, bw_header: &mut BinaryWriter<W>, bw_data: &mut BinaryWriter<W>, format: Format, index: i32, bytes: Vec<u8>) -> io::Result<()>
     where 
         W: Write + Seek
     {
@@ -363,7 +363,7 @@ impl BinderFileHeader {
         Ok(())
     }
 
-    pub(crate) fn write_file_name<W>(&mut self, bw: &mut BinaryWriter<W>, format: &Format, index: i32, unicode: bool) -> io::Result<()>
+    pub(crate) fn write_file_name<W>(&mut self, bw: &mut BinaryWriter<W>, format: Format, index: i32, unicode: bool) -> io::Result<()>
     where 
         W: Write + Seek
     {
@@ -372,8 +372,8 @@ impl BinderFileHeader {
             let pos = bw.position()?;
             bw.fill_i32(format!("file_{index}_name_offset"), util::try_from_to_io_result(pos)?)?;
             match unicode {
-                true => bw.write_utf16(self.name.clone().unwrap(), true)?,
-                false => bw.write_shift_jis(self.name.clone().unwrap(), true)?,
+                true => bw.write_utf16(self.name.clone(), true)?,
+                false => bw.write_shift_jis(self.name.clone(), true)?,
             };
         }
 
