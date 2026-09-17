@@ -1,4 +1,4 @@
-use soulsformats_rs::{BTL, SoulsFile};
+use soulsformats_rs::{BTL, ByteIO, FileIO};
 
 #[test]
 fn btl_round_trip() {

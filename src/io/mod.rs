@@ -1,6 +1,9 @@
+mod format;
 mod reader;
 mod writer;
 
+pub(crate) use format::StreamIO;
+pub use format::{ByteIO, FileIO};
 pub(crate) use reader::BinaryReader;
 pub(crate) use writer::BinaryWriter;
 
@@ -52,6 +55,7 @@ pub struct ByteVector3 {
 }
 
 #[derive(Debug, Clone, Copy)]
+/// Represents data endianness. Also used for order of bits in BND flags
 pub enum Endian {
     Big,
     Little,

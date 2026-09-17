@@ -3,12 +3,7 @@ use std::io::{self, Read, Seek, Write};
 
 use crate::io::{BinaryReader, BinaryWriter};
 
-
-pub fn write_zlib<W>(
-    bw: &mut BinaryWriter<W>,
-    format_byte: u8,
-    input: &Vec<u8>,
-) -> io::Result<i32>
+pub fn write_zlib<W>(bw: &mut BinaryWriter<W>, format_byte: u8, input: &Vec<u8>) -> io::Result<i32>
 where
     W: Write + Seek,
 {

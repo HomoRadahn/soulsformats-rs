@@ -1,7 +1,10 @@
 use std::io::{self, Read, Seek, Write};
 
 use crate::{
-    SoulsFile, dcx::compression_info::*, format::SoulsFileInternal, io::{BinaryReader, BinaryWriter, Endian}, util,
+    ByteIO, FileIO,
+    dcx::compression_info::*,
+    io::{BinaryReader, BinaryWriter, Endian, StreamIO},
+    util,
 };
 
 pub mod light;
@@ -32,7 +35,7 @@ impl BTL {
     }
 }
 
-impl SoulsFileInternal<BTL> for BTL {
+impl StreamIO<BTL> for BTL {
     fn read<R>(br: &mut BinaryReader<R>) -> io::Result<Self>
     where
         R: Read + Seek,
@@ -100,12 +103,18 @@ impl SoulsFileInternal<BTL> for BTL {
             name_offsets.push(name_offset);
             bw.write_utf16(&entry.name, true)?;
             if name_offset % 0x10 != 0 {
-                bw.write_pattern(util::try_from_to_io_result(0x10 - (name_offset % 0x10))?, 0x00)?;
+                bw.write_pattern(
+                    util::try_from_to_io_result(0x10 - (name_offset % 0x10))?,
+                    0x00,
+                )?;
             }
         }
 
         let pos = bw.position()?;
-        bw.fill_i32("names_length", util::try_from_to_io_result(pos - names_start)?)?;
+        bw.fill_i32(
+            "names_length",
+            util::try_from_to_io_result(pos - names_start)?,
+        )?;
 
         for i in 0..self.lights.len() {
             self.lights[i].write(bw, name_offsets[i])?;
@@ -119,4 +128,5 @@ impl SoulsFileInternal<BTL> for BTL {
     }
 }
 
-impl SoulsFile<BTL> for BTL {}
+impl ByteIO<BTL> for BTL {}
+impl FileIO<BTL> for BTL {}

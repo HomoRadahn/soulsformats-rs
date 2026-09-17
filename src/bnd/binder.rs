@@ -1,7 +1,7 @@
 use std::io::{self, Read, Seek, Write};
 
-use bitflags::bitflags;
 use crate::io::{BinaryReader, BinaryWriter, Endian};
+use bitflags::bitflags;
 
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -39,17 +39,16 @@ impl TryFrom<u8> for Format {
     type Error = io::Error;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
-        Self::from_bits(value).ok_or_else(|| {
-            io::Error::new(io::ErrorKind::InvalidData, "invalid format flags")
-        })
+        Self::from_bits(value)
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "invalid format flags"))
     }
 }
 
 impl Format {
     /// Reads `Format` from `BinaryReader`
     pub(crate) fn read<R>(br: &mut BinaryReader<R>, bit_endian: Endian) -> io::Result<Self>
-    where 
-        R: Read + Seek
+    where
+        R: Read + Seek,
     {
         let raw = br.read_u8()?;
 
@@ -60,14 +59,14 @@ impl Format {
 
         match reverse {
             true => Ok(Self::try_from(raw)?),
-            false => Ok(Self::try_from(raw.reverse_bits())?)
+            false => Ok(Self::try_from(raw.reverse_bits())?),
         }
     }
 
     /// Writes `Format` to `BinaryWriter`
     pub(crate) fn write<W>(&self, bw: &mut BinaryWriter<W>, bit_endian: Endian) -> io::Result<()>
-    where 
-        W: Write + Seek
+    where
+        W: Write + Seek,
     {
         let reverse = match bit_endian {
             Endian::Big => true,
@@ -76,7 +75,7 @@ impl Format {
 
         let raw = match reverse {
             true => self.bits(),
-            false => self.bits().reverse_bits()
+            false => self.bits().reverse_bits(),
         };
 
         bw.write_u8(raw)
@@ -87,23 +86,19 @@ impl Format {
 pub fn get_bnd4_file_header_size(format: Format) -> i64 {
     0x10 + match format.contains(Format::LongOffsets) {
         true => 8,
-        false => 4
-    }
-    + match format.contains(Format::Compression) {
+        false => 4,
+    } + match format.contains(Format::Compression) {
         true => 8,
-        false => 0
-    }
-    + match format.contains(Format::IDs) {
+        false => 0,
+    } + match format.contains(Format::IDs) {
         true => 4,
-        false => 0
-    }
-    + match format.contains(Format::Names1 | Format::Names2) {
+        false => 0,
+    } + match format.contains(Format::Names1 | Format::Names2) {
         true => 4,
-        false => 0
-    }
-    + match format == Format::Names1 {
+        false => 0,
+    } + match format == Format::Names1 {
         true => 8,
-        false => 0
+        false => 0,
     }
 }
 
@@ -143,29 +138,28 @@ impl TryFrom<u8> for FileFlags {
     type Error = io::Error;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
-        Self::from_bits(value).ok_or_else(|| {
-            io::Error::new(io::ErrorKind::InvalidData, "invalid format flags")
-        })
+        Self::from_bits(value)
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "invalid format flags"))
     }
 }
 
 impl FileFlags {
     /// Reads `FileFlags` from `BinaryReader`
     pub(crate) fn read<R>(br: &mut BinaryReader<R>, bit_endian: Endian) -> io::Result<Self>
-    where 
-        R: Read + Seek
+    where
+        R: Read + Seek,
     {
         let raw = br.read_u8()?;
         match bit_endian {
             Endian::Big => Ok(Self::try_from(raw)?),
-            Endian::Little => Ok(Self::try_from(raw.reverse_bits())?)
+            Endian::Little => Ok(Self::try_from(raw.reverse_bits())?),
         }
     }
 
     /// Writes `FileFlags` to `BinaryWriter`
-    pub(crate) fn write<W>(&self, bw: &mut BinaryWriter<W>, bit_endian: Endian) -> io::Result<()> 
-    where 
-        W: Write + Seek
+    pub(crate) fn write<W>(&self, bw: &mut BinaryWriter<W>, bit_endian: Endian) -> io::Result<()>
+    where
+        W: Write + Seek,
     {
         let raw = match bit_endian {
             Endian::Big => self.bits(),
@@ -200,7 +194,7 @@ impl DateTime {
         let hour = char::from_u32(self.hour + 'A' as u32).unwrap_or('1');
 
         let string: String = format!("{}{}{}{}{}", year, month, self.day, hour, self.minute);
-        
+
         let len = string.chars().count();
 
         if len >= 8 {

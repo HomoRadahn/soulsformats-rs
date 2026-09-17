@@ -1,4 +1,4 @@
-use soulsformats_rs::{BND4, SoulsFile};
+use soulsformats_rs::{ByteIO, FileIO, bnd::BND4};
 
 #[test]
 fn bnd4_read() {

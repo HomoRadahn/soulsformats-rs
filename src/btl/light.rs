@@ -1,6 +1,9 @@
 use std::io::{self, Read, Seek, Write};
 
-use crate::{io::{BinaryReader, BinaryWriter, ByteVector3, ByteVector4, Vector3}, util};
+use crate::{
+    io::{BinaryReader, BinaryWriter, ByteVector3, ByteVector4, Vector3},
+    util,
+};
 
 #[derive(Default, Clone, PartialEq, Debug)]
 /// Type of a light source
@@ -147,7 +150,11 @@ impl Light {
     }
 
     /// Reads the `Light` from the supplied `BinaryReader`
-    pub(crate) fn read<R>(br: &mut BinaryReader<R>, names_start: i64, version: i32) -> io::Result<Self>
+    pub(crate) fn read<R>(
+        br: &mut BinaryReader<R>,
+        names_start: i64,
+        version: i32,
+    ) -> io::Result<Self>
     where
         R: Read + Seek,
     {

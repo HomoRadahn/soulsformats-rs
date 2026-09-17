@@ -1,10 +1,9 @@
 use std::io::{self, Read, Seek, Write};
 
 use crate::{
-    dcx::{
-        compression_info::*,
-        zstd_helper::ZstdHelper,
-    }, io::{BinaryReader, BinaryWriter, Endian}, util,
+    dcx::{compression_info::*, zstd_helper::ZstdHelper},
+    io::{BinaryReader, BinaryWriter, Endian},
+    util,
 };
 pub mod compression_info;
 mod deflate_helper;
@@ -19,10 +18,7 @@ pub struct DCX {
 impl DCX {
     /// Creates a `DCX` from `Vec<u8>` and `CompressionInfo`
     pub fn new(data: Vec<u8>, compression: CompressionInfo) -> Self {
-        Self {
-            data,
-            compression,
-        }
+        Self { data, compression }
     }
 
     /// Checks if the provided `BinaryReader` contains a valid `DCX`
@@ -120,9 +116,9 @@ impl DCX {
                     let unk14 = br.get_i32(0x14)?;
                     let unk30 = br.get_i32(0x30)?;
                     let unk38 = br.get_i32(0x38)?;
-                    compression = CompressionInfo::DcxDflt(
-                        DcxDfltArgs::new(unk04, unk10, unk14, unk30, unk38)
-                    );
+                    compression = CompressionInfo::DcxDflt(DcxDfltArgs::new(
+                        unk04, unk10, unk14, unk30, unk38,
+                    ));
                 }
                 "EDGE" => compression = CompressionInfo::DcxEdge,
                 "KRAK" => unimplemented!(),
@@ -195,10 +191,7 @@ impl DCX {
         return Ok(output);
     }
 
-    fn decompress_dcx_dflt<R>(
-        mut br: BinaryReader<R>,
-        args: DcxDfltArgs,
-    ) -> io::Result<Vec<u8>>
+    fn decompress_dcx_dflt<R>(mut br: BinaryReader<R>, args: DcxDfltArgs) -> io::Result<Vec<u8>>
     where
         R: Read + Seek,
     {
@@ -382,10 +375,7 @@ impl DCX {
         unimplemented!()
     }
 
-    fn decompress_dcx_zstd<R>(
-        mut br: BinaryReader<R>,
-        compression_level: u8,
-    ) -> io::Result<Vec<u8>>
+    fn decompress_dcx_zstd<R>(mut br: BinaryReader<R>, compression_level: u8) -> io::Result<Vec<u8>>
     where
         R: Read + Seek,
     {
@@ -732,7 +722,10 @@ impl DCX {
                 &format!("chunk_{i}_offset"),
                 util::try_from_to_io_result(pos - data_start)?,
             )?;
-            bw.fill_i32(&format!("chunk_{i}_size"), util::try_from_to_io_result(chunk.len())?)?;
+            bw.fill_i32(
+                &format!("chunk_{i}_size"),
+                util::try_from_to_io_result(chunk.len())?,
+            )?;
             bw.write_u8_vec(chunk)?;
             bw.pad_00(0x10)?;
         }

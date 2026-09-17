@@ -802,8 +802,8 @@ mod tests {
     fn read_uint64() {
         let single = vec![0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19];
         let many = vec![
-            0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26,
-            0x27,
+            0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25,
+            0x26, 0x27,
         ];
 
         let mut little_reader = BinaryReader::from_bytes(single.clone(), Endian::Little, true);
@@ -929,8 +929,8 @@ mod tests {
     #[test]
     fn read_int64() {
         let bytes = vec![
-            0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
-            0x00,
+            0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x02, 0x00,
         ];
 
         let mut little_reader = BinaryReader::from_bytes(bytes.clone(), Endian::Little, true);
@@ -969,7 +969,8 @@ mod tests {
         let little_bytes = vec![0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x20, 0xC0];
         let big_bytes = vec![0x3F, 0x80, 0x00, 0x00, 0xC0, 0x20, 0x00, 0x00];
 
-        let mut little_reader = BinaryReader::from_bytes(little_bytes.clone(), Endian::Little, true);
+        let mut little_reader =
+            BinaryReader::from_bytes(little_bytes.clone(), Endian::Little, true);
         assert_eq!(little_reader.read_f32().unwrap(), 1.0);
         let mut little_vec_reader =
             BinaryReader::from_bytes(little_bytes.clone(), Endian::Little, true);
@@ -995,15 +996,16 @@ mod tests {
     #[test]
     fn read_float64() {
         let little_bytes = vec![
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF0, 0x3F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04,
-            0xC0,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF0, 0x3F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x04, 0xC0,
         ];
         let big_bytes = vec![
-            0x3F, 0xF0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00,
+            0x3F, 0xF0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x04, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00,
         ];
 
-        let mut little_reader = BinaryReader::from_bytes(little_bytes.clone(), Endian::Little, true);
+        let mut little_reader =
+            BinaryReader::from_bytes(little_bytes.clone(), Endian::Little, true);
         assert_eq!(little_reader.read_f64().unwrap(), 1.0);
         let mut little_vec_reader =
             BinaryReader::from_bytes(little_bytes.clone(), Endian::Little, true);
@@ -1036,8 +1038,8 @@ mod tests {
         assert_eq!(0, short_get_reader.position().unwrap());
 
         let long_bytes = vec![
-            0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00,
+            0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00,
         ];
         let mut long_reader = BinaryReader::from_bytes(long_bytes.clone(), Endian::Little, true);
         assert_eq!(long_reader.read_varint_vec(2).unwrap(), vec![-2, 2]);
@@ -1057,7 +1059,8 @@ mod tests {
         let mut reader = BinaryReader::from_bytes(vec![1, 0, 0, 0], Endian::Little, true);
         assert_eq!(reader.read_enum_u32::<EnumU32>().unwrap(), EnumU32::One);
 
-        let mut reader = BinaryReader::from_bytes(vec![1, 0, 0, 0, 0, 0, 0, 0], Endian::Little, true);
+        let mut reader =
+            BinaryReader::from_bytes(vec![1, 0, 0, 0, 0, 0, 0, 0], Endian::Little, true);
         assert_eq!(reader.read_enum_u64::<EnumU64>().unwrap(), EnumU64::One);
 
         let mut reader = BinaryReader::from_bytes(vec![1], Endian::Little, true);
@@ -1069,7 +1072,8 @@ mod tests {
         let mut reader = BinaryReader::from_bytes(vec![1, 0, 0, 0], Endian::Little, true);
         assert_eq!(reader.read_enum_i32::<EnumI32>().unwrap(), EnumI32::One);
 
-        let mut reader = BinaryReader::from_bytes(vec![1, 0, 0, 0, 0, 0, 0, 0], Endian::Little, true);
+        let mut reader =
+            BinaryReader::from_bytes(vec![1, 0, 0, 0, 0, 0, 0, 0], Endian::Little, true);
         assert_eq!(reader.read_enum_i64::<EnumI64>().unwrap(), EnumI64::One);
 
         macro_rules! assert_get_enum {
@@ -1133,11 +1137,13 @@ mod tests {
 
     #[test]
     fn read_strings() {
-        let mut ascii_reader = BinaryReader::from_bytes(b"hello\0world".to_vec(), Endian::Little, true);
+        let mut ascii_reader =
+            BinaryReader::from_bytes(b"hello\0world".to_vec(), Endian::Little, true);
         assert_eq!(ascii_reader.read_ascii().unwrap(), "hello");
         assert_eq!(ascii_reader.read_ascii_len(5).unwrap(), "world");
 
-        let mut ascii_get_reader = BinaryReader::from_bytes(b"xMAGIC\0".to_vec(), Endian::Little, true);
+        let mut ascii_get_reader =
+            BinaryReader::from_bytes(b"xMAGIC\0".to_vec(), Endian::Little, true);
         assert_eq!(ascii_get_reader.get_ascii_len(1, 5).unwrap(), "MAGIC");
         assert_eq!(ascii_get_reader.position().unwrap(), 0);
         assert_eq!(
@@ -1261,5 +1267,4 @@ mod tests {
 
         assert!(reader.pad(0).is_err());
     }
-
 }

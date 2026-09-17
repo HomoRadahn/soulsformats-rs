@@ -1,10 +1,14 @@
 use std::io::{self, Read, Seek, Write};
 
-use crate::{bnd::file::BinderFileHeader, io::{BinaryReader, BinaryWriter}, util};
+use crate::{
+    bnd::file::BinderFileHeader,
+    io::{BinaryReader, BinaryWriter},
+    util,
+};
 
 pub(crate) fn assert<R>(br: &mut BinaryReader<R>) -> io::Result<()>
-where 
-    R: Read + Seek
+where
+    R: Read + Seek,
 {
     br.read_i64()?;
     br.read_i32()?;
@@ -17,8 +21,8 @@ where
 }
 
 pub(crate) fn write<W>(bw: &mut BinaryWriter<W>, files: &Vec<BinderFileHeader>) -> io::Result<()>
-where 
-    W: Write + Seek
+where
+    W: Write + Seek,
 {
     let mut group_count = 0;
     for p in (files.len() as u32 / 7)..=100_000 {
@@ -29,7 +33,10 @@ where
     }
 
     if group_count == 0 {
-        return Err(io::Error::new(io::ErrorKind::InvalidData, "unable to determine hash group count"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "unable to determine hash group count",
+        ));
     }
 
     let mut hash_lists: Vec<Vec<PathHash>> = (0..group_count).map(|_| Vec::new()).collect();
@@ -80,17 +87,20 @@ where
 
 struct PathHash {
     index: i32,
-    hash: u32
+    hash: u32,
 }
 
 impl PathHash {
     fn new(index: i32, path: impl Into<String>) -> Self {
-        Self { index, hash: util::from_path_hash(path) }
+        Self {
+            index,
+            hash: util::from_path_hash(path),
+        }
     }
 
     fn write<W>(&self, bw: &mut BinaryWriter<W>) -> io::Result<()>
-    where 
-        W: Write + Seek
+    where
+        W: Write + Seek,
     {
         bw.write_u32(self.hash)?;
         bw.write_i32(self.index)?;
@@ -100,7 +110,7 @@ impl PathHash {
 
 struct HashGroup {
     index: i32,
-    length: i32
+    length: i32,
 }
 
 impl HashGroup {
@@ -109,8 +119,8 @@ impl HashGroup {
     }
 
     fn write<W>(&self, bw: &mut BinaryWriter<W>) -> io::Result<()>
-    where 
-        W: Write + Seek
+    where
+        W: Write + Seek,
     {
         bw.write_i32(self.length)?;
         bw.write_i32(self.index)?;

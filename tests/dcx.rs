@@ -3,10 +3,7 @@ use soulsformats_rs::dcx::compression_info::*;
 
 #[test]
 fn dcp_dflt_round_trip() {
-    let dcx = DCX::new(
-        b"hello, soulsformats-rs".to_vec(),
-        CompressionInfo::DcpDflt,
-    );
+    let dcx = DCX::new(b"hello, soulsformats-rs".to_vec(), CompressionInfo::DcpDflt);
 
     let output = dcx.compress_to_bytes().unwrap();
 
@@ -17,10 +14,7 @@ fn dcp_dflt_round_trip() {
 
 #[test]
 fn dcp_edge_round_trip() {
-    let dcx = DCX::new(
-        b"hello, soulsformats-rs".to_vec(),
-        CompressionInfo::DcpEdge,
-    );
+    let dcx = DCX::new(b"hello, soulsformats-rs".to_vec(), CompressionInfo::DcpEdge);
 
     let output = dcx.compress_to_bytes().unwrap();
 
@@ -31,10 +25,7 @@ fn dcp_edge_round_trip() {
 
 #[test]
 fn dcx_edge_round_trip() {
-    let dcx = DCX::new(
-        b"hello, soulsformats-rs".to_vec(),
-        CompressionInfo::DcxEdge,
-    );
+    let dcx = DCX::new(b"hello, soulsformats-rs".to_vec(), CompressionInfo::DcxEdge);
 
     let output = dcx.compress_to_bytes().unwrap();
 
@@ -47,9 +38,7 @@ fn dcx_edge_round_trip() {
 fn dcx_dftl_round_trip() {
     let dcx = DCX::new(
         b"hello, soulsformats-rs".to_vec(),
-        CompressionInfo::DcxDflt(
-            DcxDfltArgs::from_preset(DcxDfltPreset::DcxDflt10000_24_9)
-        ),
+        CompressionInfo::DcxDflt(DcxDfltArgs::from_preset(DcxDfltPreset::DcxDflt10000_24_9)),
     );
 
     let output = dcx.compress_to_bytes().unwrap();
@@ -62,10 +51,7 @@ fn dcx_dftl_round_trip() {
 #[test]
 #[should_panic]
 fn dcx_krak_round_trip() {
-    let dcx = DCX::new(
-        b"hello, soulsformats-rs".to_vec(),
-        CompressionInfo::DcxKrak,
-    );
+    let dcx = DCX::new(b"hello, soulsformats-rs".to_vec(), CompressionInfo::DcxKrak);
 
     dcx.compress_to_bytes().unwrap();
 }
@@ -74,7 +60,7 @@ fn dcx_krak_round_trip() {
 fn dcx_zstd_round_trip() {
     let dcx = DCX::new(
         b"hello, soulsformats-rs".to_vec(),
-        CompressionInfo::DcxZstd(6)
+        CompressionInfo::DcxZstd(6),
     );
 
     let output = dcx.compress_to_bytes().unwrap();
