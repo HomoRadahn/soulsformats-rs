@@ -2,7 +2,7 @@ use std::io::{self, Read, Seek, Write};
 
 use crate::{
     DCX,
-    bnd::binder::{FileFlags, Format},
+    binder::format::{FileFlags, Format},
     dcx::compression_info::CompressionInfo,
     io::{BinaryReader, BinaryWriter, Endian},
     util,
@@ -299,7 +299,7 @@ impl BinderFileHeader {
         Ok(())
     }
 
-    fn write_file_data<W>(&mut self, bw: &mut BinaryWriter<W>, bytes: Vec<u8>) -> io::Result<()>
+    fn write_file_data<W>(&mut self, bw: &mut BinaryWriter<W>, bytes: &[u8]) -> io::Result<()>
     where
         W: Write + Seek,
     {
@@ -311,12 +311,12 @@ impl BinderFileHeader {
         self.uncompressed_size = util::try_from_to_io_result(bytes.len())?;
 
         if self.flags.contains(FileFlags::Compressed) {
-            let compressed = DCX::new(bytes, self.compression).compress_to_bytes()?;
+            let compressed = DCX::new(bytes.to_vec(), self.compression).compress_to_bytes()?;
             self.compressed_size = util::try_from_to_io_result(compressed.len())?;
             bw.write_u8_vec(compressed)?;
         } else {
             self.compressed_size = util::try_from_to_io_result(bytes.len())?;
-            bw.write_u8_vec(bytes)?;
+            bw.write_bytes(bytes)?;
         }
 
         Ok(())
@@ -328,7 +328,7 @@ impl BinderFileHeader {
         bw: &mut BinaryWriter<W>,
         format: Format,
         index: i32,
-        bytes: Vec<u8>,
+        bytes: &[u8],
     ) -> io::Result<()>
     where
         W: Write + Seek,
@@ -360,16 +360,17 @@ impl BinderFileHeader {
     }
 
     /// Writes `BXF3` file data - which requires two separate `BinaryWriter` references
-    pub(crate) fn write_bxf3_file_data<W>(
+    pub(crate) fn write_bxf3_file_data<WH, WD>(
         &mut self,
-        bw_header: &mut BinaryWriter<W>,
-        bw_data: &mut BinaryWriter<W>,
+        bw_header: &mut BinaryWriter<WH>,
+        bw_data: &mut BinaryWriter<WD>,
         format: Format,
         index: i32,
-        bytes: Vec<u8>,
+        bytes: &[u8],
     ) -> io::Result<()>
     where
-        W: Write + Seek,
+        WH: Write + Seek,
+        WD: Write + Seek,
     {
         self.write_file_data(bw_data, bytes)?;
 
@@ -403,7 +404,7 @@ impl BinderFileHeader {
         bw: &mut BinaryWriter<W>,
         format: Format,
         index: i32,
-        bytes: Vec<u8>,
+        bytes: &[u8],
     ) -> io::Result<()>
     where
         W: Write + Seek,
@@ -441,7 +442,7 @@ impl BinderFileHeader {
         bw_data: &mut BinaryWriter<W>,
         format: Format,
         index: i32,
-        bytes: Vec<u8>,
+        bytes: &[u8],
     ) -> io::Result<()>
     where
         W: Write + Seek,
@@ -473,7 +474,7 @@ impl BinderFileHeader {
     }
 
     pub(crate) fn write_file_name<W>(
-        &mut self,
+        &self,
         bw: &mut BinaryWriter<W>,
         format: Format,
         index: i32,

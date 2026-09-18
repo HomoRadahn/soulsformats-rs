@@ -8,7 +8,7 @@ use std::{
     io::{self, Read, Seek, Write},
 };
 
-pub(crate) trait StreamIO<T>
+pub trait StreamIO<T>
 where
     T: StreamIO<T>,
 {

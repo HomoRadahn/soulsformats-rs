@@ -41,7 +41,7 @@ impl StreamIO<BTL> for BTL {
         R: Read + Seek,
     {
         let (mut reader, compression) = util::get_decompressed_binary_reader(br)?;
-        reader.set_endian(Endian::Little);
+        reader.endian = Endian::Little;
         reader.assert_i32(&[2])?;
         let version = reader.assert_i32(&[1, 2, 5, 6, 16, 18])?;
         let lights_count = reader.read_i32()?;
@@ -51,7 +51,7 @@ impl StreamIO<BTL> for BTL {
         reader.assert_pattern(0x24, 0x00)?;
         let light_res = light_size != 0xC0;
         let offsets_64bit = light_res.clone();
-        reader.set_varint_64bit(light_res);
+        reader.varint_64bit = light_res;
 
         let names_start = reader.position()?;
         reader.skip(names_length as i64)?;
@@ -77,8 +77,8 @@ impl StreamIO<BTL> for BTL {
     where
         W: Write + Seek,
     {
-        bw.set_endian(Endian::Little);
-        bw.set_varint_64bit(self.offsets_64bit);
+        bw.endian = Endian::Little;
+        bw.varint_64bit = self.offsets_64bit;
 
         bw.write_i32(2)?;
         bw.write_i32(self.version)?;

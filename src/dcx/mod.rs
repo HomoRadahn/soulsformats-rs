@@ -3,8 +3,7 @@ use std::io::{self, Read, Seek, Write};
 use crate::{
     dcx::{compression_info::*, zstd_helper::ZstdHelper},
     io::{BinaryReader, BinaryWriter, Endian},
-    util,
-    oodle
+    oodle, util,
 };
 pub mod compression_info;
 mod deflate_helper;
@@ -23,7 +22,7 @@ impl DCX {
     }
 
     /// Checks if the provided `BinaryReader` contains a valid `DCX`
-    pub(crate) fn is<R>(br: &mut BinaryReader<R>) -> io::Result<bool>
+    pub fn is<R>(br: &mut BinaryReader<R>) -> io::Result<bool>
     where
         R: Read + Seek,
     {
@@ -43,8 +42,8 @@ impl DCX {
     }
 
     /// Checks whether provided file is a valid `DCX`
-    pub fn is_file(path: &str) -> io::Result<bool> {
-        let mut br = BinaryReader::from_file(path, Endian::Big, false)?;
+    pub fn is_file(path: impl Into<String>) -> io::Result<bool> {
+        let mut br = BinaryReader::from_file(path.into(), Endian::Big, false)?;
         DCX::is(&mut br)
     }
 
@@ -59,8 +58,8 @@ impl DCX {
     }
 
     /// Decompress `DCX` from provided file
-    pub fn decompress_file(path: &str) -> io::Result<Self> {
-        let br = BinaryReader::from_file(path, Endian::Big, false)?;
+    pub fn decompress_file(path: impl Into<String>) -> io::Result<Self> {
+        let br = BinaryReader::from_file(path.into(), Endian::Big, false)?;
         let (decompressed, compression) = DCX::decompress(br)?;
         Ok(Self {
             data: decompressed,
@@ -69,8 +68,8 @@ impl DCX {
     }
 
     /// Compress `DCX` to specified file
-    pub fn compress_to_file(&self, path: &str) -> io::Result<()> {
-        let mut bw = BinaryWriter::to_file(path, Endian::Big, false)?;
+    pub fn compress_to_file(&self, path: impl Into<String>) -> io::Result<()> {
+        let mut bw = BinaryWriter::to_file(path.into(), Endian::Big, false)?;
         let data = &self.data;
         DCX::compress(&mut bw, data, self.compression)?;
         Ok(())

@@ -1,9 +1,9 @@
 use crate::{
     ByteIO, FileIO,
-    bnd::{
+    binder::{
         BinderFile,
-        binder::{self, *},
         file::BinderFileHeader,
+        format::{self, *},
         hashtable,
     },
     dcx::compression_info::CompressionInfo,
@@ -12,17 +12,17 @@ use crate::{
 };
 use std::io::{self, ErrorKind::InvalidData, Read, Seek, Write};
 
-/// A general-purpose file container used since DS2. Extension: .*bnd
+/// A general-purpose file container used since DS2
 pub struct BND4 {
-    /// The files contained within this BND4
+    /// The files contained within this `BND4`
     pub files: Vec<BinderFile>,
     /// A timestamp or version number, 8 characters maximum
     pub version: String,
-    /// Indicates the format of this BND4
-    pub format: binder::Format,
+    /// Indicates the format of this `BND4`
+    pub format: format::Format,
     pub unk04: bool,
     pub unk05: bool,
-    /// Endian format to write in
+    /// Endian format of the data
     pub endian: Endian,
     /// Ordering of flag bits
     pub bit_endian: Endian,
@@ -35,7 +35,7 @@ pub struct BND4 {
 }
 
 impl BND4 {
-    /// Creates an empty BND4 formatted for DS3
+    /// Creates an empty `BND4` formatted for DS3
     pub fn new(compression: CompressionInfo) -> Self {
         Self {
             files: Vec::new(),
@@ -79,7 +79,7 @@ impl BND4 {
         };
         br.assert_u8(&[0])?;
 
-        br.set_endian(self.endian);
+        br.endian = self.endian;
 
         let file_count = br.read_i32()?;
         br.assert_i64(&[0x40])?; // Header size
@@ -129,7 +129,7 @@ impl BND4 {
     where
         W: Write + Seek,
     {
-        bw.set_endian(self.endian);
+        bw.endian = self.endian;
 
         bw.write_ascii("BND4", false)?;
 
@@ -152,7 +152,7 @@ impl BND4 {
         bw.write_i32(util::try_from_to_io_result(file_headers.len())?)?;
         bw.write_i64(0x40)?;
         bw.write_fix_str(self.version.clone(), 8, 0)?;
-        bw.write_i64(binder::get_bnd4_file_header_size(self.format))?;
+        bw.write_i64(format::get_bnd4_file_header_size(self.format))?;
         bw.reserve_i64("headers-end")?;
 
         bw.write_bool(self.unicode)?;
@@ -169,15 +169,6 @@ impl BND4 {
                 self.format,
                 self.bit_endian,
                 util::try_from_to_io_result(i)?,
-            )?;
-        }
-
-        for i in 0..self.files.len() {
-            file_headers[i].write_bnd4_file_data(
-                bw,
-                self.format,
-                i as i32,
-                self.files[i].bytes.clone(),
             )?;
         }
 
@@ -211,14 +202,14 @@ impl StreamIO<BND4> for BND4 {
     where
         R: Read + Seek,
     {
-        let (mut br_dec, compression) = util::get_decompressed_binary_reader(br)?;
+        let (mut reader, compression) = util::get_decompressed_binary_reader(br)?;
         let mut bnd = BND4::new(compression);
 
-        let file_headers = bnd.read_header(&mut br_dec)?;
+        let file_headers = bnd.read_header(&mut reader)?;
         let mut files: Vec<BinderFile> = Vec::with_capacity(file_headers.len());
 
         for header in file_headers {
-            files.push(header.read_file_data(&mut br_dec)?);
+            files.push(header.read_file_data(&mut reader)?);
         }
 
         bnd.files = files;
@@ -236,6 +227,15 @@ impl StreamIO<BND4> for BND4 {
         }
 
         BND4::write_header(&self, bw, &mut file_headers)?;
+
+        for i in 0..self.files.len() {
+            file_headers[i].write_bnd4_file_data(
+                bw,
+                self.format,
+                util::try_from_to_io_result(i)?,
+                &self.files[i].bytes,
+            )?;
+        }
 
         Ok(())
     }

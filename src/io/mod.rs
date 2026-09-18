@@ -2,10 +2,10 @@ mod format;
 mod reader;
 mod writer;
 
-pub(crate) use format::StreamIO;
+pub use format::StreamIO;
 pub use format::{ByteIO, FileIO};
-pub(crate) use reader::BinaryReader;
-pub(crate) use writer::BinaryWriter;
+pub use reader::BinaryReader;
+pub use writer::BinaryWriter;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 #[allow(dead_code)]

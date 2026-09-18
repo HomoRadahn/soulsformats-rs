@@ -1,7 +1,7 @@
 use std::io::{self, Read, Seek, Write};
 
 use crate::{
-    bnd::file::BinderFileHeader,
+    binder::file::BinderFileHeader,
     io::{BinaryReader, BinaryWriter},
     util,
 };

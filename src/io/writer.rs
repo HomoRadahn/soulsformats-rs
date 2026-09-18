@@ -47,10 +47,10 @@ macro_rules! impl_numeric_writer {
     };
 }
 
-pub(crate) struct BinaryWriter<W> {
+pub struct BinaryWriter<W> {
     inner: W,
-    endian: Endian,
-    varint_64bit: bool,
+    pub endian: Endian,
+    pub varint_64bit: bool,
     reservations: HashMap<String, u64>,
 }
 
@@ -64,16 +64,6 @@ impl<W: Write + Seek> BinaryWriter<W> {
             varint_64bit,
             reservations: HashMap::new(),
         }
-    }
-
-    /// Sets endianness of the stream
-    pub fn set_endian(&mut self, endian: Endian) {
-        self.endian = endian;
-    }
-
-    /// Sets `varint_64bit` to `behavior`
-    pub fn set_varint_64bit(&mut self, behavior: bool) {
-        self.varint_64bit = behavior;
     }
 
     /// Returns current stream position
@@ -399,6 +389,10 @@ impl<W: Write + Seek> BinaryWriter<W> {
     pub fn write_pattern(&mut self, length: usize, value: u8) -> io::Result<()> {
         let bytes = vec![value; length];
         self.write_u8_vec(bytes)
+    }
+
+    pub fn write_bytes(&mut self, bytes: &[u8]) -> io::Result<()> {
+        self.inner.write_all(bytes)
     }
 
     impl_numeric_writer!(u8, 1, write_u8, write_u8_vec, reserve_u8, fill_u8);

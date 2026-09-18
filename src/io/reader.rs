@@ -74,10 +74,10 @@ macro_rules! impl_numeric_reader {
     };
 }
 
-pub(crate) struct BinaryReader<R> {
+pub struct BinaryReader<R> {
     inner: R,
-    endian: Endian,
-    varint_64bit: bool,
+    pub endian: Endian,
+    pub varint_64bit: bool,
 }
 
 #[allow(unused)]
@@ -89,16 +89,6 @@ impl<R: Read + Seek> BinaryReader<R> {
             endian,
             varint_64bit,
         }
-    }
-
-    /// Sets endianness of the stream
-    pub fn set_endian(&mut self, endian: Endian) {
-        self.endian = endian;
-    }
-
-    /// Sets `varint_64bit` to `behavior`
-    pub fn set_varint_64bit(&mut self, behavior: bool) {
-        self.varint_64bit = behavior;
     }
 
     fn assert_value<T>(value: T, expected: &[T], type_name: &str) -> io::Result<T>

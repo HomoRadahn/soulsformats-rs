@@ -1,8 +1,8 @@
 use crate::{
-    bnd::{
+    binder::{
         BinderFile,
-        binder::{self, Format},
         file::BinderFileHeader,
+        format::{self, Format},
     },
     dcx::compression_info::CompressionInfo,
     io::{BinaryReader, BinaryWriter, ByteIO, Endian, FileIO, StreamIO},
@@ -12,13 +12,13 @@ use std::io::{self, Read, Seek, Write};
 
 /// A general-purpose file container used before DS2
 pub struct BND3 {
-    /// The files contained within this BND3
+    /// The files contained within this `BND3`
     pub files: Vec<BinderFile>,
     /// A timestamp or version number, 8 characters maximum
     pub version: String,
-    /// Indicates the format of the BND3
+    /// Indicates the format of the `BND3`
     pub format: Format,
-    /// Endian format to write in
+    /// Endian format of the data
     pub endian: Endian,
     /// Ordering of flag bits
     pub bit_endian: Endian,
@@ -30,11 +30,11 @@ pub struct BND3 {
 }
 
 impl BND3 {
-    /// Creates an empty BND3 formatted for DS1
+    /// Creates an empty `BND3` formatted for DS1
     pub fn new(compression: CompressionInfo) -> Self {
         Self {
             files: Vec::new(),
-            version: binder::DateTime {
+            version: format::DateTime {
                 year: 2026,
                 month: 1,
                 day: 1,
@@ -43,8 +43,8 @@ impl BND3 {
             }
             .to_bnd_timestamp(),
             format: Format::IDs | Format::Names1 | Format::Names2 | Format::Compression,
-            endian: Endian::Big,
-            bit_endian: Endian::Big,
+            endian: Endian::Little,
+            bit_endian: Endian::Little,
             unk18: 0,
             write_file_headers_end: false,
             compression: compression,
@@ -74,10 +74,10 @@ impl BND3 {
         };
         br.assert_u8(&[0])?;
 
-        match self.endian {
-            Endian::Big => br.set_endian(Endian::Big),
-            Endian::Little if self.format.contains(Format::BigEndian) => br.set_endian(Endian::Big),
-            Endian::Little => br.set_endian(Endian::Little),
+        br.endian = match self.endian {
+            Endian::Big => Endian::Big,
+            Endian::Little if self.format.contains(Format::BigEndian) => Endian::Big,
+            Endian::Little => Endian::Little,
         };
 
         let file_count = br.read_i32()?;
@@ -96,6 +96,66 @@ impl BND3 {
 
         Ok(file_headers)
     }
+
+    fn write_header<W>(
+        &self,
+        bw: &mut BinaryWriter<W>,
+        file_headers: &mut Vec<BinderFileHeader>,
+    ) -> io::Result<()>
+    where
+        W: Write + Seek,
+    {
+        bw.endian = match self.endian {
+            Endian::Big => Endian::Big,
+            Endian::Little if self.format.contains(Format::BigEndian) => Endian::Big,
+            Endian::Little => Endian::Little,
+        };
+
+        bw.write_ascii("BND3", false)?;
+        bw.write_fix_str(self.version.clone(), 8, 0)?;
+        self.format.write(bw, self.bit_endian)?;
+        bw.write_bool(match self.endian {
+            Endian::Big => true,
+            Endian::Little => false,
+        })?;
+        bw.write_bool(match self.bit_endian {
+            Endian::Big => true,
+            Endian::Little => false,
+        })?;
+        bw.write_u8(0)?;
+
+        bw.write_i32(util::try_from_to_io_result(file_headers.len())?)?;
+        bw.reserve_i32("file-headers-end")?;
+        bw.write_i32(self.unk18)?;
+        bw.write_i32(0)?;
+
+        for i in 0..file_headers.len() {
+            file_headers[i].write_bnd3_header(
+                bw,
+                self.format,
+                self.bit_endian,
+                util::try_from_to_io_result(i)?,
+            )?;
+        }
+
+        for i in 0..file_headers.len() {
+            file_headers[i].write_file_name(
+                bw,
+                self.format,
+                util::try_from_to_io_result(i)?,
+                false,
+            )?;
+        }
+
+        if self.write_file_headers_end {
+            let pos = util::try_from_to_io_result::<u64, i32>(bw.position()?)?;
+            bw.fill_i32("file-headers-end", pos)?;
+        } else {
+            bw.fill_i32("file-headers-end", 0)?;
+        }
+
+        Ok(())
+    }
 }
 
 impl StreamIO<BND3> for BND3 {
@@ -107,14 +167,14 @@ impl StreamIO<BND3> for BND3 {
     where
         R: Read + Seek,
     {
-        let (mut br_dec, compression) = util::get_decompressed_binary_reader(br)?;
+        let (mut reader, compression) = util::get_decompressed_binary_reader(br)?;
         let mut bnd = BND3::new(compression);
 
-        let file_headers = bnd.read_header(&mut br_dec)?;
+        let file_headers = bnd.read_header(&mut reader)?;
         let mut files: Vec<BinderFile> = Vec::with_capacity(file_headers.len());
 
         for header in file_headers {
-            files.push(header.read_file_data(&mut br_dec)?);
+            files.push(header.read_file_data(&mut reader)?);
         }
 
         bnd.files = files;
@@ -126,7 +186,24 @@ impl StreamIO<BND3> for BND3 {
     where
         W: Write + Seek,
     {
-        todo!()
+        let mut file_headers: Vec<BinderFileHeader> = Vec::with_capacity(self.files.len());
+
+        for file in &self.files {
+            file_headers.push(BinderFileHeader::from_binder_file(&file));
+        }
+
+        BND3::write_header(&self, bw, &mut file_headers)?;
+
+        for i in 0..self.files.len() {
+            file_headers[i].write_bnd3_file_data(
+                bw,
+                self.format,
+                util::try_from_to_io_result(i)?,
+                &self.files[i].bytes,
+            )?;
+        }
+
+        Ok(())
     }
 
     fn is<R>(br: &mut BinaryReader<R>) -> io::Result<bool>

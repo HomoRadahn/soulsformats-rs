@@ -1,4 +1,4 @@
-use soulsformats_rs::{FileIO, bnd::BND4};
+use soulsformats_rs::{FileIO, binder::BND4};
 use std::{env, error::Error, fs, path::Path, process};
 
 fn decompress_write(path: String) -> Result<(), Box<dyn Error>> {

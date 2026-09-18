@@ -141,8 +141,7 @@ fn load() -> io::Result<OodleCompat> {
         let file_name = file_name.to_string_lossy().to_ascii_lowercase();
         if file_name.starts_with("oo2core") && file_name.ends_with(".dll") {
             candidates.push(entry.path());
-        }
-        else if file_name.starts_with("liboo2core") {
+        } else if file_name.starts_with("liboo2core") {
             candidates.push(entry.path());
         }
     }
