@@ -49,11 +49,16 @@ fn dcx_dftl_round_trip() {
 }
 
 #[test]
-#[should_panic]
 fn dcx_krak_round_trip() {
-    let dcx = DCX::new(b"hello, soulsformats-rs".to_vec(), CompressionInfo::DcxKrak);
+    let dcx = DCX::new(
+        b"hello, soulsformats-rs".to_vec(),
+        CompressionInfo::DcxKrak(DcxKrakArgs::new()),
+    );
 
-    dcx.compress_to_bytes().unwrap();
+    let output = dcx.compress_to_bytes().unwrap();
+    let round_trip = DCX::decompress_bytes(output).unwrap();
+
+    assert_eq!(round_trip.data, b"hello, soulsformats-rs".to_vec());
 }
 
 #[test]

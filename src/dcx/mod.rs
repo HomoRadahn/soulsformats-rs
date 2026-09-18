@@ -4,6 +4,7 @@ use crate::{
     dcx::{compression_info::*, zstd_helper::ZstdHelper},
     io::{BinaryReader, BinaryWriter, Endian},
     util,
+    oodle
 };
 pub mod compression_info;
 mod deflate_helper;
@@ -121,7 +122,13 @@ impl DCX {
                     ));
                 }
                 "EDGE" => compression = CompressionInfo::DcxEdge,
-                "KRAK" => unimplemented!(),
+                "KRAK" => {
+                    let compression_level = br.get_u8(0x30)?;
+                    compression = CompressionInfo::DcxKrak(DcxKrakArgs {
+                        compression_level,
+                        oodle_compressor: ::oodle::OodleCompressor::Kraken,
+                    });
+                }
                 "ZSTD" => {
                     let zstd_compression_level = br.get_u8(0x30)?;
                     compression = CompressionInfo::DcxZstd(zstd_compression_level);
@@ -153,7 +160,7 @@ impl DCX {
             CompressionInfo::DcpEdge => DCX::decompress_dcp_edge(br)?,
             CompressionInfo::DcxEdge => DCX::decompress_dcx_edge(br)?,
             CompressionInfo::DcxDflt(args) => DCX::decompress_dcx_dflt(br, args)?,
-            CompressionInfo::DcxKrak => DCX::decompress_dcx_krak(br, compression)?,
+            CompressionInfo::DcxKrak(args) => DCX::decompress_dcx_krak(br, args)?,
             CompressionInfo::DcxZstd(level) => DCX::decompress_dcx_zstd(br, level)?,
             _ => {
                 return Err(io::Error::new(
@@ -367,12 +374,35 @@ impl DCX {
         return Ok(output);
     }
 
-    #[allow(dead_code, unused)]
-    fn decompress_dcx_krak<R>(
-        mut br: BinaryReader<R>,
-        args: CompressionInfo,
-    ) -> io::Result<Vec<u8>> {
-        unimplemented!()
+    fn decompress_dcx_krak<R>(mut br: BinaryReader<R>, args: DcxKrakArgs) -> io::Result<Vec<u8>>
+    where
+        R: Read + Seek,
+    {
+        br.assert_ascii(&["DCX\0"])?;
+        br.assert_i32(&[0x11000])?;
+        br.assert_i32(&[0x18])?;
+        br.assert_i32(&[0x24])?;
+        br.assert_i32(&[0x44])?;
+        br.assert_i32(&[0x4C])?;
+        br.assert_ascii(&["DCS\0"])?;
+        let uncompressed_size = util::try_from_to_io_result(br.read_u32()?)?;
+        let compressed_size = util::try_from_to_io_result::<u32, usize>(br.read_u32()?)?;
+        br.assert_ascii(&["DCP\0"])?;
+        br.assert_ascii(&["KRAK"])?;
+        br.assert_i32(&[0x20])?;
+        br.assert_u8(&[args.compression_level])?;
+        br.assert_u8(&[0])?;
+        br.assert_u8(&[0])?;
+        br.assert_u8(&[0])?;
+        br.assert_i32(&[0])?;
+        br.assert_i32(&[0])?;
+        br.assert_i32(&[0])?;
+        br.assert_i32(&[0x10100])?;
+        br.assert_ascii(&["DCA\0"])?;
+        br.assert_i32(&[8])?;
+
+        let compressed = br.read_u8_vec(compressed_size as u64)?;
+        oodle::decompress(&compressed, uncompressed_size)
     }
 
     fn decompress_dcx_zstd<R>(mut br: BinaryReader<R>, compression_level: u8) -> io::Result<Vec<u8>>
@@ -428,7 +458,7 @@ impl DCX {
             CompressionInfo::DcpDflt => DCX::compress_dcp_dflt(bw, data)?,
             CompressionInfo::DcxEdge => DCX::compress_dcx_edge(bw, data)?,
             CompressionInfo::DcxDflt(args) => DCX::compress_dcx_dflt(bw, data, args)?,
-            CompressionInfo::DcxKrak => DCX::compress_dcx_krak(bw, data, compression)?,
+            CompressionInfo::DcxKrak(args) => DCX::compress_dcx_krak(bw, data, args)?,
             CompressionInfo::DcxZstd(level) => DCX::compress_dcx_zstd(bw, data, level)?,
             _ => {
                 return Err(io::Error::new(
@@ -530,12 +560,38 @@ impl DCX {
     fn compress_dcx_krak<W>(
         bw: &mut BinaryWriter<W>,
         data: &Vec<u8>,
-        args: CompressionInfo,
+        args: DcxKrakArgs,
     ) -> io::Result<()>
     where
         W: Write + Seek,
     {
-        unimplemented!()
+        let compressed = oodle::compress(data, args.oodle_compressor, args.compression_level)?;
+
+        bw.write_ascii("DCX", true)?;
+        bw.write_i32(0x11000)?;
+        bw.write_i32(0x18)?;
+        bw.write_i32(0x24)?;
+        bw.write_i32(0x44)?;
+        bw.write_i32(0x4C)?;
+        bw.write_ascii("DCS", true)?;
+        bw.write_u32(util::try_from_to_io_result(data.len())?)?;
+        bw.write_u32(util::try_from_to_io_result(compressed.len())?)?;
+        bw.write_ascii("DCP", true)?;
+        bw.write_ascii("KRAK", false)?;
+        bw.write_i32(0x20)?;
+        bw.write_u8(args.compression_level)?;
+        bw.write_u8(0)?;
+        bw.write_u8(0)?;
+        bw.write_u8(0)?;
+        bw.write_i32(0)?;
+        bw.write_i32(0)?;
+        bw.write_i32(0)?;
+        bw.write_i32(0x10100)?;
+        bw.write_ascii("DCA", true)?;
+        bw.write_i32(8)?;
+        bw.write_u8_vec(compressed)?;
+        bw.pad_00(0x10)?;
+        Ok(())
     }
 
     fn compress_dcp_edge<W>(bw: &mut BinaryWriter<W>, data: &Vec<u8>) -> io::Result<()>

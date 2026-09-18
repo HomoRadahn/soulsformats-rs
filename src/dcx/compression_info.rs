@@ -1,3 +1,5 @@
+use oodle::OodleCompressor;
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum CompressionInfo {
     Unknown,
@@ -7,7 +9,7 @@ pub enum CompressionInfo {
     DcpDflt,
     DcxEdge,
     DcxDflt(DcxDfltArgs),
-    DcxKrak,
+    DcxKrak(DcxKrakArgs),
     DcxZstd(u8),
 }
 
@@ -83,7 +85,32 @@ impl DcxDfltArgs {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct DcxKrakArgs {
+    pub compression_level: u8,
+    pub oodle_compressor: OodleCompressor,
+}
+
+impl DcxKrakArgs {
+    pub fn new() -> Self {
+        Self::from_preset(KrakCompressionPreset::EldenRing)
+    }
+
+    pub fn from_preset(preset: KrakCompressionPreset) -> Self {
+        match preset {
+            KrakCompressionPreset::EldenRing => Self {
+                compression_level: 6,
+                oodle_compressor: OodleCompressor::Kraken,
+            },
+            KrakCompressionPreset::ArmoredCore6 => Self {
+                compression_level: 9,
+                oodle_compressor: OodleCompressor::Kraken,
+            },
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
 pub enum KrakCompressionPreset {
     EldenRing,
     ArmoredCore6,

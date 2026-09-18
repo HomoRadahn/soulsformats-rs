@@ -24,7 +24,7 @@ pub struct BND4 {
     pub unk05: bool,
     /// Endian format to write in
     pub endian: Endian,
-    /// Controls ordering of flag bits
+    /// Ordering of flag bits
     pub bit_endian: Endian,
     /// Whether to encode filenames as UTF-8 or Shift JIS
     pub unicode: bool,
@@ -58,43 +58,43 @@ impl BND4 {
         }
     }
 
-    fn read_header<R>(br: &mut BinaryReader<R>, bnd: &mut BND4) -> io::Result<Vec<BinderFileHeader>>
+    fn read_header<R>(&mut self, br: &mut BinaryReader<R>) -> io::Result<Vec<BinderFileHeader>>
     where
         R: Read + Seek,
     {
         br.assert_ascii(&["BND4"])?;
-        bnd.unk04 = br.read_bool()?;
-        bnd.unk05 = br.read_bool()?;
+        self.unk04 = br.read_bool()?;
+        self.unk05 = br.read_bool()?;
         br.assert_u8(&[0])?;
         br.assert_u8(&[0])?;
 
         br.assert_u8(&[0])?;
-        bnd.endian = match br.read_bool()? {
+        self.endian = match br.read_bool()? {
             true => Endian::Big,
             false => Endian::Little,
         };
-        bnd.bit_endian = match !br.read_bool()? {
+        self.bit_endian = match !br.read_bool()? {
             true => Endian::Big,
             false => Endian::Little,
         };
         br.assert_u8(&[0])?;
 
-        br.set_endian(bnd.endian);
+        br.set_endian(self.endian);
 
         let file_count = br.read_i32()?;
         br.assert_i64(&[0x40])?; // Header size
-        bnd.version = br.read_fix_str(8)?;
+        self.version = br.read_fix_str(8)?;
         let file_header_size = br.read_i64()?;
         br.read_i64()?; // Headers end (incl. hash table)
 
-        bnd.unicode = br.read_bool()?;
-        bnd.format = Format::read(br, bnd.bit_endian)?;
-        bnd.extended = br.assert_u8(&[0, 1, 4, 0x80])?;
+        self.unicode = br.read_bool()?;
+        self.format = Format::read(br, self.bit_endian)?;
+        self.extended = br.assert_u8(&[0, 1, 4, 0x80])?;
         br.assert_u8(&[0])?;
 
         br.assert_i32(&[0])?;
 
-        if bnd.extended == 4 {
+        if self.extended == 4 {
             let hash_table_offset = br.read_i64()?;
             let pos = br.position()?;
             br.seek(hash_table_offset as u64)?;
@@ -104,7 +104,7 @@ impl BND4 {
             br.assert_i64(&[0])?;
         }
 
-        if file_header_size != get_bnd4_file_header_size(bnd.format) {
+        if file_header_size != get_bnd4_file_header_size(self.format) {
             return Err(io::Error::new(InvalidData, "Invalid file header size"));
         }
 
@@ -112,9 +112,9 @@ impl BND4 {
         for _ in 0..file_count {
             file_headers.push(BinderFileHeader::read_bnd4_header(
                 br,
-                bnd.format,
-                bnd.bit_endian,
-                bnd.unicode,
+                self.format,
+                self.bit_endian,
+                self.unicode,
             )?);
         }
 
@@ -211,14 +211,14 @@ impl StreamIO<BND4> for BND4 {
     where
         R: Read + Seek,
     {
-        let (mut reader, compression) = util::get_decompressed_binary_reader(br)?;
+        let (mut br_dec, compression) = util::get_decompressed_binary_reader(br)?;
         let mut bnd = BND4::new(compression);
 
-        let file_headers = BND4::read_header(&mut reader, &mut bnd)?;
+        let file_headers = bnd.read_header(&mut br_dec)?;
         let mut files: Vec<BinderFile> = Vec::with_capacity(file_headers.len());
 
         for header in file_headers {
-            files.push(header.read_file_data(&mut reader)?);
+            files.push(header.read_file_data(&mut br_dec)?);
         }
 
         bnd.files = files;
@@ -244,8 +244,9 @@ impl StreamIO<BND4> for BND4 {
     where
         R: Read + Seek,
     {
-        let len = br.length()?;
-        Ok(len >= 4 && br.get_ascii_len(0, 4)? == "BND4")
+        let (mut br_dec, _) = util::get_decompressed_binary_reader(br)?;
+        let len = br_dec.length()?;
+        Ok(len >= 4 && br_dec.get_ascii_len(0, 4)? == "BND4")
     }
 
     fn get_compression(&self) -> CompressionInfo {
