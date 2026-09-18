@@ -32,7 +32,6 @@ pub struct BXF3 {
     pub bdt_compression: CompressionInfo,
 }
 
-// Read
 impl BXF3 {
     /// Creates an empty `BXF3` formatted for DS1.
     pub fn new(bhd_compression: CompressionInfo, bdt_compression: CompressionInfo) -> Self {
@@ -333,5 +332,53 @@ impl BXF3 {
         let (bhd, bdt) = self.preprocess_to_dcx()?;
 
         Ok((bhd.compress_to_bytes()?, bdt.compress_to_bytes()?))
+    }
+}
+
+impl BXF3 {
+    /// Checks if the provided `BinaryReader` appears to contain a valid header
+    pub fn is_header<R>(br: &mut BinaryReader<R>) -> io::Result<bool>
+    where
+        R: Read + Seek,
+    {
+        let (mut decompressed, _) = util::get_decompressed_binary_reader(br)?;
+        let remaining = decompressed.remaining()?;
+        let pos = decompressed.position()?;
+        Ok(remaining >= 4 && decompressed.get_ascii_len(pos, 4)? == "BHF3")
+    }
+
+    /// Checks if the given bytes appear to contain a valid header
+    pub fn is_header_bytes(data: Vec<u8>) -> io::Result<bool> {
+        let mut br = BinaryReader::from_bytes(data, Endian::Little, false);
+        BXF3::is_header(&mut br)
+    }
+
+    /// Checks if the given bytes appear to contain a valid header
+    pub fn is_header_file(path: impl Into<String>) -> io::Result<bool> {
+        let mut br = BinaryReader::from_file(path.into(), Endian::Little, false)?;
+        BXF3::is_header(&mut br)
+    }
+
+    /// Checks if the provided `BinaryReader` appears to contain valid data
+    pub fn is_data<R>(br: &mut BinaryReader<R>) -> io::Result<bool>
+    where
+        R: Read + Seek,
+    {
+        let (mut decompressed, _) = util::get_decompressed_binary_reader(br)?;
+        let remaining = decompressed.remaining()?;
+        let pos = decompressed.position()?;
+        Ok(remaining >= 4 && decompressed.get_ascii_len(pos, 4)? == "BDF3")
+    }
+
+    /// Checks if the given bytes appear to contain valid data
+    pub fn is_data_bytes(data: Vec<u8>) -> io::Result<bool> {
+        let mut br = BinaryReader::from_bytes(data, Endian::Little, false);
+        BXF3::is_data(&mut br)
+    }
+
+    /// Checks if the given bytes appear to contain valid data
+    pub fn is_data_file(path: impl Into<String>) -> io::Result<bool> {
+        let mut br = BinaryReader::from_file(path.into(), Endian::Little, false)?;
+        BXF3::is_data(&mut br)
     }
 }

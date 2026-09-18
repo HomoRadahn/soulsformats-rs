@@ -24,6 +24,8 @@ fn bxf3_round_trip() {
     ];
 
     let (bhd_bytes, bdt_bytes) = bxf.to_bytes().unwrap();
+    assert!(BXF3::is_header_bytes(bhd_bytes.clone()).unwrap());
+    assert!(BXF3::is_data_bytes(bdt_bytes.clone()).unwrap());
     let round_trip = BXF3::from_bytes(bhd_bytes, bdt_bytes).unwrap();
 
     assert_eq!(

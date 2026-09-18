@@ -282,8 +282,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
         padding: u8,
     ) -> io::Result<()> {
         let mut fixstr = vec![padding; size];
-        let write_text = text.into();
-        let mut bytes = encoding_rs::SHIFT_JIS.encode(&write_text).0.to_vec();
+        let mut bytes = encoding_rs::SHIFT_JIS.encode(&text.into()).0.to_vec();
         bytes.push(0);
         for (index, byte) in bytes.iter().take(size).enumerate() {
             fixstr[index] = *byte;
@@ -300,8 +299,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
     ) -> io::Result<()> {
         let mut fixstr = vec![padding; size];
         let mut bytes = Vec::new();
-        let write_text = text.into();
-        for code_unit in write_text.encode_utf16() {
+        for code_unit in text.into().encode_utf16() {
             match self.endian {
                 Endian::Little => bytes.extend_from_slice(&code_unit.to_le_bytes()),
                 Endian::Big => bytes.extend_from_slice(&code_unit.to_be_bytes()),

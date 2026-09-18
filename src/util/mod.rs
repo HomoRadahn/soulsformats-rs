@@ -45,8 +45,7 @@ where
 
 /// FromSoft's basic filename hashing algorithm, used in some BND and BXF formats
 pub(crate) fn from_path_hash(text: impl Into<String>) -> u32 {
-    let text_into = text.into();
-    let mut hashable = text_into.to_lowercase().replace("\\", "/");
+    let mut hashable = text.into().to_lowercase().replace("\\", "/");
     if hashable.chars().next() != Some('/') {
         hashable = format!("/{}", hashable);
     };

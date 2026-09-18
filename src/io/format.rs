@@ -41,28 +41,26 @@ where
 {
     /// Checks if the file appears to be the format
     fn is_file(path: impl Into<String>) -> io::Result<bool> {
-        let path_into = path.into();
-        let mut br = BinaryReader::from_file(path_into, Endian::Little, false)?;
-        T::is(&mut br)
+        let mut br = BinaryReader::from_file(path.into(), Endian::Little, false)?;
+        let (mut decompressed, _) = crate::util::get_decompressed_binary_reader(&mut br)?;
+        T::is(&mut decompressed)
     }
 
     /// Reads the format from a file
     fn from_file(path: impl Into<String>) -> io::Result<T> {
-        let path_into = path.into();
-        let mut br = BinaryReader::from_file(path_into, Endian::Little, false)?;
+        let mut br = BinaryReader::from_file(path.into(), Endian::Little, false)?;
         T::read(&mut br)
     }
 
     /// Writes the format to a file
     fn to_file(&self, path: impl Into<String>) -> io::Result<()> {
-        let path_into = path.into();
         let mut bw = BinaryWriter::to_bytes(Endian::Little, false);
         self.write(&mut bw)?;
         let data = bw.close_bytes()?;
 
         let dcx = DCX::new(data, self.get_compression());
         let out = dcx.compress_to_bytes()?;
-        fs::write(path_into, out)?;
+        fs::write(path.into(), out)?;
 
         Ok(())
     }
@@ -77,7 +75,8 @@ where
     /// Checks if the bytes appear to be the format
     fn is_bytes(data: Vec<u8>) -> io::Result<bool> {
         let mut br = BinaryReader::from_bytes(data, Endian::Little, false);
-        T::is(&mut br)
+        let (mut decompressed, _) = crate::util::get_decompressed_binary_reader(&mut br)?;
+        T::is(&mut decompressed)
     }
 
     /// Reads the format from bytes

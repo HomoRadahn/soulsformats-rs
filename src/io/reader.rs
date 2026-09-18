@@ -118,6 +118,10 @@ impl<R: Read + Seek> BinaryReader<R> {
         Ok(length)
     }
 
+    pub fn remaining(&mut self) -> io::Result<u64> {
+        Ok(self.length()? - self.position()?)
+    }
+
     /// Moves stream position to the target
     pub fn seek(&mut self, position: u64) -> io::Result<u64> {
         self.inner.seek(SeekFrom::Start(position))
