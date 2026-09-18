@@ -142,6 +142,9 @@ fn load() -> io::Result<OodleCompat> {
         if file_name.starts_with("oo2core") && file_name.ends_with(".dll") {
             candidates.push(entry.path());
         }
+        else if file_name.starts_with("liboo2core") {
+            candidates.push(entry.path());
+        }
     }
 
     candidates.sort();
