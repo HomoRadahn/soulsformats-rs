@@ -54,7 +54,7 @@ pub struct ByteVector3 {
     pub z: u8,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 /// Represents data endianness. Also used for order of bits in BND flags
 pub enum Endian {
     Big,

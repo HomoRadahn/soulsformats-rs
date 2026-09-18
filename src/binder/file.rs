@@ -436,16 +436,17 @@ impl BinderFileHeader {
     }
 
     /// Writes `BXF4` file data - which requires two separate `BinaryWriter` references
-    pub(crate) fn write_bxf4_file_data<W>(
+    pub(crate) fn write_bxf4_file_data<WH, WD>(
         &mut self,
-        bw_header: &mut BinaryWriter<W>,
-        bw_data: &mut BinaryWriter<W>,
+        bw_header: &mut BinaryWriter<WH>,
+        bw_data: &mut BinaryWriter<WD>,
         format: Format,
         index: i32,
         bytes: &[u8],
     ) -> io::Result<()>
     where
-        W: Write + Seek,
+        WH: Write + Seek,
+        WD: Write + Seek,
     {
         self.write_file_data(bw_data, bytes)?;
 

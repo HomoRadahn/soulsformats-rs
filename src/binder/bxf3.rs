@@ -112,7 +112,7 @@ impl BXF3 {
         Ok(file_headers)
     }
 
-    /// Reads `BXF3` from two `BinaryReaders`
+    /// Reads `BXF3` from two `BinaryReaders`. Only accepts decompressed data
     pub fn read<RH, RD>(
         bhd: &mut BinaryReader<RH>,
         bdt: &mut BinaryReader<RD>,
@@ -123,9 +123,9 @@ impl BXF3 {
         RH: Read + Seek,
         RD: Read + Seek,
     {
-        let mut bxf = BXF3::new(bhd_compression, bdt_compression);
+        let mut bxf = Self::new(bhd_compression, bdt_compression);
 
-        BXF3::read_bdf_header(bdt)?;
+        Self::read_bdf_header(bdt)?;
         let file_headers = bxf.read_bhf_header(bhd)?;
 
         for header in file_headers {
@@ -147,7 +147,7 @@ impl BXF3 {
         // These could potentially be massive, so dropping compressed copies
         drop(bhd_enc);
         drop(bdt_enc);
-        BXF3::read(&mut bhd, &mut bdt, bhd_compression, bdt_compression)
+        Self::read(&mut bhd, &mut bdt, bhd_compression, bdt_compression)
     }
 
     /// Reads `BXF3` from a `bhd` file and `bdt` bytes, decompressing as necessary
@@ -162,7 +162,7 @@ impl BXF3 {
         // These could potentially be massive, so dropping compressed copies
         drop(bhd_enc);
         drop(bdt_enc);
-        BXF3::read(&mut bhd, &mut bdt, bhd_compression, bdt_compression)
+        Self::read(&mut bhd, &mut bdt, bhd_compression, bdt_compression)
     }
 
     /// Reads `BXF3` from `bhd` bytes and `bdt` file, decompressing as necessary
@@ -177,7 +177,7 @@ impl BXF3 {
         // These could potentially be massive, so dropping compressed copies
         drop(bhd_reader);
         drop(bdt_enc);
-        BXF3::read(&mut bhd, &mut bdt, bhd_compression, bdt_compression)
+        Self::read(&mut bhd, &mut bdt, bhd_compression, bdt_compression)
     }
 
     /// Reads `BXF3` from two `Vec<u8>`, decompressing as necessary
@@ -189,12 +189,12 @@ impl BXF3 {
         // These could potentially be massive, so dropping compressed copies
         drop(bhd_reader);
         drop(bdt_enc);
-        BXF3::read(&mut bhd, &mut bdt, bhd_compression, bdt_compression)
+        Self::read(&mut bhd, &mut bdt, bhd_compression, bdt_compression)
     }
 }
 
 impl BXF3 {
-    /// Writes `BXF3` to two separate `BinaryWriters`
+    /// Writes `BXF3` to two separate `BinaryWriters`. Doesn't compress data
     pub fn write<WH, WD>(
         &self,
         bhd: &mut BinaryWriter<WH>,
@@ -350,13 +350,13 @@ impl BXF3 {
     /// Checks if the given bytes appear to contain a valid header
     pub fn is_header_bytes(data: Vec<u8>) -> io::Result<bool> {
         let mut br = BinaryReader::from_bytes(data, Endian::Little, false);
-        BXF3::is_header(&mut br)
+        Self::is_header(&mut br)
     }
 
     /// Checks if the given bytes appear to contain a valid header
     pub fn is_header_file(path: impl Into<String>) -> io::Result<bool> {
         let mut br = BinaryReader::from_file(path.into(), Endian::Little, false)?;
-        BXF3::is_header(&mut br)
+        Self::is_header(&mut br)
     }
 
     /// Checks if the provided `BinaryReader` appears to contain valid data
@@ -373,12 +373,12 @@ impl BXF3 {
     /// Checks if the given bytes appear to contain valid data
     pub fn is_data_bytes(data: Vec<u8>) -> io::Result<bool> {
         let mut br = BinaryReader::from_bytes(data, Endian::Little, false);
-        BXF3::is_data(&mut br)
+        Self::is_data(&mut br)
     }
 
     /// Checks if the given bytes appear to contain valid data
     pub fn is_data_file(path: impl Into<String>) -> io::Result<bool> {
         let mut br = BinaryReader::from_file(path.into(), Endian::Little, false)?;
-        BXF3::is_data(&mut br)
+        Self::is_data(&mut br)
     }
 }

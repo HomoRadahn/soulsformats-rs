@@ -49,7 +49,9 @@ pub(crate) fn from_path_hash(text: impl Into<String>) -> u32 {
     if hashable.chars().next() != Some('/') {
         hashable = format!("/{}", hashable);
     };
-    hashable.chars().fold(0u32, |i, c| i * 37 + c as u32)
+    hashable.chars().fold(0u32, |hash, character| {
+        hash.wrapping_mul(37).wrapping_add(character as u32)
+    })
 }
 
 /// Determines whether a number is prime or not

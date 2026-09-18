@@ -20,7 +20,7 @@ where
     Ok(())
 }
 
-pub(crate) fn write<W>(bw: &mut BinaryWriter<W>, files: &Vec<BinderFileHeader>) -> io::Result<()>
+pub(crate) fn write<W>(bw: &mut BinaryWriter<W>, files: &[BinderFileHeader]) -> io::Result<()>
 where
     W: Write + Seek,
 {

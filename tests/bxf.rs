@@ -1,5 +1,5 @@
 use soulsformats_rs::{
-    binder::{BXF3, BinderFile, FileFlags},
+    binder::{BXF3, BXF4, BinderFile, FileFlags},
     dcx::compression_info::CompressionInfo,
 };
 
@@ -47,4 +47,28 @@ fn bxf3_round_trip() {
             assert_eq!(CompressionInfo::Zlib, round_trip_file.compression);
         }
     }
+}
+
+#[test]
+fn bxf4_round_trip() {
+    let mut bxf = BXF4::new(CompressionInfo::DcpDflt, CompressionInfo::DcpDflt);
+    bxf.files = vec![BinderFile::new(
+        FileFlags::None,
+        40,
+        "bxf4.bin".to_string(),
+        b"BXF4 in memory".to_vec(),
+        CompressionInfo::DcpDflt,
+    )];
+
+    let (bhd_bytes, bdt_bytes) = bxf.to_bytes().unwrap();
+    assert!(BXF4::is_header_bytes(bhd_bytes.clone()).unwrap());
+    assert!(BXF4::is_data_bytes(bdt_bytes.clone()).unwrap());
+    let round_trip = BXF4::from_bytes(bhd_bytes, bdt_bytes).unwrap();
+
+    assert_eq!(bxf.format, round_trip.format);
+    assert_eq!(bxf.unicode, round_trip.unicode);
+    assert_eq!(bxf.extended, round_trip.extended);
+    assert_eq!(bxf.files[0].id, round_trip.files[0].id);
+    assert_eq!(bxf.files[0].name, round_trip.files[0].name);
+    assert_eq!(bxf.files[0].bytes, round_trip.files[0].bytes);
 }
