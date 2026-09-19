@@ -106,18 +106,19 @@ impl DCX {
                     ));
                 }
             }
-        } else if magic == "DCX\0" {
+        }
+        else if magic == "DCX\0" {
             let format = br.get_ascii_len(0x28, 4)?;
 
             match format.as_str() {
                 "DFLT" => {
-                    let unk04 = br.get_i32(0x4)?;
-                    let unk10 = br.get_i32(0x10)?;
-                    let unk14 = br.get_i32(0x14)?;
-                    let unk30 = br.get_i32(0x30)?;
-                    let unk38 = br.get_i32(0x38)?;
+                    let unk_04 = br.get_i32(0x4)?;
+                    let unk_10 = br.get_i32(0x10)?;
+                    let unk_14 = br.get_i32(0x14)?;
+                    let unk_30 = br.get_i32(0x30)?;
+                    let unk_38 = br.get_i32(0x38)?;
                     compression = CompressionInfo::DcxDflt(DcxDfltArgs::new(
-                        unk04, unk10, unk14, unk30, unk38,
+                        unk_04, unk_10, unk_14, unk_30, unk_38,
                     ));
                 }
                 "EDGE" => compression = CompressionInfo::DcxEdge,
@@ -139,7 +140,8 @@ impl DCX {
                     ));
                 }
             }
-        } else {
+        }
+        else {
             let b0 = br.get_u8(0)?;
             let b1 = br.get_u8(1)?;
 
@@ -302,7 +304,7 @@ impl DCX {
         br.assert_i32(&[0x18])?;
         br.assert_i32(&[0x24])?;
         br.assert_i32(&[0x24])?;
-        let unk1 = br.read_i32()?;
+        let unk_1 = br.read_i32()?;
 
         br.assert_ascii(&["DCS\0"])?;
         let uncompressed = br.read_i32()?;
@@ -333,10 +335,10 @@ impl DCX {
         let chunk_count = br.read_i32()?;
         br.assert_i32(&[0x100000])?;
 
-        if unk1 != (0x50 + chunk_count * 0x10) {
+        if unk_1 != (0x50 + chunk_count * 0x10) {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
-                "unexpected unk1 size in EDGE DCX",
+                "unexpected unk_1 size in EDGE DCX",
             ));
         }
 

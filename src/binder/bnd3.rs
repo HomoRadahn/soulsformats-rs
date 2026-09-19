@@ -22,7 +22,7 @@ pub struct BND3 {
     pub endian: Endian,
     /// Ordering of flag bits
     pub bit_endian: Endian,
-    pub unk18: i32,
+    pub unk_18: i32,
     /// Whether or not to write the file headers end value or 0
     pub write_file_headers_end: bool,
     /// DCX Compression info
@@ -45,7 +45,7 @@ impl BND3 {
             format: Format::IDs | Format::Names1 | Format::Names2 | Format::Compression,
             endian: Endian::Little,
             bit_endian: Endian::Little,
-            unk18: 0,
+            unk_18: 0,
             write_file_headers_end: false,
             compression: compression,
         }
@@ -82,7 +82,7 @@ impl BND3 {
 
         let file_count = br.read_i32()?;
         self.write_file_headers_end = br.read_i32()? > 0;
-        self.unk18 = br.assert_i32(&[0, i32::MIN])?;
+        self.unk_18 = br.assert_i32(&[0, i32::MIN])?;
         br.assert_i32(&[0])?;
 
         let mut file_headers: Vec<BinderFileHeader> = Vec::with_capacity(file_count as usize);
@@ -126,7 +126,7 @@ impl BND3 {
 
         bw.write_i32(util::try_from_to_io_result(file_headers.len())?)?;
         bw.reserve_i32("file-headers-end")?;
-        bw.write_i32(self.unk18)?;
+        bw.write_i32(self.unk_18)?;
         bw.write_i32(0)?;
 
         for i in 0..file_headers.len() {

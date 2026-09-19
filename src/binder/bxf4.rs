@@ -22,8 +22,8 @@ pub struct BXF4 {
     pub version: String,
     /// Format of this `BXF4`
     pub format: Format,
-    pub unk04: bool,
-    pub unk05: bool,
+    pub unk_04: bool,
+    pub unk_05: bool,
     /// Endianness of the data
     pub endian: Endian,
     /// Ordering of flag bits
@@ -52,8 +52,8 @@ impl BXF4 {
             }
             .to_bnd_timestamp(),
             format: Format::IDs | Format::Names1 | Format::Names2 | Format::Compression,
-            unk04: false,
-            unk05: false,
+            unk_04: false,
+            unk_05: false,
             endian: Endian::Little,
             bit_endian: Endian::Little,
             unicode: true,
@@ -94,8 +94,8 @@ impl BXF4 {
     {
         bhd.assert_ascii(&["BHF4"])?;
 
-        self.unk04 = bhd.read_bool()?;
-        self.unk05 = bhd.read_bool()?;
+        self.unk_04 = bhd.read_bool()?;
+        self.unk_05 = bhd.read_bool()?;
         bhd.assert_u8(&[0])?;
         bhd.assert_u8(&[0])?;
 
@@ -266,8 +266,8 @@ impl BXF4 {
     {
         bdt.endian = self.endian;
         bdt.write_ascii("BDF4", false)?;
-        bdt.write_bool(self.unk04)?;
-        bdt.write_bool(self.unk05)?;
+        bdt.write_bool(self.unk_04)?;
+        bdt.write_bool(self.unk_05)?;
         bdt.write_u8(0)?;
         bdt.write_u8(0)?;
         bdt.write_u8(0)?;
@@ -293,8 +293,8 @@ impl BXF4 {
 
         bhd.write_ascii("BHF4", false)?;
 
-        bhd.write_bool(self.unk04)?;
-        bhd.write_bool(self.unk05)?;
+        bhd.write_bool(self.unk_04)?;
+        bhd.write_bool(self.unk_05)?;
         bhd.write_u8(0)?;
         bhd.write_u8(0)?;
 

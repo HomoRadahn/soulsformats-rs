@@ -33,13 +33,13 @@ pub struct DcxDfltArgs {
 
 impl DcxDfltArgs {
     /// Initializes `DcxDfltArgs` from given values
-    pub fn new(unk04: i32, unk10: i32, unk14: i32, unk30: i32, unk38: i32) -> Self {
+    pub fn new(unk_04: i32, unk_10: i32, unk_14: i32, unk_30: i32, unk_38: i32) -> Self {
         Self {
-            unk_04: unk04,
-            unk_10: unk10,
-            unk_14: unk14,
-            unk_30: unk30,
-            unk_38: unk38,
+            unk_04,
+            unk_10,
+            unk_14,
+            unk_30,
+            unk_38,
         }
     }
 

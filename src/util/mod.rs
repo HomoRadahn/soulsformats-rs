@@ -4,7 +4,7 @@ use crate::io::Endian;
 use crate::{DCX, dcx::compression_info::CompressionInfo, io::BinaryReader};
 
 /// Decompresses data from `BinaryReader` if necessary, returning a new `BinaryReader` over bytes
-pub(crate) fn get_decompressed_binary_reader<R>(
+pub fn get_decompressed_binary_reader<R>(
     br: &mut BinaryReader<R>,
 ) -> io::Result<(BinaryReader<Cursor<Vec<u8>>>, CompressionInfo)>
 where

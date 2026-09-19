@@ -20,8 +20,8 @@ pub struct BND4 {
     pub version: String,
     /// Indicates the format of this `BND4`
     pub format: format::Format,
-    pub unk04: bool,
-    pub unk05: bool,
+    pub unk_04: bool,
+    pub unk_05: bool,
     /// Endian format of the data
     pub endian: Endian,
     /// Ordering of flag bits
@@ -48,8 +48,8 @@ impl BND4 {
             }
             .to_bnd_timestamp(),
             format: Format::IDs | Format::Names1 | Format::Names2 | Format::Compression,
-            unk04: false,
-            unk05: false,
+            unk_04: false,
+            unk_05: false,
             endian: Endian::Little,
             bit_endian: Endian::Little,
             unicode: true,
@@ -63,8 +63,8 @@ impl BND4 {
         R: Read + Seek,
     {
         br.assert_ascii(&["BND4"])?;
-        self.unk04 = br.read_bool()?;
-        self.unk05 = br.read_bool()?;
+        self.unk_04 = br.read_bool()?;
+        self.unk_05 = br.read_bool()?;
         br.assert_u8(&[0])?;
         br.assert_u8(&[0])?;
 
@@ -133,8 +133,8 @@ impl BND4 {
 
         bw.write_ascii("BND4", false)?;
 
-        bw.write_bool(self.unk04)?;
-        bw.write_bool(self.unk05)?;
+        bw.write_bool(self.unk_04)?;
+        bw.write_bool(self.unk_05)?;
         bw.write_u8(0)?;
         bw.write_u8(0)?;
 

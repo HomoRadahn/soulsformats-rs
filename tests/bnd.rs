@@ -50,8 +50,8 @@ fn bnd4_round_trip() {
 
     assert_eq!(bnd.version, round_trip.version);
     assert_eq!(bnd.format, round_trip.format);
-    assert_eq!(bnd.unk04, round_trip.unk04);
-    assert_eq!(bnd.unk05, round_trip.unk05);
+    assert_eq!(bnd.unk_04, round_trip.unk_04);
+    assert_eq!(bnd.unk_05, round_trip.unk_05);
     assert_eq!(bnd.unicode, round_trip.unicode);
     assert_eq!(bnd.extended, round_trip.extended);
     assert_eq!(bnd.files.len(), round_trip.files.len());

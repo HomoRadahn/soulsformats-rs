@@ -306,7 +306,7 @@ impl BinderFileHeader {
         if bytes.len() > 0 {
             bw.pad_00(0x10)?;
         }
-
+        
         self.data_offset = util::try_from_to_io_result(bw.position()?)?;
         self.uncompressed_size = util::try_from_to_io_result(bytes.len())?;
 
