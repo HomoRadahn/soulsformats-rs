@@ -1,14 +1,15 @@
-use std::io::{self, ErrorKind::InvalidData, Read, Seek, Write};
+use std::{
+    fs,
+    io::{self, ErrorKind::InvalidData, Read, Seek, Write},
+};
 
 use crate::{
-    DCX,
     binder::{
         BinderFile,
         file::BinderFileHeader,
         format::{self, Format},
         hashtable,
     },
-    dcx::compression_info::CompressionInfo,
     io::{BinaryReader, BinaryWriter, Endian},
     util,
 };
@@ -32,15 +33,11 @@ pub struct BXF4 {
     pub unicode: bool,
     /// Indicates the presence of a filename hash table
     pub extended: u8,
-    /// Compression info of `bhd`
-    pub bhd_compression: CompressionInfo,
-    /// Compression info of `bdt`
-    pub bdt_compression: CompressionInfo,
 }
 
 impl BXF4 {
     /// Creates and empty `BXF4` formatted for DS3
-    pub fn new(bhd_compression: CompressionInfo, bdt_compression: CompressionInfo) -> Self {
+    pub fn new() -> Self {
         Self {
             files: Vec::new(),
             version: format::DateTime {
@@ -58,8 +55,6 @@ impl BXF4 {
             bit_endian: Endian::Little,
             unicode: true,
             extended: 4,
-            bhd_compression,
-            bdt_compression,
         }
     }
 
@@ -155,17 +150,12 @@ impl BXF4 {
     }
 
     /// Read `BXF4` from two given `BinaryReaders`. Only accepts decompressed data
-    pub fn read<RH, RD>(
-        bhd: &mut BinaryReader<RH>,
-        bdt: &mut BinaryReader<RD>,
-        bhd_compression: CompressionInfo,
-        bdt_compression: CompressionInfo,
-    ) -> io::Result<Self>
+    pub fn read<RH, RD>(bhd: &mut BinaryReader<RH>, bdt: &mut BinaryReader<RD>) -> io::Result<Self>
     where
         RH: Read + Seek,
         RD: Read + Seek,
     {
-        let mut bxf = Self::new(bhd_compression, bdt_compression);
+        let mut bxf = Self::new();
         Self::read_bdf_header(bdt)?;
         let file_headers = bxf.read_bhf_header(bhd)?;
         for header in file_headers {
@@ -179,14 +169,9 @@ impl BXF4 {
         bhd_path: impl Into<String>,
         bdt_path: impl Into<String>,
     ) -> io::Result<Self> {
-        let mut bhd_enc = BinaryReader::from_file(bhd_path.into(), Endian::Little, false)?;
-        let mut bdt_enc = BinaryReader::from_file(bdt_path.into(), Endian::Little, false)?;
-        let (mut bhd, bhd_compression) = util::get_decompressed_binary_reader(&mut bhd_enc)?;
-        let (mut bdt, bdt_compression) = util::get_decompressed_binary_reader(&mut bdt_enc)?;
-        // These could potentially be massive, so dropping compressed copies
-        drop(bhd_enc);
-        drop(bdt_enc);
-        Self::read(&mut bhd, &mut bdt, bhd_compression, bdt_compression)
+        let mut bhd = BinaryReader::from_file(bhd_path.into(), Endian::Little, false)?;
+        let mut bdt = BinaryReader::from_file(bdt_path.into(), Endian::Little, false)?;
+        Self::read(&mut bhd, &mut bdt)
     }
 
     /// Reads `BXF3` from a `bhd` file and `bdt` bytes, decompressing as necessary
@@ -194,14 +179,9 @@ impl BXF4 {
         bhd_path: impl Into<String>,
         bdt_bytes: Vec<u8>,
     ) -> io::Result<Self> {
-        let mut bhd_enc = BinaryReader::from_file(bhd_path.into(), Endian::Little, false)?;
-        let mut bdt_enc = BinaryReader::from_bytes(bdt_bytes, Endian::Little, false);
-        let (mut bhd, bhd_compression) = util::get_decompressed_binary_reader(&mut bhd_enc)?;
-        let (mut bdt, bdt_compression) = util::get_decompressed_binary_reader(&mut bdt_enc)?;
-        // These could potentially be massive, so dropping compressed copies
-        drop(bhd_enc);
-        drop(bdt_enc);
-        Self::read(&mut bhd, &mut bdt, bhd_compression, bdt_compression)
+        let mut bhd = BinaryReader::from_file(bhd_path.into(), Endian::Little, false)?;
+        let mut bdt = BinaryReader::from_bytes(bdt_bytes, Endian::Little, false);
+        Self::read(&mut bhd, &mut bdt)
     }
 
     /// Reads `BXF3` from `bhd` bytes and `bdt` file, decompressing as necessary
@@ -209,26 +189,18 @@ impl BXF4 {
         bhd_bytes: Vec<u8>,
         bdt_path: impl Into<String>,
     ) -> io::Result<Self> {
-        let mut bhd_reader = BinaryReader::from_bytes(bhd_bytes, Endian::Little, false);
-        let mut bdt_enc = BinaryReader::from_file(bdt_path.into(), Endian::Little, false)?;
-        let (mut bhd, bhd_compression) = util::get_decompressed_binary_reader(&mut bhd_reader)?;
-        let (mut bdt, bdt_compression) = util::get_decompressed_binary_reader(&mut bdt_enc)?;
-        // These could potentially be massive, so dropping compressed copies
-        drop(bhd_reader);
-        drop(bdt_enc);
-        Self::read(&mut bhd, &mut bdt, bhd_compression, bdt_compression)
+        let mut bhd = BinaryReader::from_bytes(bhd_bytes, Endian::Little, false);
+        let mut bdt = BinaryReader::from_file(bdt_path.into(), Endian::Little, false)?;
+
+        Self::read(&mut bhd, &mut bdt)
     }
 
     /// Reads `BXF3` from two `Vec<u8>`, decompressing as necessary
     pub fn from_bytes(bhd_bytes: Vec<u8>, bdt_bytes: Vec<u8>) -> io::Result<Self> {
-        let mut bhd_reader = BinaryReader::from_bytes(bhd_bytes, Endian::Little, false);
-        let mut bdt_enc = BinaryReader::from_bytes(bdt_bytes, Endian::Little, false);
-        let (mut bhd, bhd_compression) = util::get_decompressed_binary_reader(&mut bhd_reader)?;
-        let (mut bdt, bdt_compression) = util::get_decompressed_binary_reader(&mut bdt_enc)?;
-        // These could potentially be massive, so dropping compressed copies
-        drop(bhd_reader);
-        drop(bdt_enc);
-        Self::read(&mut bhd, &mut bdt, bhd_compression, bdt_compression)
+        let mut bhd = BinaryReader::from_bytes(bhd_bytes, Endian::Little, false);
+        let mut bdt = BinaryReader::from_bytes(bdt_bytes, Endian::Little, false);
+
+        Self::read(&mut bhd, &mut bdt)
     }
 
     /// Writes `BXF4` to two `BinaryWriters`. Doesn't compress data
@@ -344,14 +316,12 @@ impl BXF4 {
         Ok(())
     }
 
-    fn preprocess_to_dcx(&self) -> io::Result<(DCX, DCX)> {
+    fn preprocess_to_dcx(&self) -> io::Result<(Vec<u8>, Vec<u8>)> {
         let mut bhd = BinaryWriter::to_bytes(Endian::Little, false);
         let mut bdt = BinaryWriter::to_bytes(Endian::Little, false);
         self.write(&mut bhd, &mut bdt)?;
-        Ok((
-            DCX::new(bhd.close_bytes()?, self.bhd_compression),
-            DCX::new(bdt.close_bytes()?, self.bdt_compression),
-        ))
+
+        Ok((bhd.close_bytes()?, bdt.close_bytes()?))
     }
 
     /// Writes `BXF4` to two files, compressing as necessary
@@ -362,8 +332,8 @@ impl BXF4 {
     ) -> io::Result<()> {
         let (bhd, bdt) = self.preprocess_to_dcx()?;
 
-        bhd.compress_to_file(bhd_path.into())?;
-        bdt.compress_to_file(bdt_path.into())?;
+        fs::write(bhd_path.into(), bhd)?;
+        fs::write(bdt_path.into(), bdt)?;
 
         Ok(())
     }
@@ -371,24 +341,24 @@ impl BXF4 {
     /// Writes `BXF4` - `bhd` to file and `bdt` to bytes
     pub fn to_bhd_file_bdt_bytes(&self, bhd_path: impl Into<String>) -> io::Result<Vec<u8>> {
         let (bhd, bdt) = self.preprocess_to_dcx()?;
-        bhd.compress_to_file(bhd_path.into())?;
+        fs::write(bhd_path.into(), bhd)?;
 
-        Ok(bdt.compress_to_bytes()?)
+        Ok(bdt)
     }
 
     /// Writes `BXF4` - `bhd` to file and `bdt` to bytes
     pub fn to_bhd_bytes_bdt_file(&self, bdt_path: impl Into<String>) -> io::Result<Vec<u8>> {
         let (bhd, bdt) = self.preprocess_to_dcx()?;
-        bdt.compress_to_file(bdt_path.into())?;
+        fs::write(bdt_path.into(), bdt)?;
 
-        Ok(bhd.compress_to_bytes()?)
+        Ok(bhd)
     }
 
     /// Writes `BXF4` to two `Vec<u8>`, compressing as necessary
     pub fn to_bytes(&self) -> io::Result<(Vec<u8>, Vec<u8>)> {
         let (bhd, bdt) = self.preprocess_to_dcx()?;
 
-        Ok((bhd.compress_to_bytes()?, bdt.compress_to_bytes()?))
+        Ok((bhd, bdt))
     }
 
     /// Checks if the provided `BinaryReader` appears to contain a valid header

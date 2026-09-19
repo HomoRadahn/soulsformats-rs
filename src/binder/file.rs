@@ -202,7 +202,7 @@ impl BinderFileHeader {
         let compressed = br.get_u8_vec(self.data_offset as u64, self.compressed_size as u64)?;
 
         let (bytes, compression) = if self.flags.contains(FileFlags::Compressed) {
-            let dcx = DCX::decompress_bytes(compressed)?;
+            let dcx = DCX::from_bytes(compressed)?;
             (dcx.data, dcx.compression)
         } else {
             (compressed, CompressionInfo::Zlib)
@@ -306,12 +306,12 @@ impl BinderFileHeader {
         if bytes.len() > 0 {
             bw.pad_00(0x10)?;
         }
-        
+
         self.data_offset = util::try_from_to_io_result(bw.position()?)?;
         self.uncompressed_size = util::try_from_to_io_result(bytes.len())?;
 
         if self.flags.contains(FileFlags::Compressed) {
-            let compressed = DCX::new(bytes.to_vec(), self.compression).compress_to_bytes()?;
+            let compressed = DCX::new(bytes.to_vec(), self.compression).to_bytes()?;
             self.compressed_size = util::try_from_to_io_result(compressed.len())?;
             bw.write_u8_vec(compressed)?;
         } else {

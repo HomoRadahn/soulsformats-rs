@@ -1,7 +1,10 @@
-use std::io::{self, Read, Seek, Write};
 use bitflags::bitflags;
+use std::io::{self, Read, Seek, Write};
 
-use crate::{ByteIO, FileIO, dcx::compression_info::CompressionInfo, io::{BinaryReader, BinaryWriter, StreamIO}};
+use crate::{
+    ByteIO, FileIO,
+    io::{BinaryReader, BinaryWriter, StreamIO},
+};
 
 /// Generic binder archive use in games: Metal Wolf Chaos, A.C.E. 2, AC: FF (PSP), AC: NB, AC: LR (PSP+PS2)
 pub struct BND2 {
@@ -20,15 +23,14 @@ pub struct BND2 {
     pub unk_1b: u8,
     /// Base directory of all files - used only if `FilePathMode::BaseDirectory` is set
     pub base_directory: String,
+    /// Files contained in this `BND2`
     pub files: Vec<File>,
-    /// `DCX` compression info
-    pub compression: CompressionInfo
 }
 
 impl BND2 {
     /// Creates `BND2`
-    pub fn new(compression: CompressionInfo) -> Self {
-        Self { 
+    pub fn new() -> Self {
+        Self {
             header_info_flags: HeaderInfoFlags::all(),
             file_info_flags: FileInfoFlags::all(),
             unk_06: 0x00,
@@ -39,13 +41,12 @@ impl BND2 {
             unk_1b: 0,
             base_directory: String::new(),
             files: Vec::new(),
-            compression
         }
     }
 
     /// Creates `BND2` with specified version
-    pub fn with_version(version: i32, compression: CompressionInfo) -> Self {
-        Self { 
+    pub fn with_version(version: i32) -> Self {
+        Self {
             header_info_flags: HeaderInfoFlags::empty(),
             file_info_flags: FileInfoFlags::empty(),
             unk_06: 0x00,
@@ -56,13 +57,12 @@ impl BND2 {
             unk_1b: 0,
             base_directory: String::new(),
             files: Vec::new(),
-            compression
         }
     }
 
     /// Creates `BND2` with specified `FilePathMode`
-    pub fn with_path_mode(file_path_mode: FilePathMode, compression: CompressionInfo) -> Self {
-        Self { 
+    pub fn with_path_mode(file_path_mode: FilePathMode) -> Self {
+        Self {
             header_info_flags: HeaderInfoFlags::empty(),
             file_info_flags: FileInfoFlags::empty(),
             unk_06: 0x00,
@@ -73,12 +73,11 @@ impl BND2 {
             unk_1b: 0,
             base_directory: String::new(),
             files: Vec::new(),
-            compression
         }
     }
 
-    pub fn with_version_path_mode(version: i32, file_path_mode: FilePathMode, compression: CompressionInfo) -> Self {
-        Self { 
+    pub fn with_version_path_mode(version: i32, file_path_mode: FilePathMode) -> Self {
+        Self {
             header_info_flags: HeaderInfoFlags::empty(),
             file_info_flags: FileInfoFlags::empty(),
             unk_06: 0x00,
@@ -89,7 +88,6 @@ impl BND2 {
             unk_1b: 0,
             base_directory: String::new(),
             files: Vec::new(),
-            compression
         }
     }
 }
@@ -104,20 +102,18 @@ impl StreamIO<BND2> for BND2 {
             format!("Is function not implemented for type: {}", stringify!(T)),
         ))
     }
-    
-    fn get_compression(&self) -> CompressionInfo {
-        self.compression
-    }
-    
+
     fn read<R>(br: &mut BinaryReader<R>) -> io::Result<BND2>
     where
-        R: Read + Seek {
+        R: Read + Seek,
+    {
         todo!()
     }
-    
+
     fn write<W>(&self, bw: &mut BinaryWriter<W>) -> io::Result<()>
     where
-        W: Write + Seek {
+        W: Write + Seek,
+    {
         todo!()
     }
 }
@@ -125,9 +121,7 @@ impl StreamIO<BND2> for BND2 {
 impl ByteIO<BND2> for BND2 {}
 impl FileIO<BND2> for BND2 {}
 
-pub struct File {
-
-}
+pub struct File {}
 
 /// `BND2` - An enum for the different supported file path modes
 pub enum FilePathMode {
@@ -138,7 +132,7 @@ pub enum FilePathMode {
     /// All files use a full file path
     FullPath = 2,
     /// Add a base directory all paths start from, then write the rest of the path as each file name
-    BaseDirectory = 3
+    BaseDirectory = 3,
 }
 
 impl TryFrom<u8> for FilePathMode {

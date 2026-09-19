@@ -5,9 +5,9 @@ use soulsformats_rs::dcx::compression_info::*;
 fn dcp_dflt_round_trip() {
     let dcx = DCX::new(b"hello, soulsformats-rs".to_vec(), CompressionInfo::DcpDflt);
 
-    let output = dcx.compress_to_bytes().unwrap();
+    let output = dcx.to_bytes().unwrap();
 
-    let round_trip = DCX::decompress_bytes(output).unwrap();
+    let round_trip = DCX::from_bytes(output).unwrap();
 
     assert_eq!(round_trip.data, b"hello, soulsformats-rs".to_vec());
 }
@@ -16,9 +16,9 @@ fn dcp_dflt_round_trip() {
 fn dcp_edge_round_trip() {
     let dcx = DCX::new(b"hello, soulsformats-rs".to_vec(), CompressionInfo::DcpEdge);
 
-    let output = dcx.compress_to_bytes().unwrap();
+    let output = dcx.to_bytes().unwrap();
 
-    let round_trip = DCX::decompress_bytes(output).unwrap();
+    let round_trip = DCX::from_bytes(output).unwrap();
 
     assert_eq!(round_trip.data, b"hello, soulsformats-rs".to_vec());
 }
@@ -27,9 +27,9 @@ fn dcp_edge_round_trip() {
 fn dcx_edge_round_trip() {
     let dcx = DCX::new(b"hello, soulsformats-rs".to_vec(), CompressionInfo::DcxEdge);
 
-    let output = dcx.compress_to_bytes().unwrap();
+    let output = dcx.to_bytes().unwrap();
 
-    let round_trip = DCX::decompress_bytes(output).unwrap();
+    let round_trip = DCX::from_bytes(output).unwrap();
 
     assert_eq!(round_trip.data, b"hello, soulsformats-rs".to_vec());
 }
@@ -41,9 +41,9 @@ fn dcx_dftl_round_trip() {
         CompressionInfo::DcxDflt(DcxDfltArgs::from_preset(DcxDfltPreset::DcxDflt10000_24_9)),
     );
 
-    let output = dcx.compress_to_bytes().unwrap();
+    let output = dcx.to_bytes().unwrap();
 
-    let round_trip = DCX::decompress_bytes(output).unwrap();
+    let round_trip = DCX::from_bytes(output).unwrap();
 
     assert_eq!(round_trip.data, b"hello, soulsformats-rs".to_vec());
 }
@@ -55,8 +55,8 @@ fn dcx_krak_round_trip() {
         CompressionInfo::DcxKrak(DcxKrakArgs::new()),
     );
 
-    let output = dcx.compress_to_bytes().unwrap();
-    let round_trip = DCX::decompress_bytes(output).unwrap();
+    let output = dcx.to_bytes().unwrap();
+    let round_trip = DCX::from_bytes(output).unwrap();
 
     assert_eq!(round_trip.data, b"hello, soulsformats-rs".to_vec());
 }
@@ -68,9 +68,9 @@ fn dcx_zstd_round_trip() {
         CompressionInfo::DcxZstd(6),
     );
 
-    let output = dcx.compress_to_bytes().unwrap();
+    let output = dcx.to_bytes().unwrap();
 
-    let round_trip = DCX::decompress_bytes(output).unwrap();
+    let round_trip = DCX::from_bytes(output).unwrap();
 
     assert_eq!(round_trip.data, b"hello, soulsformats-rs".to_vec());
 }

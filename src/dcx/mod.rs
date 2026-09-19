@@ -48,7 +48,7 @@ impl DCX {
     }
 
     /// Decompress `DCX` from provided `Vec<u8>`
-    pub fn decompress_bytes(data: Vec<u8>) -> io::Result<Self> {
+    pub fn from_bytes(data: Vec<u8>) -> io::Result<Self> {
         let br = BinaryReader::from_bytes(data, Endian::Big, false);
         let (decompressed, compression) = DCX::decompress(br)?;
         Ok(Self {
@@ -58,7 +58,7 @@ impl DCX {
     }
 
     /// Decompress `DCX` from provided file
-    pub fn decompress_file(path: impl Into<String>) -> io::Result<Self> {
+    pub fn from_file(path: impl Into<String>) -> io::Result<Self> {
         let br = BinaryReader::from_file(path.into(), Endian::Big, false)?;
         let (decompressed, compression) = DCX::decompress(br)?;
         Ok(Self {
@@ -68,7 +68,7 @@ impl DCX {
     }
 
     /// Compress `DCX` to specified file
-    pub fn compress_to_file(&self, path: impl Into<String>) -> io::Result<()> {
+    pub fn to_file(&self, path: impl Into<String>) -> io::Result<()> {
         let mut bw = BinaryWriter::to_file(path.into(), Endian::Big, false)?;
         let data = &self.data;
         DCX::compress(&mut bw, data, self.compression)?;
@@ -76,7 +76,7 @@ impl DCX {
     }
 
     /// Compress `DCX` to `Vec<u8>`
-    pub fn compress_to_bytes(&self) -> io::Result<Vec<u8>> {
+    pub fn to_bytes(&self) -> io::Result<Vec<u8>> {
         let mut bw = BinaryWriter::to_bytes(Endian::Big, false);
         let data = &self.data;
         DCX::compress(&mut bw, data, self.compression)?;
@@ -87,7 +87,7 @@ impl DCX {
 /// Decompression Internal Functions
 impl DCX {
     /// Decompress `DCX` from the provided `BinaryReader`
-    fn decompress<R>(mut br: BinaryReader<R>) -> io::Result<(Vec<u8>, CompressionInfo)>
+    pub fn decompress<R>(mut br: BinaryReader<R>) -> io::Result<(Vec<u8>, CompressionInfo)>
     where
         R: Read + Seek,
     {
@@ -106,8 +106,7 @@ impl DCX {
                     ));
                 }
             }
-        }
-        else if magic == "DCX\0" {
+        } else if magic == "DCX\0" {
             let format = br.get_ascii_len(0x28, 4)?;
 
             match format.as_str() {
@@ -140,8 +139,7 @@ impl DCX {
                     ));
                 }
             }
-        }
-        else {
+        } else {
             let b0 = br.get_u8(0)?;
             let b1 = br.get_u8(1)?;
 
@@ -445,7 +443,7 @@ impl DCX {
 /// Compression Internal Functions
 impl DCX {
     /// Compress `DCX` to provided `BinaryWriter`
-    fn compress<W>(
+    pub fn compress<W>(
         bw: &mut BinaryWriter<W>,
         data: &Vec<u8>,
         compression: CompressionInfo,

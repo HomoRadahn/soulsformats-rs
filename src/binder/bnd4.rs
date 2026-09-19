@@ -6,7 +6,6 @@ use crate::{
         format::{self, *},
         hashtable,
     },
-    dcx::compression_info::CompressionInfo,
     io::{BinaryReader, BinaryWriter, Endian, StreamIO},
     util,
 };
@@ -30,13 +29,11 @@ pub struct BND4 {
     pub unicode: bool,
     /// Indicates presence of filename hash table
     pub extended: u8,
-    /// DCX Compression info
-    pub compression: CompressionInfo,
 }
 
 impl BND4 {
     /// Creates an empty `BND4` formatted for DS3
-    pub fn new(compression: CompressionInfo) -> Self {
+    pub fn new() -> Self {
         Self {
             files: Vec::new(),
             version: DateTime {
@@ -54,7 +51,6 @@ impl BND4 {
             bit_endian: Endian::Little,
             unicode: true,
             extended: 4,
-            compression,
         }
     }
 
@@ -202,14 +198,13 @@ impl StreamIO<BND4> for BND4 {
     where
         R: Read + Seek,
     {
-        let (mut reader, compression) = util::get_decompressed_binary_reader(br)?;
-        let mut bnd = BND4::new(compression);
+        let mut bnd = BND4::new();
 
-        let file_headers = bnd.read_header(&mut reader)?;
+        let file_headers = bnd.read_header(br)?;
         let mut files: Vec<BinderFile> = Vec::with_capacity(file_headers.len());
 
         for header in file_headers {
-            files.push(header.read_file_data(&mut reader)?);
+            files.push(header.read_file_data(br)?);
         }
 
         bnd.files = files;
@@ -247,10 +242,6 @@ impl StreamIO<BND4> for BND4 {
         let (mut br_dec, _) = util::get_decompressed_binary_reader(br)?;
         let len = br_dec.length()?;
         Ok(len >= 4 && br_dec.get_ascii_len(0, 4)? == "BND4")
-    }
-
-    fn get_compression(&self) -> CompressionInfo {
-        self.compression
     }
 }
 

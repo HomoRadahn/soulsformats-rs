@@ -2,7 +2,6 @@ use std::io::{self, Read, Seek, Write};
 
 use crate::{
     ByteIO, FileIO,
-    dcx::compression_info::*,
     io::{BinaryReader, BinaryWriter, Endian, StreamIO},
     util,
 };
@@ -14,8 +13,6 @@ pub use light::LightType;
 
 /// Point light sources in a map, used in BB, DS3, and Sekiro
 pub struct BTL {
-    /// Compression of this BTL
-    pub compression: CompressionInfo,
     /// Version
     pub version: i32,
     /// Whether offsets are 64-bit; set to false for Dark Souls 2
@@ -27,7 +24,6 @@ pub struct BTL {
 impl BTL {
     pub fn new(version: i32, offsets_64bit: bool) -> Self {
         Self {
-            compression: CompressionInfo::None,
             version,
             offsets_64bit,
             lights: Vec::new(),
@@ -40,33 +36,31 @@ impl StreamIO<BTL> for BTL {
     where
         R: Read + Seek,
     {
-        let (mut reader, compression) = util::get_decompressed_binary_reader(br)?;
-        reader.endian = Endian::Little;
-        reader.assert_i32(&[2])?;
-        let version = reader.assert_i32(&[1, 2, 5, 6, 16, 18])?;
-        let lights_count = reader.read_i32()?;
-        let names_length = reader.read_i32()?;
-        reader.assert_i32(&[0])?;
-        let light_size = reader.assert_i32(&[0xC0, 0xC8, 0xE8])?;
-        reader.assert_pattern(0x24, 0x00)?;
+        br.endian = Endian::Little;
+        br.assert_i32(&[2])?;
+        let version = br.assert_i32(&[1, 2, 5, 6, 16, 18])?;
+        let lights_count = br.read_i32()?;
+        let names_length = br.read_i32()?;
+        br.assert_i32(&[0])?;
+        let light_size = br.assert_i32(&[0xC0, 0xC8, 0xE8])?;
+        br.assert_pattern(0x24, 0x00)?;
         let light_res = light_size != 0xC0;
         let offsets_64bit = light_res.clone();
-        reader.varint_64bit = light_res;
+        br.varint_64bit = light_res;
 
-        let names_start = reader.position()?;
-        reader.skip(names_length as i64)?;
+        let names_start = br.position()?;
+        br.skip(names_length as i64)?;
         let mut lights: Vec<Light> = Vec::with_capacity(lights_count as usize);
 
         for _ in 0..lights_count {
             lights.push(Light::read(
-                &mut reader,
+                br,
                 util::try_from_to_io_result(names_start)?,
                 version,
             )?);
         }
 
         Ok(Self {
-            compression,
             version,
             offsets_64bit,
             lights,
@@ -121,10 +115,6 @@ impl StreamIO<BTL> for BTL {
         }
 
         Ok(())
-    }
-
-    fn get_compression(&self) -> CompressionInfo {
-        self.compression
     }
 }
 

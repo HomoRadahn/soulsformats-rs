@@ -4,7 +4,6 @@ use crate::{
         file::BinderFileHeader,
         format::{self, Format},
     },
-    dcx::compression_info::CompressionInfo,
     io::{BinaryReader, BinaryWriter, ByteIO, Endian, FileIO, StreamIO},
     util,
 };
@@ -25,13 +24,11 @@ pub struct BND3 {
     pub unk_18: i32,
     /// Whether or not to write the file headers end value or 0
     pub write_file_headers_end: bool,
-    /// DCX Compression info
-    pub compression: CompressionInfo,
 }
 
 impl BND3 {
     /// Creates an empty `BND3` formatted for DS1
-    pub fn new(compression: CompressionInfo) -> Self {
+    pub fn new() -> Self {
         Self {
             files: Vec::new(),
             version: format::DateTime {
@@ -47,7 +44,6 @@ impl BND3 {
             bit_endian: Endian::Little,
             unk_18: 0,
             write_file_headers_end: false,
-            compression: compression,
         }
     }
 
@@ -159,22 +155,17 @@ impl BND3 {
 }
 
 impl StreamIO<BND3> for BND3 {
-    fn get_compression(&self) -> CompressionInfo {
-        self.compression
-    }
-
     fn read<R>(br: &mut BinaryReader<R>) -> io::Result<BND3>
     where
         R: Read + Seek,
     {
-        let (mut reader, compression) = util::get_decompressed_binary_reader(br)?;
-        let mut bnd = BND3::new(compression);
+        let mut bnd = BND3::new();
 
-        let file_headers = bnd.read_header(&mut reader)?;
+        let file_headers = bnd.read_header(br)?;
         let mut files: Vec<BinderFile> = Vec::with_capacity(file_headers.len());
 
         for header in file_headers {
-            files.push(header.read_file_data(&mut reader)?);
+            files.push(header.read_file_data(br)?);
         }
 
         bnd.files = files;

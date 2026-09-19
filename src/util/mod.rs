@@ -12,7 +12,7 @@ where
 {
     if DCX::is(br)? {
         let len = br.length()?;
-        let dcx = DCX::decompress_bytes(br.get_u8_vec(0, len)?)?;
+        let dcx = DCX::from_bytes(br.get_u8_vec(0, len)?)?;
         return Ok((
             BinaryReader::from_bytes(dcx.data, Endian::Little, false),
             dcx.compression,
@@ -43,7 +43,7 @@ where
     })
 }
 
-/// FromSoft's basic filename hashing algorithm, used in some BND and BXF formats
+/// FromSoft's basic filename hashing algorithm, used in `BND4` and `BXF4`
 pub(crate) fn from_path_hash(text: impl Into<String>) -> u32 {
     let mut hashable = text.into().to_lowercase().replace("\\", "/");
     if hashable.chars().next() != Some('/') {

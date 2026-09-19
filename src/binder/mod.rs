@@ -13,4 +13,4 @@ pub use bnd4::BND4;
 pub use bxf3::BXF3;
 pub use bxf4::BXF4;
 pub use file::BinderFile;
-pub use format::{FileFlags, Format, DateTime};
+pub use format::{DateTime, FileFlags, Format};

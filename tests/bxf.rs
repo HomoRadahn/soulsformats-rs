@@ -5,7 +5,7 @@ use soulsformats_rs::{
 
 #[test]
 fn bxf3_round_trip() {
-    let mut bxf = BXF3::new(CompressionInfo::DcpDflt, CompressionInfo::DcpDflt);
+    let mut bxf = BXF3::new();
     bxf.files = vec![
         BinderFile::new(
             FileFlags::None,
@@ -33,8 +33,6 @@ fn bxf3_round_trip() {
         round_trip.version.trim_end_matches('\0')
     );
     assert_eq!(bxf.format, round_trip.format);
-    assert_eq!(bxf.bhd_compression, round_trip.bhd_compression);
-    assert_eq!(bxf.bdt_compression, round_trip.bdt_compression);
     assert_eq!(bxf.files.len(), round_trip.files.len());
     for (file, round_trip_file) in bxf.files.iter().zip(round_trip.files.iter()) {
         assert_eq!(file.flags, round_trip_file.flags);
@@ -51,7 +49,7 @@ fn bxf3_round_trip() {
 
 #[test]
 fn bxf4_round_trip() {
-    let mut bxf = BXF4::new(CompressionInfo::DcpDflt, CompressionInfo::DcpDflt);
+    let mut bxf = BXF4::new();
     bxf.files = vec![BinderFile::new(
         FileFlags::None,
         40,

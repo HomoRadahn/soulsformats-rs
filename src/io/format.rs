@@ -1,8 +1,4 @@
-use crate::{
-    DCX,
-    dcx::compression_info::CompressionInfo,
-    io::{BinaryReader, BinaryWriter, Endian},
-};
+use crate::io::{BinaryReader, BinaryWriter, Endian};
 use std::{
     fs,
     io::{self, Read, Seek, Write},
@@ -12,7 +8,6 @@ pub trait StreamIO<T>
 where
     T: StreamIO<T>,
 {
-    fn get_compression(&self) -> CompressionInfo;
     fn read<R>(br: &mut BinaryReader<R>) -> io::Result<T>
     where
         R: Read + Seek;
@@ -28,7 +23,7 @@ where
     {
         Err(io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("Is function not implemented for type: {}", stringify!(T)),
+            format!("Is function not implemented for this format"),
         ))
     }
 }
@@ -58,10 +53,7 @@ where
         self.write(&mut bw)?;
         let data = bw.close_bytes()?;
 
-        let dcx = DCX::new(data, self.get_compression());
-        let out = dcx.compress_to_bytes()?;
-        fs::write(path.into(), out)?;
-
+        fs::write(path.into(), data)?;
         Ok(())
     }
 }
@@ -91,9 +83,6 @@ where
         self.write(&mut bw)?;
         let data = bw.close_bytes()?;
 
-        let dcx = DCX::new(data, self.get_compression());
-        let out = dcx.compress_to_bytes()?;
-
-        Ok(out)
+        Ok(data)
     }
 }
