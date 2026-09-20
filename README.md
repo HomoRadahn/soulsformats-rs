@@ -17,8 +17,8 @@ cargo run --example decompress-bnd4
 ```
 
 ## Credits
-- [SoulsFormatsNEXT](https://github.com/soulsmods/SoulsFormatsNEXT) by the `soulsmods` group on GitHub (and JKAnderson for the original SoulsFormats library). Without their work, this library would never exist.
-- [oodle-rs](https://github.com/meszmate/oodle-rs) by `meszmate`
+- [SoulsFormatsNEXT](https://github.com/soulsmods/SoulsFormatsNEXT) (and the original SoulsFormats library). Without the author's work, this library would never exist.
+- [oodle-rs](https://github.com/meszmate/oodle-rs)
 - [flate2](https://docs.rs/flate2/latest/flate2/)
 - [zstd](https://docs.rs/zstd/latest/zstd/)
 - [encoding_rs](https://docs.rs/encoding_rs/latest/encoding_rs/)
