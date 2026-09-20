@@ -155,7 +155,7 @@ impl BND4 {
 
         bw.write_i32(util::try_from_to_io_result(file_headers.len())?)?;
         bw.write_i64(0x40)?;
-        bw.write_fix_str(self.version.clone(), 8, 0)?;
+        bw.write_fix_str(&self.version, 8, 0)?;
         bw.write_i64(format::get_bnd4_file_header_size(self.format))?;
         bw.reserve_i64("headers-end")?;
 

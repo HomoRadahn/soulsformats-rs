@@ -1,3 +1,4 @@
+pub mod bnd;
 pub mod bnd2;
 mod bnd3;
 mod bnd4;
@@ -7,6 +8,7 @@ mod file;
 mod format;
 mod hashtable;
 
+pub use bnd::BND;
 pub use bnd2::BND2;
 pub use bnd3::BND3;
 pub use bnd4::BND4;

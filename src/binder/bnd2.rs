@@ -199,7 +199,7 @@ impl BND2 {
             FilePathMode::BaseDirectory => {
                 let pos = bw.position()?;
                 bw.fill_i32("base-dir-offset", util::try_from_to_io_result(pos)?)?;
-                bw.write_shift_jis(self.base_directory.clone(), true)?;
+                bw.write_shift_jis(&self.base_directory, true)?;
             }
             _ => bw.fill_i32("base-dir-offset", 0)?,
         }
@@ -213,7 +213,7 @@ impl BND2 {
                         format!("name-offset-{i}"),
                         util::try_from_to_io_result(pos)?,
                     )?;
-                    let mut name = PathBuf::from(file_headers[i].name.clone());
+                    let mut name = PathBuf::from(&file_headers[i].name);
                     match self.file_path_mode {
                         FilePathMode::FullPath => {
                             if !name.is_absolute() {
@@ -342,69 +342,17 @@ impl Binder2File {
             bytes: Vec::new(),
         }
     }
-
-    // pub(crate) fn read<R>(
-    //     br: &mut BinaryReader<R>,
-    //     path_mode: FilePathMode,
-    //     info_flags: FileInfoFlags,
-    // ) -> io::Result<Self>
-    // where
-    //     R: Read + Seek,
-    // {
-    //     let mut out = Self::empty();
-
-    //     out.id = br.read_i32()?;
-    //     let offset = br.read_i32()?;
-    //     let size = br.read_i32()?;
-
-    //     if info_flags.contains(FileInfoFlags::NameOffset) {
-    //         let name_offset = br.read_i32()?;
-    //         match path_mode {
-    //             FilePathMode::Nameless => out.name = format!("{}", out.id),
-    //             _ => {
-    //                 out.name = br.get_shift_jis(name_offset as u64)?
-    //             }
-    //         }
-    //     } else {
-    //         out.name = format!("{}", out.id);
-    //     }
-
-    //     out.bytes = br.get_u8_vec(
-    //         util::try_from_to_io_result(offset)?,
-    //         util::try_from_to_io_result(size)?,
-    //     )?;
-
-    //     Ok(out)
-    // }
-
-    // pub(crate) fn write<W>(&self, bw: &mut BinaryWriter<W>, path_mode: FilePathMode, info_flags: FileInfoFlags, index: i32) -> io::Result<()>
-    // where
-    //     W: Write + Seek
-    // {
-    //     bw.write_i32(self.id)?;
-    //     bw.reserve_i32(format!("file-offset-{index}"))?;
-    //     bw.write_i32(util::try_from_to_io_result(self.bytes.len())?)?;
-
-    //     if info_flags.contains(FileInfoFlags::NameOffset) {
-    //         match path_mode {
-    //             FilePathMode::Nameless => bw.write_i32(0)?,
-    //             _ => bw.reserve_i32(format!("name-offset-{index}"))?
-    //         }
-    //     }
-
-    //     Ok(())
-    // }
 }
 
-pub(crate) struct Binder2FileHeader {
-    pub id: i32,
-    pub name: String,
-    pub offset: i32,
-    pub size: i32,
+struct Binder2FileHeader {
+    id: i32,
+    name: String,
+    offset: i32,
+    size: i32,
 }
 
 impl Binder2FileHeader {
-    pub(crate) fn empty() -> Self {
+    fn empty() -> Self {
         Self {
             id: -1,
             name: String::new(),
@@ -413,7 +361,7 @@ impl Binder2FileHeader {
         }
     }
 
-    pub(crate) fn from(file: &Binder2File) -> Self {
+    fn from(file: &Binder2File) -> Self {
         Self {
             id: file.id,
             name: file.name.clone(),
@@ -422,7 +370,7 @@ impl Binder2FileHeader {
         }
     }
 
-    pub(crate) fn read<R>(
+    fn read<R>(
         br: &mut BinaryReader<R>,
         path_mode: FilePathMode,
         info_flags: FileInfoFlags,
@@ -447,7 +395,7 @@ impl Binder2FileHeader {
         Ok(out)
     }
 
-    pub(crate) fn write<W>(
+    fn write<W>(
         &self,
         bw: &mut BinaryWriter<W>,
         path_mode: FilePathMode,
@@ -471,7 +419,7 @@ impl Binder2FileHeader {
         Ok(())
     }
 
-    pub(crate) fn read_file_data<R>(&self, br: &mut BinaryReader<R>) -> io::Result<Binder2File>
+    fn read_file_data<R>(&self, br: &mut BinaryReader<R>) -> io::Result<Binder2File>
     where
         R: Read + Seek,
     {
@@ -479,7 +427,7 @@ impl Binder2FileHeader {
         Ok(Binder2File::new(self.id, self.name.clone(), bytes))
     }
 
-    pub(crate) fn write_file_data<W>(
+    fn write_file_data<W>(
         &self,
         bw: &mut BinaryWriter<W>,
         index: i32,

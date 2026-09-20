@@ -209,7 +209,7 @@ impl BXF3 {
         W: Write + Seek,
     {
         bdt.write_ascii("BDF3", false)?;
-        bdt.write_fix_str(self.version.clone(), 8, 0)?;
+        bdt.write_fix_str(&self.version, 8, 0)?;
         bdt.write_i32(0)?;
 
         Ok(())
@@ -230,7 +230,7 @@ impl BXF3 {
         };
 
         bhd.write_ascii("BHF3", false)?;
-        bhd.write_fix_str(self.version.clone(), 8, 0)?;
+        bhd.write_fix_str(&self.version, 8, 0)?;
 
         self.format.write(bhd, self.bit_endian)?;
         bhd.write_u8(0)?;

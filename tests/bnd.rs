@@ -1,6 +1,33 @@
 use soulsformats_rs::{
-    ByteIO, DCX, FileIO, binder::{BND2, BND3, BND4, bnd2::{Binder2File, FileInfoFlags, FilePathMode}},
+    binder::{
+        bnd2::{Binder2File, FileInfoFlags, FilePathMode},
+        BND, BND2, BND3, BND4, bnd::Binder1File,
+    },
+    ByteIO, DCX, FileIO,
 };
+
+#[test]
+fn bnd() {
+    let mut bnd = BND::empty();
+    bnd.internal_version = 1;
+    bnd.root_file_path = Some(String::from("L:\\"));
+    bnd.files = vec![
+        Binder1File::new(1, String::from("こんにちは"), vec![1, 2, 3, 4, 5, 6, 7]),
+        Binder1File::new(2, String::from("こんにちは"), vec![1, 2, 3, 4, 5, 6, 7])
+    ];
+    let round_trip = BND::from_bytes(bnd.to_bytes().unwrap()).unwrap();
+    assert_eq!(bnd.internal_version, round_trip.internal_version);
+    assert_eq!(bnd.format0, round_trip.format0);
+    assert_eq!(bnd.format1, round_trip.format1);
+    assert_eq!(bnd.root_file_path, round_trip.root_file_path);
+    for i in 0..bnd.files.len() {
+        assert_eq!(bnd.files[i].id, round_trip.files[i].id);
+        assert_eq!(bnd.files[i].name, round_trip.files[i].name);
+        assert_eq!(bnd.files[i].bytes, round_trip.files[i].bytes);
+    }
+
+    assert_eq!(bnd.to_bytes().unwrap(), round_trip.to_bytes().unwrap());
+}
 
 #[test]
 fn bnd2_read() {
@@ -19,6 +46,8 @@ fn bnd2_read() {
         assert_eq!(bnd.files[i].name, round_trip.files[i].name);
         assert_eq!(bnd.files[i].bytes, round_trip.files[i].bytes);
     }
+
+    assert_eq!(bnd.to_bytes().unwrap(), round_trip.to_bytes().unwrap());
 }
 
 #[test]

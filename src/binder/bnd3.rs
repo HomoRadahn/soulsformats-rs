@@ -117,7 +117,7 @@ impl BND3 {
         };
 
         bw.write_ascii("BND3", false)?;
-        bw.write_fix_str(self.version.clone(), 8, 0)?;
+        bw.write_fix_str(&self.version, 8, 0)?;
         self.format.write(bw, self.bit_endian)?;
         bw.write_bool(match self.endian {
             Endian::Big => true,

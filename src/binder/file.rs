@@ -505,8 +505,8 @@ impl BinderFileHeader {
                 util::try_from_to_io_result(pos)?,
             )?;
             match unicode {
-                true => bw.write_utf16(self.name.clone(), true)?,
-                false => bw.write_shift_jis(self.name.clone(), true)?,
+                true => bw.write_utf16(&self.name, true)?,
+                false => bw.write_shift_jis(&self.name, true)?,
             };
         }
 

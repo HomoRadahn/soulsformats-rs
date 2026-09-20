@@ -45,7 +45,7 @@ impl StreamIO<BTL> for BTL {
         let light_size = br.assert_i32(&[0xC0, 0xC8, 0xE8])?;
         br.assert_pattern(0x24, 0x00)?;
         let light_res = light_size != 0xC0;
-        let offsets_64bit = light_res.clone();
+        let offsets_64bit = light_res;
         br.varint_64bit = light_res;
 
         let names_start = br.position()?;
