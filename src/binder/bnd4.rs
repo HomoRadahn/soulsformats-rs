@@ -32,8 +32,16 @@ pub struct BND4 {
 }
 
 impl BND4 {
+    /// Initializes `BND3` with specifies parameters, and rest of parameters set to most common values
+    pub fn new(date: DateTime, files: Vec<BinderFile>) -> Self {
+        let mut out = Self::empty();
+        out.version = date.to_bnd_timestamp();
+        out.files = files;
+
+        out
+    }
     /// Creates an empty `BND4` formatted for DS3
-    pub fn new() -> Self {
+    pub fn empty() -> Self {
         Self {
             files: Vec::new(),
             version: DateTime {
@@ -198,7 +206,7 @@ impl StreamIO<BND4> for BND4 {
     where
         R: Read + Seek,
     {
-        let mut bnd = BND4::new();
+        let mut bnd = BND4::empty();
 
         let file_headers = bnd.read_header(br)?;
         let mut files: Vec<BinderFile> = Vec::with_capacity(file_headers.len());

@@ -1,6 +1,7 @@
 use oodle::OodleCompressor;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
+/// Compression info of `DCX`
 pub enum CompressionInfo {
     Unknown,
     None,
@@ -14,6 +15,7 @@ pub enum CompressionInfo {
 }
 
 #[derive(PartialEq, Clone, Copy)]
+/// Presets for `DCX DFLT` compression
 pub enum DcxDfltPreset {
     DcxDflt10000_24_9,
     DcxDflt10000_44_9,
@@ -23,6 +25,7 @@ pub enum DcxDfltPreset {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+/// Arguments for `DCX DFLT` compression
 pub struct DcxDfltArgs {
     pub unk_04: i32,
     pub unk_10: i32,
@@ -32,7 +35,7 @@ pub struct DcxDfltArgs {
 }
 
 impl DcxDfltArgs {
-    /// Initializes `DcxDfltArgs` from given values
+    /// Initializes `DcxDfltArgs` from provided values
     pub fn new(unk_04: i32, unk_10: i32, unk_14: i32, unk_30: i32, unk_38: i32) -> Self {
         Self {
             unk_04,
@@ -43,7 +46,7 @@ impl DcxDfltArgs {
         }
     }
 
-    /// Initializes `DcxDfltArgs` from given preset
+    /// Initializes `DcxDfltArgs` from preset
     pub fn from_preset(preset: DcxDfltPreset) -> Self {
         match preset {
             DcxDfltPreset::DcxDflt10000_24_9 => Self {
@@ -86,16 +89,19 @@ impl DcxDfltArgs {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
+/// Arguments for `DCX` Kraken compression
 pub struct DcxKrakArgs {
     pub compression_level: u8,
-    pub oodle_compressor: OodleCompressor,
+    pub(crate) oodle_compressor: OodleCompressor,
 }
 
 impl DcxKrakArgs {
+    /// Initializes `DcxKrakArgs` for Elden Ring
     pub fn new() -> Self {
         Self::from_preset(KrakCompressionPreset::EldenRing)
     }
 
+    /// Initializes `DcxKrakArgs` from the provided `KrakCompressionPreset`
     pub fn from_preset(preset: KrakCompressionPreset) -> Self {
         match preset {
             KrakCompressionPreset::EldenRing => Self {
@@ -111,13 +117,14 @@ impl DcxKrakArgs {
 }
 
 #[derive(Clone, Copy)]
+/// Presets for `DCX` Kraken compression
 pub enum KrakCompressionPreset {
     EldenRing,
     ArmoredCore6,
 }
 
-pub struct EdgeChunk {
-    pub compressed_offset: i32,
-    pub compressed_length: i32,
-    pub is_compressed: bool,
+pub(crate) struct EdgeChunk {
+    pub(crate) compressed_offset: i32,
+    pub(crate) compressed_length: i32,
+    pub(crate) is_compressed: bool,
 }

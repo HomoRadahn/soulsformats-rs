@@ -4,8 +4,8 @@ use soulsformats_rs::{
 };
 
 #[test]
-fn bxf3_round_trip() {
-    let mut bxf = BXF3::new();
+fn bxf3() {
+    let mut bxf = BXF3::empty();
     bxf.files = vec![
         BinderFile::new(
             FileFlags::None,
@@ -48,8 +48,8 @@ fn bxf3_round_trip() {
 }
 
 #[test]
-fn bxf4_round_trip() {
-    let mut bxf = BXF4::new();
+fn bxf4() {
+    let mut bxf = BXF4::empty();
     bxf.files = vec![BinderFile::new(
         FileFlags::None,
         40,

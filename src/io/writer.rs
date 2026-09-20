@@ -91,8 +91,8 @@ impl<W: Write + Seek> BinaryWriter<W> {
     }
 
     /// Moves stream position relative to current position
-    pub fn skip(&mut self, position: i64) -> io::Result<u64> {
-        self.inner.seek(SeekFrom::Current(position))
+    pub fn skip(&mut self, amount: i64) -> io::Result<u64> {
+        self.inner.seek(SeekFrom::Current(amount))
     }
 
     /// Writes specified `u8` until the stream position meets the specified alignment

@@ -1,7 +1,7 @@
 use soulsformats_rs::{BTL, ByteIO, DCX};
 
 #[test]
-fn btl_round_trip() {
+fn btl() {
     let dcx = DCX::from_file("./tests/files/btl/btl.dcx").unwrap();
     let btl = BTL::from_bytes(dcx.data).unwrap();
     let compressed = btl.to_bytes().unwrap();

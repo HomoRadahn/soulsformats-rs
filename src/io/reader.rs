@@ -128,8 +128,8 @@ impl<R: Read + Seek> BinaryReader<R> {
     }
 
     /// Moves stream position relative to current position
-    pub fn skip(&mut self, position: i64) -> io::Result<u64> {
-        self.inner.seek(SeekFrom::Current(position))
+    pub fn skip(&mut self, amount: i64) -> io::Result<u64> {
+        self.inner.seek(SeekFrom::Current(amount))
     }
 
     /// Advances the stream position until it meets the specified alignment
@@ -437,7 +437,7 @@ impl<R: Read + Seek> BinaryReader<R> {
         get_f64_vec,
         assert_f64
     );
-    impl_generic_enum_reader!(u8, read_u8, get_u8, read_enum8, get_enum8);
+    impl_generic_enum_reader!(u8, read_u8, get_u8, read_enum_u8, get_enum8);
     impl_generic_enum_reader!(u16, read_u16, get_u16, read_enum_u16, get_enum_u16);
     impl_generic_enum_reader!(u32, read_u32, get_u32, read_enum_u32, get_enum_u32);
     impl_generic_enum_reader!(u64, read_u64, get_u64, read_enum_u64, get_enum_u64);
@@ -1045,7 +1045,7 @@ mod tests {
     #[test]
     fn read_enum_functions() {
         let mut reader = BinaryReader::from_bytes(vec![1], Endian::Little, true);
-        assert_eq!(reader.read_enum8::<EnumU8>().unwrap(), EnumU8::One);
+        assert_eq!(reader.read_enum_u8::<EnumU8>().unwrap(), EnumU8::One);
 
         let mut reader = BinaryReader::from_bytes(vec![0x01, 0x00], Endian::Little, true);
         assert_eq!(reader.read_enum_u16::<EnumU16>().unwrap(), EnumU16::One);

@@ -1,6 +1,6 @@
 use crate::{
     binder::{
-        BinderFile,
+        BinderFile, DateTime,
         file::BinderFileHeader,
         format::{self, Format},
     },
@@ -27,8 +27,17 @@ pub struct BND3 {
 }
 
 impl BND3 {
+    /// Initializes `BND3` with specifies parameters, and rest of parameters set to most common values
+    pub fn new(date: DateTime, files: Vec<BinderFile>) -> Self {
+        let mut out = Self::empty();
+        out.version = date.to_bnd_timestamp();
+        out.files = files;
+
+        out
+    }
+
     /// Creates an empty `BND3` formatted for DS1
-    pub fn new() -> Self {
+    pub fn empty() -> Self {
         Self {
             files: Vec::new(),
             version: format::DateTime {
@@ -159,7 +168,7 @@ impl StreamIO<BND3> for BND3 {
     where
         R: Read + Seek,
     {
-        let mut bnd = BND3::new();
+        let mut bnd = BND3::empty();
 
         let file_headers = bnd.read_header(br)?;
         let mut files: Vec<BinderFile> = Vec::with_capacity(file_headers.len());

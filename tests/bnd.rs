@@ -1,10 +1,61 @@
 use soulsformats_rs::{
-    ByteIO, DCX,
-    binder::{BND3, BND4},
+    ByteIO, DCX, FileIO, binder::{BND2, BND3, BND4, bnd2::{Binder2File, FileInfoFlags, FilePathMode}},
 };
 
 #[test]
-fn bnd3_round_trip() {
+fn bnd2_read() {
+    let bnd = BND2::from_file("./tests/files/bnd/bnd2.bin").unwrap();
+    let round_trip = BND2::from_bytes(bnd.to_bytes().unwrap()).unwrap();
+    assert_eq!(bnd.header_info_flags, round_trip.header_info_flags);
+    assert_eq!(bnd.file_info_flags, round_trip.file_info_flags);
+    assert_eq!(bnd.unk_06, round_trip.unk_06);
+    assert_eq!(bnd.unk_07, round_trip.unk_07);
+    assert_eq!(bnd.file_version, round_trip.file_version);
+    assert_eq!(bnd.alignment_size, round_trip.alignment_size);
+    assert_eq!(bnd.unk_1b, round_trip.unk_1b);
+    assert_eq!(bnd.base_directory, round_trip.base_directory);
+    for i in 0..bnd.files.len() {
+        assert_eq!(bnd.files[i].id, round_trip.files[i].id);
+        assert_eq!(bnd.files[i].name, round_trip.files[i].name);
+        assert_eq!(bnd.files[i].bytes, round_trip.files[i].bytes);
+    }
+}
+
+#[test]
+fn bnd2() {
+    let mut bnd = BND2::empty();
+    bnd.files = vec![Binder2File::new(
+        7,
+        "test.bin".to_string(),
+        b"BND2 test".to_vec(),
+    )];
+
+    let round_trip = BND2::from_bytes(bnd.to_bytes().unwrap()).unwrap();
+    assert_eq!(round_trip.file_info_flags, bnd.file_info_flags);
+    assert_eq!(round_trip.file_path_mode as u8, bnd.file_path_mode as u8);
+    assert_eq!(round_trip.files[0].id, 7);
+    assert_eq!(round_trip.files[0].name, "test.bin");
+    assert_eq!(round_trip.files[0].bytes, b"BND2 test");
+}
+
+#[test]
+fn bnd2_no_names() {
+    let mut bnd = BND2::with_path_mode(FilePathMode::Nameless);
+    bnd.file_info_flags = FileInfoFlags::ID | FileInfoFlags::Offset | FileInfoFlags::Size;
+    bnd.files = vec![Binder2File::new(
+        9,
+        "test.bin".to_string(),
+        vec![1, 2, 3],
+    )];
+
+    let round_trip = BND2::from_bytes(bnd.to_bytes().unwrap()).unwrap();
+    assert_eq!(round_trip.files[0].id, 9);
+    assert!(round_trip.files[0].name.is_empty());
+    assert_eq!(round_trip.files[0].bytes, vec![1, 2, 3]);
+}
+
+#[test]
+fn bnd3() {
     println!("Note this BND3 is Kraken compressed, Oodle required");
     let dcx = DCX::from_file("./tests/files/bnd/bnd3.dcx").unwrap();
     let bnd = BND3::from_bytes(dcx.data).unwrap();
@@ -40,7 +91,7 @@ fn bnd3_round_trip() {
 }
 
 #[test]
-fn bnd4_round_trip() {
+fn bnd4() {
     let dcx = DCX::from_file("./tests/files/bnd/bnd4.dcx").unwrap();
     let bnd = BND4::from_bytes(dcx.data).unwrap();
     let text1 = String::from_utf8(bnd.files[0].bytes.clone()).unwrap();

@@ -4,19 +4,23 @@ use std::{
     io::{self, Read, Seek, Write},
 };
 
+/// Trait for reading and writing to `BinaryReader` and `BinaryWriter`
 pub trait StreamIO<T>
 where
     T: StreamIO<T>,
 {
+    /// Reads format from the provided `BinaryReader`
     fn read<R>(br: &mut BinaryReader<R>) -> io::Result<T>
     where
         R: Read + Seek;
 
+    /// Writes format to the provided `BinaryWriter`
     fn write<W>(&self, bw: &mut BinaryWriter<W>) -> io::Result<()>
     where
         W: Write + Seek;
 
     #[allow(unused)]
+    /// Check if the `BinaryReader` appears to contain a valid format
     fn is<R>(br: &mut BinaryReader<R>) -> io::Result<bool>
     where
         R: Read + Seek,
@@ -28,26 +32,26 @@ where
     }
 }
 
-/// Enable for reading / writing formats to files. Not for implementation in own projects
+/// Trait allowing for reading and writing to files. Requires `StreamIO`
 #[allow(private_bounds)]
 pub trait FileIO<T>: StreamIO<T>
 where
     T: FileIO<T>,
 {
-    /// Checks if the file appears to be the format
+    /// Check if the file path appears to contain a valid format
     fn is_file(path: impl Into<String>) -> io::Result<bool> {
         let mut br = BinaryReader::from_file(path.into(), Endian::Little, false)?;
         let (mut decompressed, _) = crate::util::get_decompressed_binary_reader(&mut br)?;
         T::is(&mut decompressed)
     }
 
-    /// Reads the format from a file
+    /// Reads format from the provided file path
     fn from_file(path: impl Into<String>) -> io::Result<T> {
         let mut br = BinaryReader::from_file(path.into(), Endian::Little, false)?;
         T::read(&mut br)
     }
 
-    /// Writes the format to a file
+    /// Writes format to the provided file path
     fn to_file(&self, path: impl Into<String>) -> io::Result<()> {
         let mut bw = BinaryWriter::to_bytes(Endian::Little, false);
         self.write(&mut bw)?;
@@ -58,26 +62,26 @@ where
     }
 }
 
-/// Trait allowing for reading and writing to bytes / files. Not for actual implementation on your own structs
+/// Trait allowing for reading and writing to bytes. Requires `StreamIO`
 #[allow(private_bounds)]
 pub trait ByteIO<T>: StreamIO<T>
 where
     T: ByteIO<T>,
 {
-    /// Checks if the bytes appear to be the format
+    /// Check if the bytes appear to contain a valid format
     fn is_bytes(data: Vec<u8>) -> io::Result<bool> {
         let mut br = BinaryReader::from_bytes(data, Endian::Little, false);
         let (mut decompressed, _) = crate::util::get_decompressed_binary_reader(&mut br)?;
         T::is(&mut decompressed)
     }
 
-    /// Reads the format from bytes
+    /// Reads format from provided bytes
     fn from_bytes(data: Vec<u8>) -> io::Result<T> {
         let mut br = BinaryReader::from_bytes(data, Endian::Little, false);
         T::read(&mut br)
     }
 
-    /// Writes the format to bytes
+    /// Writes format to bytes
     fn to_bytes(&self) -> io::Result<Vec<u8>> {
         let mut bw = BinaryWriter::to_bytes(Endian::Little, false);
         self.write(&mut bw)?;

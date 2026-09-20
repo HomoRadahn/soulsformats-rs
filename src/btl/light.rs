@@ -1,3 +1,4 @@
+use core::fmt;
 use std::io::{self, Read, Seek, Write};
 
 use crate::{
@@ -110,8 +111,8 @@ pub struct Light {
 }
 
 impl Light {
-    /// Creates a new light with default values
-    pub fn new() -> Self {
+    /// Creates an empty `Light` with default values
+    pub fn empty() -> Self {
         Self {
             unk_00: vec![0 as u8; 16],
             name: "".to_string(),
@@ -158,7 +159,7 @@ impl Light {
     where
         R: Read + Seek,
     {
-        let mut output = Self::new();
+        let mut output = Self::empty();
         output.unk_00 = br.read_u8_vec(16)?;
         let varint = br.read_varint()?;
         output.name = br.get_utf16(util::try_from_to_io_result(names_start + varint)?)?;
@@ -317,5 +318,11 @@ impl Light {
         };
 
         Ok(())
+    }
+}
+
+impl fmt::Display for Light {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)
     }
 }

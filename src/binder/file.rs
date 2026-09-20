@@ -1,3 +1,4 @@
+use core::fmt;
 use std::io::{self, Read, Seek, Write};
 
 use crate::{
@@ -10,10 +11,15 @@ use crate::{
 
 /// A generic file in `BND3`, `BND4`, `BXF3`, `BXF4` containers
 pub struct BinderFile {
+    /// Flags of this `BinderFile`
     pub flags: FileFlags,
+    /// ID of this `BinderFile`
     pub id: i32,
+    /// Name of this `BinderFile`
     pub name: String,
+    /// Bytes contained in this `BinderFile`
     pub bytes: Vec<u8>,
+    /// Compression of this `BinderFile`, different from `DCX compression`
     pub compression: CompressionInfo,
 }
 
@@ -38,12 +44,19 @@ impl BinderFile {
 
 /// Metadata for a file in a binder container
 pub(crate) struct BinderFileHeader {
+    /// Flags of this `BinderFileHeader`
     pub flags: FileFlags,
+    /// ID of this `BinderFileHeader`
     pub id: i32,
+    /// Name of this `BinderFileHeader`
     pub name: String,
+    /// Compression of this `BinderFileHeader`, different from `DCX` compression
     pub compression: CompressionInfo,
+    /// Compressed size of the data of the `BinderFile` this header describes
     pub compressed_size: i64,
+    /// Uncompressed size of the data of the `BinderFile` this header describes
     pub uncompressed_size: i64,
+    /// Offset of the data
     pub data_offset: i64,
 }
 
@@ -498,5 +511,24 @@ impl BinderFileHeader {
         }
 
         Ok(())
+    }
+}
+
+impl fmt::Display for BinderFileHeader {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {}", self.id, self.name)
+    }
+}
+
+impl fmt::Display for BinderFile {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "ID: {} | Name: {} | Length: {} | Flags: {}",
+            self.id,
+            self.name,
+            self.bytes.len(),
+            self.flags.bits()
+        )
     }
 }

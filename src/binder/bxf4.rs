@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     binder::{
-        BinderFile,
+        BinderFile, DateTime,
         file::BinderFileHeader,
         format::{self, Format},
         hashtable,
@@ -36,8 +36,17 @@ pub struct BXF4 {
 }
 
 impl BXF4 {
+    /// Initializes `BXF3` with specifies parameters, and rest of parameters set to most common values
+    pub fn new(date: DateTime, files: Vec<BinderFile>) -> Self {
+        let mut out = Self::empty();
+        out.version = date.to_bnd_timestamp();
+        out.files = files;
+
+        out
+    }
+
     /// Creates and empty `BXF4` formatted for DS3
-    pub fn new() -> Self {
+    pub fn empty() -> Self {
         Self {
             files: Vec::new(),
             version: format::DateTime {
@@ -155,7 +164,7 @@ impl BXF4 {
         RH: Read + Seek,
         RD: Read + Seek,
     {
-        let mut bxf = Self::new();
+        let mut bxf = Self::empty();
         Self::read_bdf_header(bdt)?;
         let file_headers = bxf.read_bhf_header(bhd)?;
         for header in file_headers {
