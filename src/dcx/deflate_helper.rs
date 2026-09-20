@@ -16,7 +16,7 @@ pub fn decompress_deflate_bytes(compressed_bytes: &[u8]) -> io::Result<Vec<u8>> 
 /// Compresses deflate bytes
 pub fn compress_deflate_bytes(data: &[u8]) -> io::Result<Vec<u8>> {
     let mut encoder = DeflateEncoder::new(Vec::new(), Compression::default());
-    encoder.write_all(&data)?;
+    encoder.write_all(data)?;
     let output = encoder.finish()?;
 
     Ok(output)

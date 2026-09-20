@@ -10,6 +10,7 @@ mod deflate_helper;
 mod zlib_helper;
 mod zstd_helper;
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct DCX {
     pub data: Vec<u8>,
     pub compression: CompressionInfo,
@@ -189,12 +190,12 @@ impl DCX {
         br.read_i32()?;
         let compressed = br.read_i32()?;
 
-        let output = zlib_helper::read_zlib(&mut br, util::try_from_to_io_result(compressed)?)?;
+        let output = zlib_helper::read_zlib(&mut br, util::convert_num(compressed)?)?;
 
         br.assert_ascii(&["DCA\0"])?;
         br.assert_i32(&[8])?;
 
-        return Ok(output);
+        Ok(output)
     }
 
     fn decompress_dcx_dflt<R>(mut br: BinaryReader<R>, args: DcxDfltArgs) -> io::Result<Vec<u8>>
@@ -277,9 +278,9 @@ impl DCX {
             let size = br.read_i32()? as usize;
             let compressed = br.assert_i32(&[0, 1])? == 1;
 
-            let mut chunk = br.get_u8_vec(
-                data_start + util::try_from_to_io_result::<i32, u64>(offset)?,
-                util::try_from_to_io_result(size)?,
+            let mut chunk = br.get_vec_u8(
+                data_start + util::convert_num::<i32, u64>(offset)?,
+                util::convert_num(size)?,
             )?;
 
             if compressed {
@@ -290,7 +291,7 @@ impl DCX {
             }
         }
 
-        return Ok(output);
+        Ok(output)
     }
 
     fn decompress_dcx_edge<R>(mut br: BinaryReader<R>) -> io::Result<Vec<u8>>
@@ -355,11 +356,11 @@ impl DCX {
             let size = br.read_i32()?;
             let compressed = br.assert_i32(&[0, 1])? == 1;
 
-            let mut chunk = br.get_u8_vec(
+            let mut chunk = br.get_vec_u8(
                 dca_start
-                    + util::try_from_to_io_result::<i32, u64>(dca_size)?
-                    + util::try_from_to_io_result::<i32, u64>(offset)?,
-                util::try_from_to_io_result(size)?,
+                    + util::convert_num::<i32, u64>(dca_size)?
+                    + util::convert_num::<i32, u64>(offset)?,
+                util::convert_num(size)?,
             )?;
 
             if compressed {
@@ -370,7 +371,7 @@ impl DCX {
             }
         }
 
-        return Ok(output);
+        Ok(output)
     }
 
     fn decompress_dcx_krak<R>(mut br: BinaryReader<R>, args: DcxKrakArgs) -> io::Result<Vec<u8>>
@@ -384,8 +385,8 @@ impl DCX {
         br.assert_i32(&[0x44])?;
         br.assert_i32(&[0x4C])?;
         br.assert_ascii(&["DCS\0"])?;
-        let uncompressed_size = util::try_from_to_io_result(br.read_u32()?)?;
-        let compressed_size = util::try_from_to_io_result::<u32, usize>(br.read_u32()?)?;
+        let uncompressed_size = util::convert_num(br.read_u32()?)?;
+        let compressed_size = util::convert_num::<u32, usize>(br.read_u32()?)?;
         br.assert_ascii(&["DCP\0"])?;
         br.assert_ascii(&["KRAK"])?;
         br.assert_i32(&[0x20])?;
@@ -400,7 +401,7 @@ impl DCX {
         br.assert_ascii(&["DCA\0"])?;
         br.assert_i32(&[8])?;
 
-        let compressed = br.read_u8_vec(compressed_size as u64)?;
+        let compressed = br.read_vec_u8(compressed_size as u64)?;
         oodle::decompress(&compressed, uncompressed_size)
     }
 
@@ -436,7 +437,7 @@ impl DCX {
         br.assert_ascii(&["DCA\0"])?;
         br.assert_i32(&[8])?;
 
-        ZstdHelper::read_zstd(&mut br, util::try_from_to_io_result(compressed)?)
+        ZstdHelper::read_zstd(&mut br, util::convert_num(compressed)?)
     }
 }
 
@@ -492,7 +493,7 @@ impl DCX {
         bw.write_i32(0x00010100)?;
 
         bw.write_ascii("DCS", true)?;
-        bw.write_i32(util::try_from_to_io_result(data.len())?)?;
+        bw.write_i32(util::convert_num(data.len())?)?;
         bw.reserve_i32("compressed_size")?;
 
         let compressed_size = zlib_helper::write_zlib(bw, 0xDA, data)?;
@@ -525,7 +526,7 @@ impl DCX {
         bw.write_i32(args.unk_14)?;
 
         bw.write_ascii("DCS", true)?;
-        bw.write_i32(util::try_from_to_io_result(data.len())?)?;
+        bw.write_i32(util::convert_num(data.len())?)?;
         bw.reserve_i32("compressed_size")?;
         bw.write_ascii("DCP", true)?;
         bw.write_ascii("DFLT", false)?;
@@ -547,7 +548,7 @@ impl DCX {
         let pos = bw.position()?;
         bw.fill_i32(
             "compressed_size",
-            util::try_from_to_io_result(pos - compressed_start)?,
+            util::convert_num(pos - compressed_start)?,
         )?;
 
         bw.finalize()?;
@@ -558,7 +559,7 @@ impl DCX {
     #[allow(unused)]
     fn compress_dcx_krak<W>(
         bw: &mut BinaryWriter<W>,
-        data: &Vec<u8>,
+        data: &[u8],
         args: DcxKrakArgs,
     ) -> io::Result<()>
     where
@@ -573,8 +574,8 @@ impl DCX {
         bw.write_i32(0x44)?;
         bw.write_i32(0x4C)?;
         bw.write_ascii("DCS", true)?;
-        bw.write_u32(util::try_from_to_io_result(data.len())?)?;
-        bw.write_u32(util::try_from_to_io_result(compressed.len())?)?;
+        bw.write_u32(util::convert_num(data.len())?)?;
+        bw.write_u32(util::convert_num(compressed.len())?)?;
         bw.write_ascii("DCP", true)?;
         bw.write_ascii("KRAK", false)?;
         bw.write_i32(0x20)?;
@@ -588,12 +589,12 @@ impl DCX {
         bw.write_i32(0x10100)?;
         bw.write_ascii("DCA", true)?;
         bw.write_i32(8)?;
-        bw.write_u8_vec(compressed)?;
+        bw.write_vec_u8(compressed)?;
         bw.pad_00(0x10)?;
         Ok(())
     }
 
-    fn compress_dcp_edge<W>(bw: &mut BinaryWriter<W>, data: &Vec<u8>) -> io::Result<()>
+    fn compress_dcp_edge<W>(bw: &mut BinaryWriter<W>, data: &[u8]) -> io::Result<()>
     where
         W: Write + Seek,
     {
@@ -616,7 +617,7 @@ impl DCX {
         bw.write_i32(0x100100)?;
 
         bw.write_ascii("DCS", true)?;
-        bw.write_i32(util::try_from_to_io_result(data.len())?)?;
+        bw.write_i32(util::convert_num(data.len())?)?;
         bw.reserve_i32("compressed_size")?;
         bw.write_i32(0)?;
 
@@ -640,23 +641,20 @@ impl DCX {
                 (input.to_vec(), false)
             };
 
-            let comp_chunk_offset: i32 = util::try_from_to_io_result(bw.position()? - data_start)?;
+            let comp_chunk_offset: i32 = util::convert_num(bw.position()? - data_start)?;
             let comp_chunk_size = chunk.len();
-            bw.write_u8_vec(chunk)?;
+            bw.write_vec_u8(chunk)?;
             bw.pad_00(0x10)?;
 
             chunk_headers.push(EdgeChunk {
                 compressed_offset: comp_chunk_offset,
-                compressed_length: util::try_from_to_io_result(comp_chunk_size)?,
-                is_compressed: is_compressed,
+                compressed_length: util::convert_num(comp_chunk_size)?,
+                is_compressed,
             });
         }
 
         let pos = bw.position()?;
-        bw.fill_i32(
-            "compressed_size",
-            util::try_from_to_io_result(pos - data_start)?,
-        )?;
+        bw.fill_i32("compressed_size", util::convert_num(pos - data_start)?)?;
 
         let dca_start = bw.position()?;
         bw.write_ascii("DCA", true)?;
@@ -670,7 +668,7 @@ impl DCX {
         bw.write_i32(0x10)?;
         bw.write_i32(0x10000)?;
         bw.reserve_i32("egdt_size")?;
-        bw.write_i32(util::try_from_to_io_result(chunk_count)?)?;
+        bw.write_i32(util::convert_num(chunk_count)?)?;
         bw.write_i32(0x100000)?;
 
         for i in chunk_headers {
@@ -683,14 +681,14 @@ impl DCX {
             };
         }
         let pos = bw.position()?;
-        bw.fill_i32("egdt_size", util::try_from_to_io_result(pos - egdt_start)?)?;
-        bw.fill_i32("dca_size", util::try_from_to_io_result(pos - dca_start)?)?;
+        bw.fill_i32("egdt_size", util::convert_num(pos - egdt_start)?)?;
+        bw.fill_i32("dca_size", util::convert_num(pos - dca_start)?)?;
         bw.finalize()?;
 
         Ok(())
     }
 
-    fn compress_dcx_edge<W>(bw: &mut BinaryWriter<W>, data: &Vec<u8>) -> io::Result<()>
+    fn compress_dcx_edge<W>(bw: &mut BinaryWriter<W>, data: &[u8]) -> io::Result<()>
     where
         W: Write + Seek,
     {
@@ -705,10 +703,10 @@ impl DCX {
         bw.write_i32(0x18)?;
         bw.write_i32(0x24)?;
         bw.write_i32(0x24)?;
-        bw.write_i32(util::try_from_to_io_result(0x50 + chunk_count * 0x10)?)?;
+        bw.write_i32(util::convert_num(0x50 + chunk_count * 0x10)?)?;
 
         bw.write_ascii("DCS", true)?;
-        bw.write_i32(util::try_from_to_io_result(data.len())?)?;
+        bw.write_i32(util::convert_num(data.len())?)?;
         bw.reserve_i32("compressed_size")?;
 
         bw.write_ascii("DCP", true)?;
@@ -729,9 +727,9 @@ impl DCX {
         bw.write_i32(0x24)?;
         bw.write_i32(0x10)?;
         bw.write_i32(0x10000)?;
-        bw.write_i32(util::try_from_to_io_result(chunk_remainder)?)?;
+        bw.write_i32(util::convert_num(chunk_remainder)?)?;
         bw.reserve_i32("egdt_size")?;
-        bw.write_i32(util::try_from_to_io_result(chunk_count)?)?;
+        bw.write_i32(util::convert_num(chunk_count)?)?;
         bw.write_i32(0x100000)?;
 
         for i in 0..chunk_count {
@@ -742,8 +740,8 @@ impl DCX {
         }
 
         let pos = bw.position()?;
-        bw.fill_i32("dca_size", util::try_from_to_io_result(pos - dca_start)?)?;
-        bw.fill_i32("egdt_size", util::try_from_to_io_result(pos - egdt_start)?)?;
+        bw.fill_i32("dca_size", util::convert_num(pos - dca_start)?)?;
+        bw.fill_i32("egdt_size", util::convert_num(pos - egdt_start)?)?;
 
         let data_start = bw.position()?;
 
@@ -767,21 +765,18 @@ impl DCX {
             };
 
             match is_compressed {
-                true => bw.fill_i32(&format!("chunk_{i}_compressed"), 1)?,
-                false => bw.fill_i32(&format!("chunk_{i}_compressed"), 0)?,
+                true => bw.fill_i32(format!("chunk_{i}_compressed"), 1)?,
+                false => bw.fill_i32(format!("chunk_{i}_compressed"), 0)?,
             };
 
-            compressed_size += util::try_from_to_io_result::<usize, i32>(chunk.len())?;
+            compressed_size += util::convert_num::<usize, i32>(chunk.len())?;
             let pos = bw.position()?;
             bw.fill_i32(
-                &format!("chunk_{i}_offset"),
-                util::try_from_to_io_result(pos - data_start)?,
+                format!("chunk_{i}_offset"),
+                util::convert_num(pos - data_start)?,
             )?;
-            bw.fill_i32(
-                &format!("chunk_{i}_size"),
-                util::try_from_to_io_result(chunk.len())?,
-            )?;
-            bw.write_u8_vec(chunk)?;
+            bw.fill_i32(format!("chunk_{i}_size"), util::convert_num(chunk.len())?)?;
+            bw.write_vec_u8(chunk)?;
             bw.pad_00(0x10)?;
         }
 
@@ -794,7 +789,7 @@ impl DCX {
 
     fn compress_dcx_zstd<W>(
         bw: &mut BinaryWriter<W>,
-        data: &Vec<u8>,
+        data: &[u8],
         compression_level: u8,
     ) -> io::Result<()>
     where
@@ -809,8 +804,8 @@ impl DCX {
         bw.write_i32(0x44)?;
         bw.write_i32(0x4C)?;
         bw.write_ascii("DCS", true)?;
-        bw.write_u32(util::try_from_to_io_result(data.len())?)?;
-        bw.write_u32(util::try_from_to_io_result(compressed.len())?)?;
+        bw.write_u32(util::convert_num(data.len())?)?;
+        bw.write_u32(util::convert_num(compressed.len())?)?;
         bw.write_ascii("DCP", true)?;
         bw.write_ascii("ZSTD", false)?;
         bw.write_i32(0x20)?;
@@ -824,7 +819,7 @@ impl DCX {
         bw.write_i32(0x10100)?;
         bw.write_ascii("DCA", true)?;
         bw.write_i32(8)?;
-        bw.write_u8_vec(compressed)?;
+        bw.write_vec_u8(compressed)?;
         bw.pad_00(0x10)?;
 
         bw.finalize()?;

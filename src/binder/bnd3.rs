@@ -10,6 +10,7 @@ use crate::{
 use std::io::{self, Read, Seek, Write};
 
 /// A general-purpose file container used before DS2
+#[derive(Debug, Clone, PartialEq)]
 pub struct BND3 {
     /// The files contained within this `BND3`
     pub files: Vec<BinderFile>,
@@ -105,7 +106,7 @@ impl BND3 {
     fn write_header<W>(
         &self,
         bw: &mut BinaryWriter<W>,
-        file_headers: &mut Vec<BinderFileHeader>,
+        file_headers: &mut [BinderFileHeader],
     ) -> io::Result<()>
     where
         W: Write + Seek,
@@ -129,31 +130,26 @@ impl BND3 {
         })?;
         bw.write_u8(0)?;
 
-        bw.write_i32(util::try_from_to_io_result(file_headers.len())?)?;
+        bw.write_i32(util::convert_num(file_headers.len())?)?;
         bw.reserve_i32("file-headers-end")?;
         bw.write_i32(self.unk_18)?;
         bw.write_i32(0)?;
 
-        for i in 0..file_headers.len() {
-            file_headers[i].write_bnd3_header(
+        for (index, header) in file_headers.iter().enumerate() {
+            header.write_bnd3_header(
                 bw,
                 self.format,
                 self.bit_endian,
-                util::try_from_to_io_result(i)?,
+                util::convert_num(index)?,
             )?;
         }
 
-        for i in 0..file_headers.len() {
-            file_headers[i].write_file_name(
-                bw,
-                self.format,
-                util::try_from_to_io_result(i)?,
-                false,
-            )?;
+        for (index, header) in file_headers.iter().enumerate() {
+            header.write_file_name(bw, self.format, util::convert_num(index)?, false)?;
         }
 
         if self.write_file_headers_end {
-            let pos = util::try_from_to_io_result::<u64, i32>(bw.position()?)?;
+            let pos = util::convert_num::<u64, i32>(bw.position()?)?;
             bw.fill_i32("file-headers-end", pos)?;
         } else {
             bw.fill_i32("file-headers-end", 0)?;
@@ -189,17 +185,17 @@ impl StreamIO<BND3> for BND3 {
         let mut file_headers: Vec<BinderFileHeader> = Vec::with_capacity(self.files.len());
 
         for file in &self.files {
-            file_headers.push(BinderFileHeader::from_binder_file(&file));
+            file_headers.push(BinderFileHeader::from_binder_file(file));
         }
 
-        BND3::write_header(&self, bw, &mut file_headers)?;
+        self.write_header(bw, &mut file_headers)?;
 
-        for i in 0..self.files.len() {
-            file_headers[i].write_bnd3_file_data(
+        for (index, header) in file_headers.iter_mut().enumerate() {
+            header.write_bnd3_file_data(
                 bw,
                 self.format,
-                util::try_from_to_io_result(i)?,
-                &self.files[i].bytes,
+                util::convert_num(index)?,
+                &self.files[index].bytes,
             )?;
         }
 

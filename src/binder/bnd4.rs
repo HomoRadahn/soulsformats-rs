@@ -12,6 +12,7 @@ use crate::{
 use std::io::{self, ErrorKind::InvalidData, Read, Seek, Write};
 
 /// A general-purpose file container used since DS2
+#[derive(Debug, Clone, PartialEq)]
 pub struct BND4 {
     /// The files contained within this `BND4`
     pub files: Vec<BinderFile>,
@@ -128,7 +129,7 @@ impl BND4 {
     fn write_header<W>(
         &self,
         bw: &mut BinaryWriter<W>,
-        file_headers: &mut Vec<BinderFileHeader>,
+        file_headers: &mut [BinderFileHeader],
     ) -> io::Result<()>
     where
         W: Write + Seek,
@@ -153,7 +154,7 @@ impl BND4 {
         }
         bw.write_u8(0)?;
 
-        bw.write_i32(util::try_from_to_io_result(file_headers.len())?)?;
+        bw.write_i32(util::convert_num(file_headers.len())?)?;
         bw.write_i64(0x40)?;
         bw.write_fix_str(&self.version, 8, 0)?;
         bw.write_i64(format::get_bnd4_file_header_size(self.format))?;
@@ -167,35 +168,30 @@ impl BND4 {
         bw.write_i32(0)?;
         bw.reserve_i64("hash-table-offset")?;
 
-        for i in 0..file_headers.len() {
-            file_headers[i].write_bnd4_header(
+        for (index, header) in file_headers.iter().enumerate() {
+            header.write_bnd4_header(
                 bw,
                 self.format,
                 self.bit_endian,
-                util::try_from_to_io_result(i)?,
+                util::convert_num(index)?,
             )?;
         }
 
-        for i in 0..file_headers.len() {
-            file_headers[i].write_file_name(
-                bw,
-                self.format,
-                util::try_from_to_io_result(i)?,
-                self.unicode,
-            )?;
+        for (index, header) in file_headers.iter().enumerate() {
+            header.write_file_name(bw, self.format, util::convert_num(index)?, self.unicode)?;
         }
 
         if self.extended == 4 {
             bw.pad_00(0x8)?;
             let pos = bw.position()?;
-            bw.fill_i64("hash-table-offset", util::try_from_to_io_result(pos)?)?;
-            hashtable::write(bw, &file_headers)?;
+            bw.fill_i64("hash-table-offset", util::convert_num(pos)?)?;
+            hashtable::write(bw, file_headers)?;
         } else {
             bw.fill_i64("hash-table-offset", 0)?;
         }
 
         let pos = bw.position()?;
-        bw.fill_i64("headers-end", util::try_from_to_io_result(pos)?)?;
+        bw.fill_i64("headers-end", util::convert_num(pos)?)?;
 
         Ok(())
     }
@@ -226,17 +222,17 @@ impl StreamIO<BND4> for BND4 {
         let mut file_headers: Vec<BinderFileHeader> = Vec::with_capacity(self.files.len());
 
         for file in &self.files {
-            file_headers.push(BinderFileHeader::from_binder_file(&file));
+            file_headers.push(BinderFileHeader::from_binder_file(file));
         }
 
-        BND4::write_header(&self, bw, &mut file_headers)?;
+        self.write_header(bw, &mut file_headers)?;
 
-        for i in 0..self.files.len() {
-            file_headers[i].write_bnd4_file_data(
+        for (index, header) in file_headers.iter_mut().enumerate() {
+            header.write_bnd4_file_data(
                 bw,
                 self.format,
-                util::try_from_to_io_result(i)?,
-                &self.files[i].bytes,
+                util::convert_num(index)?,
+                &self.files[index].bytes,
             )?;
         }
 

@@ -27,7 +27,7 @@ where
     {
         Err(io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("Is function not implemented for this format"),
+            "Is function not implemented for this format",
         ))
     }
 }

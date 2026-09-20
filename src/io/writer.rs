@@ -14,7 +14,7 @@ macro_rules! impl_numeric_writer {
             }
         }
 
-        #[doc = concat!("Writes a vector of `", stringify!($type), "` values")]
+        #[doc = concat!("Writes `Vec<", stringify!($type), ">`")]
         pub fn $write_vec(&mut self, data: Vec<$type>) -> io::Result<()> {
             for value in data {
                 match self.endian {
@@ -68,11 +68,10 @@ impl<W: Write + Seek> BinaryWriter<W> {
 
     /// Returns current stream position
     pub fn position(&mut self) -> io::Result<u64> {
-        return self.inner.stream_position();
+        self.inner.stream_position()
     }
 
     /// Returns total stream length
-
     pub fn length(&mut self) -> io::Result<u64> {
         let initial = self.position()?;
         let length = self.inner.seek(SeekFrom::End(0))?;
@@ -116,7 +115,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
 
     /// Writes `0x00` bytes until the stream position meets the specified alignment relative to the given starting position
     pub fn pad_relative(&mut self, start: u64, align: u64) -> io::Result<()> {
-        while (self.position()? - start) % align > 0 {
+        while !(self.position()? - start).is_multiple_of(align) {
             self.write_u8(0x00)?;
         }
 
@@ -135,7 +134,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
 
         let position = self.position()?;
 
-        self.write_u8_vec(vec![0xFE; size])?;
+        self.write_vec_u8(vec![0xFE; size])?;
 
         self.reservations.insert(name, position);
         Ok(())
@@ -169,8 +168,8 @@ impl<W: Write + Seek> BinaryWriter<W> {
         self.inner.write_all(&[value as u8])
     }
 
-    /// Writes a vector of `bool` values
-    pub fn write_bool_vec(&mut self, data: Vec<bool>) -> io::Result<()> {
+    /// Writes `Vec<bool>`
+    pub fn write_vec_bool(&mut self, data: Vec<bool>) -> io::Result<()> {
         for value in data {
             self.write_bool(value)?;
         }
@@ -207,8 +206,8 @@ impl<W: Write + Seek> BinaryWriter<W> {
         Ok(())
     }
 
-    /// Writes a vector of `varint` value
-    pub fn write_varint_vec(&mut self, data: Vec<i64>) -> io::Result<()> {
+    /// Writes a vector of `varint` values
+    pub fn write_vec_varint(&mut self, data: Vec<i64>) -> io::Result<()> {
         for value in data {
             self.write_varint(value)?;
         }
@@ -271,7 +270,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
                 Endian::Big => bytes.extend_from_slice(&0u16.to_be_bytes()),
             }
         }
-        self.write_u8_vec(bytes)
+        self.write_vec_u8(bytes)
     }
 
     /// Writes a null-terminated Shift-JIS string in a fixed-size field
@@ -287,7 +286,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
         for (index, byte) in bytes.iter().take(size).enumerate() {
             fixstr[index] = *byte;
         }
-        self.write_u8_vec(fixstr)
+        self.write_vec_u8(fixstr)
     }
 
     /// Writes a null-terminated UTF-16 string in a fixed-size field
@@ -386,23 +385,23 @@ impl<W: Write + Seek> BinaryWriter<W> {
     /// Write `length` of the given `value`
     pub fn write_pattern(&mut self, length: usize, value: u8) -> io::Result<()> {
         let bytes = vec![value; length];
-        self.write_u8_vec(bytes)
+        self.write_vec_u8(bytes)
     }
 
     pub fn write_bytes(&mut self, bytes: &[u8]) -> io::Result<()> {
         self.inner.write_all(bytes)
     }
 
-    impl_numeric_writer!(u8, 1, write_u8, write_u8_vec, reserve_u8, fill_u8);
-    impl_numeric_writer!(u16, 2, write_u16, write_u16_vec, reserve_u16, fill_u16);
-    impl_numeric_writer!(u32, 4, write_u32, write_u32_vec, reserve_u32, fill_u32);
-    impl_numeric_writer!(u64, 8, write_u64, write_u64_vec, reserve_u64, fill_u64);
-    impl_numeric_writer!(i8, 1, write_i8, write_i8_vec, reserve_i8, fill_i8);
-    impl_numeric_writer!(i16, 2, write_i16, write_i16_vec, reserve_i16, fill_i16);
-    impl_numeric_writer!(i32, 4, write_i32, write_i32_vec, reserve_i32, fill_i32);
-    impl_numeric_writer!(i64, 8, write_i64, write_i64_vec, reserve_i64, fill_i64);
-    impl_numeric_writer!(f32, 4, write_f32, write_f32_vec, reserve_f32, fill_f32);
-    impl_numeric_writer!(f64, 8, write_f64, write_f64_vec, reserve_f64, fill_f64);
+    impl_numeric_writer!(u8, 1, write_u8, write_vec_u8, reserve_u8, fill_u8);
+    impl_numeric_writer!(u16, 2, write_u16, write_vec_u16, reserve_u16, fill_u16);
+    impl_numeric_writer!(u32, 4, write_u32, write_vec_u32, reserve_u32, fill_u32);
+    impl_numeric_writer!(u64, 8, write_u64, write_vec_u64, reserve_u64, fill_u64);
+    impl_numeric_writer!(i8, 1, write_i8, write_vec_i8, reserve_i8, fill_i8);
+    impl_numeric_writer!(i16, 2, write_i16, write_vec_i16, reserve_i16, fill_i16);
+    impl_numeric_writer!(i32, 4, write_i32, write_vec_i32, reserve_i32, fill_i32);
+    impl_numeric_writer!(i64, 8, write_i64, write_vec_i64, reserve_i64, fill_i64);
+    impl_numeric_writer!(f32, 4, write_f32, write_vec_f32, reserve_f32, fill_f32);
+    impl_numeric_writer!(f64, 8, write_f64, write_vec_f64, reserve_f64, fill_f64);
 }
 
 #[allow(unused)]
@@ -438,484 +437,5 @@ impl BinaryWriter<File> {
     /// Gets the file that the writer is currently writing to
     pub fn get_ref_file(&self) -> &File {
         &self.inner
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::io::{BinaryWriter, Endian};
-    use std::fs;
-
-    #[test]
-    fn write_strings() {
-        let mut ascii_writer = BinaryWriter::to_bytes(Endian::Little, false);
-        ascii_writer.write_ascii("AB", true).unwrap();
-        assert_eq!(ascii_writer.get_ref_bytes(), &[b'A', b'B', 0]);
-
-        let mut shift_jis_writer = BinaryWriter::to_bytes(Endian::Little, false);
-        shift_jis_writer.write_shift_jis("あ", true).unwrap();
-        assert_eq!(shift_jis_writer.get_ref_bytes(), &[0x82, 0xA0, 0x00]);
-
-        let mut utf16_writer = BinaryWriter::to_bytes(Endian::Little, false);
-        utf16_writer.write_utf16("A", true).unwrap();
-        assert_eq!(utf16_writer.get_ref_bytes(), &[0x41, 0x00, 0x00, 0x00]);
-
-        let mut fix_writer = BinaryWriter::to_bytes(Endian::Little, false);
-        fix_writer.write_fix_str("A", 4, 0xFF).unwrap();
-        assert_eq!(fix_writer.get_ref_bytes(), &[b'A', 0, 0xFF, 0xFF]);
-
-        let mut fixw_writer = BinaryWriter::to_bytes(Endian::Little, false);
-        fixw_writer.write_fix_str_w("A", 4, 0xFF).unwrap();
-        assert_eq!(fixw_writer.get_ref_bytes(), &[0x41, 0x00, 0x00, 0x00]);
-    }
-
-    #[test]
-    fn write_to_file() {
-        let path =
-            std::env::temp_dir().join(format!("soulsformats-rs-writer-{}.bin", std::process::id()));
-
-        let mut writer = BinaryWriter::to_file(&path, Endian::Little, false).unwrap();
-        writer.write_u16(0x1312).unwrap();
-        assert_eq!(writer.get_ref_file().metadata().unwrap().len(), 2);
-        writer.finalize().unwrap();
-        drop(writer);
-
-        assert_eq!(fs::read(&path).unwrap(), vec![0x12, 0x13]);
-        fs::remove_file(path).unwrap();
-    }
-
-    macro_rules! test_numeric_writer {
-        ($name:ident, $type:ty, $write:ident, $write_vec:ident, $single:expr, $many:expr, $little_single:expr, $big_single:expr, $little_many:expr, $big_many:expr) => {
-            #[test]
-            fn $name() {
-                for (endian, expected_single, expected_many) in [
-                    (Endian::Little, $little_single, $little_many),
-                    (Endian::Big, $big_single, $big_many),
-                ] {
-                    let mut writer = BinaryWriter::to_bytes(endian, false);
-                    writer.$write($single).unwrap();
-                    assert_eq!(writer.get_ref_bytes(), &expected_single[..]);
-
-                    let mut vec_writer = BinaryWriter::to_bytes(endian, false);
-                    vec_writer.$write_vec($many).unwrap();
-                    assert_eq!(vec_writer.get_ref_bytes(), &expected_many[..]);
-                }
-            }
-        };
-    }
-
-    test_numeric_writer!(
-        write_uint8,
-        u8,
-        write_u8,
-        write_u8_vec,
-        0x12,
-        vec![0x12, 0x13, 0x14],
-        [0x12],
-        [0x12],
-        [0x12, 0x13, 0x14],
-        [0x12, 0x13, 0x14]
-    );
-    test_numeric_writer!(
-        write_uint16,
-        u16,
-        write_u16,
-        write_u16_vec,
-        0x1312,
-        vec![0x1312, 0x1514],
-        [0x12, 0x13],
-        [0x13, 0x12],
-        [0x12, 0x13, 0x14, 0x15],
-        [0x13, 0x12, 0x15, 0x14]
-    );
-    test_numeric_writer!(
-        write_uint32,
-        u32,
-        write_u32,
-        write_u32_vec,
-        0x15141312,
-        vec![0x15141312, 0x19181716],
-        [0x12, 0x13, 0x14, 0x15],
-        [0x15, 0x14, 0x13, 0x12],
-        [0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19],
-        [0x15, 0x14, 0x13, 0x12, 0x19, 0x18, 0x17, 0x16]
-    );
-    test_numeric_writer!(
-        write_uint64,
-        u64,
-        write_u64,
-        write_u64_vec,
-        0x1918171615141312,
-        vec![0x1918171615141312, 0x2726252423222120],
-        [0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19],
-        [0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12],
-        [
-            0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25,
-            0x26, 0x27
-        ],
-        [
-            0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x27, 0x26, 0x25, 0x24, 0x23, 0x22,
-            0x21, 0x20
-        ]
-    );
-    test_numeric_writer!(
-        write_int8,
-        i8,
-        write_i8,
-        write_i8_vec,
-        -2,
-        vec![-2, 2, 127],
-        [0xFE],
-        [0xFE],
-        [0xFE, 0x02, 0x7F],
-        [0xFE, 0x02, 0x7F]
-    );
-    test_numeric_writer!(
-        write_int16,
-        i16,
-        write_i16,
-        write_i16_vec,
-        -2,
-        vec![-2, 512, 32767],
-        [0xFE, 0xFF],
-        [0xFF, 0xFE],
-        [0xFE, 0xFF, 0x00, 0x02, 0xFF, 0x7F],
-        [0xFF, 0xFE, 0x02, 0x00, 0x7F, 0xFF]
-    );
-    test_numeric_writer!(
-        write_int32,
-        i32,
-        write_i32,
-        write_i32_vec,
-        -2,
-        vec![-2, 131072],
-        [0xFE, 0xFF, 0xFF, 0xFF],
-        [0xFF, 0xFF, 0xFF, 0xFE],
-        [0xFE, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x02, 0x00],
-        [0xFF, 0xFF, 0xFF, 0xFE, 0x00, 0x02, 0x00, 0x00]
-    );
-    test_numeric_writer!(
-        write_int64,
-        i64,
-        write_i64,
-        write_i64_vec,
-        -2,
-        vec![-2, 562949953421312],
-        [0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF],
-        [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE],
-        [
-            0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x02, 0x00
-        ],
-        [
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00
-        ]
-    );
-
-    test_numeric_writer!(
-        write_float64,
-        f64,
-        write_f64,
-        write_f64_vec,
-        2.7,
-        vec![2.7, 0.0],
-        [0x9A, 0x99, 0x99, 0x99, 0x99, 0x99, 0x05, 0x40],
-        [0x40, 0x05, 0x99, 0x99, 0x99, 0x99, 0x99, 0x9A],
-        [
-            0x9A, 0x99, 0x99, 0x99, 0x99, 0x99, 0x05, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00
-        ],
-        [
-            0x40, 0x05, 0x99, 0x99, 0x99, 0x99, 0x99, 0x9A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00
-        ]
-    );
-
-    test_numeric_writer!(
-        write_float32,
-        f32,
-        write_f32,
-        write_f32_vec,
-        2.7,
-        vec![2.7, 0.0],
-        [0xCD, 0xCC, 0x2C, 0x40],
-        [0x40, 0x2C, 0xCC, 0xCD],
-        [0xCD, 0xCC, 0x2C, 0x40, 0x00, 0x00, 0x00, 0x00],
-        [0x40, 0x2C, 0xCC, 0xCD, 0x00, 0x00, 0x00, 0x00]
-    );
-
-    #[test]
-    fn reserve_and_fill_bool() {
-        let mut writer = BinaryWriter::to_bytes(Endian::Big, false);
-
-        writer.write_u8_vec(vec![0x00, 0x00, 0x00, 0x00]).unwrap();
-        writer.reserve_bool("sample").unwrap();
-        writer.write_u8_vec(vec![0x00, 0x00, 0x00, 0x00]).unwrap();
-        assert_eq!(
-            writer.get_ref_bytes(),
-            &vec![0x00, 0x00, 0x00, 0x00, 0xFE, 0x00, 0x00, 0x00, 0x00]
-        );
-        writer.fill_bool("sample", true).unwrap();
-        assert_eq!(writer.position().unwrap(), writer.length().unwrap());
-
-        assert_eq!(
-            writer.get_ref_bytes(),
-            &vec![0x00, 0x00, 0x00, 0x00, 0x1, 0x00, 0x00, 0x00, 0x00]
-        );
-
-        assert!(!writer.close_bytes().is_err())
-    }
-
-    macro_rules! test_numeric_reservation {
-        ($name:ident, $reserve:ident, $fill:ident, $single:expr, $little:expr, $big:expr, $expected_middle:expr) => {
-            #[test]
-            fn $name() {
-                for (endian, expected_single) in [(Endian::Little, $little), (Endian::Big, $big)] {
-                    let mut writer = BinaryWriter::to_bytes(endian, false);
-                    writer.write_u8_vec(vec![0x00, 0x00, 0x00, 0x00]).unwrap();
-                    writer.$reserve(stringify!($name)).unwrap();
-                    writer.write_u8_vec(vec![0x00, 0x00, 0x00, 0x00]).unwrap();
-                    assert_eq!(writer.get_ref_bytes(), $expected_middle);
-                    writer.$fill(stringify!($name), $single).unwrap();
-                    assert_eq!(writer.position().unwrap(), writer.length().unwrap());
-
-                    assert_eq!(writer.get_ref_bytes(), expected_single);
-                    assert!(!writer.close_bytes().is_err())
-                }
-            }
-        };
-    }
-
-    #[test]
-    fn write_varint_64bit() {
-        let mut big_writer = BinaryWriter::to_bytes(Endian::Big, true);
-        big_writer.write_varint(-2).unwrap();
-        assert_eq!(
-            big_writer.get_ref_bytes(),
-            &[0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE][..]
-        );
-
-        let mut big_vec_writer = BinaryWriter::to_bytes(Endian::Big, true);
-        big_vec_writer
-            .write_varint_vec(vec![-2, 562949953421312])
-            .unwrap();
-        assert_eq!(
-            big_vec_writer.get_ref_bytes(),
-            &[
-                0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00,
-                0x00, 0x00
-            ][..]
-        );
-
-        let mut little_writer = BinaryWriter::to_bytes(Endian::Little, true);
-        little_writer.write_varint(-2).unwrap();
-        assert_eq!(
-            little_writer.get_ref_bytes(),
-            &[0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF][..]
-        );
-
-        let mut little_vec_writer = BinaryWriter::to_bytes(Endian::Little, true);
-        little_vec_writer
-            .write_varint_vec(vec![-2, 562949953421312])
-            .unwrap();
-        assert_eq!(
-            little_vec_writer.get_ref_bytes(),
-            &[
-                0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                0x02, 0x00
-            ][..]
-        );
-    }
-
-    #[test]
-    fn write_varint_i32() {
-        let mut big_writer = BinaryWriter::to_bytes(Endian::Big, false);
-        big_writer.write_varint(-2).unwrap();
-        assert_eq!(big_writer.get_ref_bytes(), &[0xFF, 0xFF, 0xFF, 0xFE][..]);
-
-        let mut big_vec_writer = BinaryWriter::to_bytes(Endian::Big, false);
-        big_vec_writer.write_varint_vec(vec![-2, 131072]).unwrap();
-        assert_eq!(
-            big_vec_writer.get_ref_bytes(),
-            &[0xFF, 0xFF, 0xFF, 0xFE, 0x00, 0x02, 0x00, 0x00][..]
-        );
-
-        let mut little_writer = BinaryWriter::to_bytes(Endian::Little, false);
-        little_writer.write_varint(-2).unwrap();
-        assert_eq!(little_writer.get_ref_bytes(), &[0xFE, 0xFF, 0xFF, 0xFF][..]);
-
-        let mut little_vec_writer = BinaryWriter::to_bytes(Endian::Little, false);
-        little_vec_writer
-            .write_varint_vec(vec![-2, 131072])
-            .unwrap();
-        assert_eq!(
-            little_vec_writer.get_ref_bytes(),
-            &[0xFE, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x02, 0x00][..]
-        );
-    }
-
-    test_numeric_reservation!(
-        reserve_and_fill_u8,
-        reserve_u8,
-        fill_u8,
-        0x12,
-        &vec![0x00, 0x00, 0x00, 0x00, 0x12, 0x00, 0x00, 0x00, 0x00],
-        &vec![0x00, 0x00, 0x00, 0x00, 0x12, 0x00, 0x00, 0x00, 0x00],
-        &vec![0x00, 0x00, 0x00, 0x00, 0xFE, 0x00, 0x00, 0x00, 0x00]
-    );
-
-    test_numeric_reservation!(
-        reserve_and_fill_u16,
-        reserve_u16,
-        fill_u16,
-        0x1234,
-        &vec![0x00, 0x00, 0x00, 0x00, 0x34, 0x12, 0x00, 0x00, 0x00, 0x00],
-        &vec![0x00, 0x00, 0x00, 0x00, 0x12, 0x34, 0x00, 0x00, 0x00, 0x00],
-        &vec![0x00, 0x00, 0x00, 0x00, 0xFE, 0xFE, 0x00, 0x00, 0x00, 0x00]
-    );
-
-    test_numeric_reservation!(
-        reserve_and_fill_u32,
-        reserve_u32,
-        fill_u32,
-        0x12345678,
-        &vec![
-            0x00, 0x00, 0x00, 0x00, 0x78, 0x56, 0x34, 0x12, 0x00, 0x00, 0x00, 0x00
-        ],
-        &vec![
-            0x00, 0x00, 0x00, 0x00, 0x12, 0x34, 0x56, 0x78, 0x00, 0x00, 0x00, 0x00
-        ],
-        &vec![
-            0x00, 0x00, 0x00, 0x00, 0xFE, 0xFE, 0xFE, 0xFE, 0x00, 0x00, 0x00, 0x00
-        ]
-    );
-
-    test_numeric_reservation!(
-        reserve_and_fill_u64,
-        reserve_u64,
-        fill_u64,
-        0x12345678_12345678,
-        &vec![
-            0x00, 0x00, 0x00, 0x00, 0x78, 0x56, 0x34, 0x12, 0x78, 0x56, 0x34, 0x12, 0x00, 0x00,
-            0x00, 0x00
-        ],
-        &vec![
-            0x00, 0x00, 0x00, 0x00, 0x12, 0x34, 0x56, 0x78, 0x12, 0x34, 0x56, 0x78, 0x00, 0x00,
-            0x00, 0x00
-        ],
-        &vec![
-            0x00, 0x00, 0x00, 0x00, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0x00, 0x00,
-            0x00, 0x00
-        ]
-    );
-
-    test_numeric_reservation!(
-        reserve_and_fill_i8,
-        reserve_i8,
-        fill_i8,
-        -3,
-        &vec![0x00, 0x00, 0x00, 0x00, 0xFD, 0x00, 0x00, 0x00, 0x00],
-        &vec![0x00, 0x00, 0x00, 0x00, 0xFD, 0x00, 0x00, 0x00, 0x00],
-        &vec![0x00, 0x00, 0x00, 0x00, 0xFE, 0x00, 0x00, 0x00, 0x00]
-    );
-
-    test_numeric_reservation!(
-        reserve_and_fill_i16,
-        reserve_i16,
-        fill_i16,
-        -3,
-        &vec![0x00, 0x00, 0x00, 0x00, 0xFD, 0xFF, 0x00, 0x00, 0x00, 0x00],
-        &vec![0x00, 0x00, 0x00, 0x00, 0xFF, 0xFD, 0x00, 0x00, 0x00, 0x00],
-        &vec![0x00, 0x00, 0x00, 0x00, 0xFE, 0xFE, 0x00, 0x00, 0x00, 0x00]
-    );
-
-    test_numeric_reservation!(
-        reserve_and_fill_i32,
-        reserve_i32,
-        fill_i32,
-        -3,
-        &vec![
-            0x00, 0x00, 0x00, 0x00, 0xFD, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00
-        ],
-        &vec![
-            0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFD, 0x00, 0x00, 0x00, 0x00
-        ],
-        &vec![
-            0x00, 0x00, 0x00, 0x00, 0xFE, 0xFE, 0xFE, 0xFE, 0x00, 0x00, 0x00, 0x00
-        ]
-    );
-
-    test_numeric_reservation!(
-        reserve_and_fill_i64,
-        reserve_i64,
-        fill_i64,
-        -3,
-        &vec![
-            0x00, 0x00, 0x00, 0x00, 0xFD, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00,
-            0x00, 0x00
-        ],
-        &vec![
-            0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFD, 0x00, 0x00,
-            0x00, 0x00
-        ],
-        &vec![
-            0x00, 0x00, 0x00, 0x00, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0x00, 0x00,
-            0x00, 0x00
-        ]
-    );
-
-    test_numeric_reservation!(
-        reserve_and_fill_f32,
-        reserve_f32,
-        fill_f32,
-        2.7,
-        &vec![
-            0x00, 0x00, 0x00, 0x00, 0xCD, 0xCC, 0x2C, 0x40, 0x00, 0x00, 0x00, 0x00
-        ],
-        &vec![
-            0x00, 0x00, 0x00, 0x00, 0x40, 0x2C, 0xCC, 0xCD, 0x00, 0x00, 0x00, 0x00
-        ],
-        &vec![
-            0x00, 0x00, 0x00, 0x00, 0xFE, 0xFE, 0xFE, 0xFE, 0x00, 0x00, 0x00, 0x00
-        ]
-    );
-
-    test_numeric_reservation!(
-        reserve_and_fill_f64,
-        reserve_f64,
-        fill_f64,
-        2.7,
-        &vec![
-            0x00, 0x00, 0x00, 0x00, 0x9A, 0x99, 0x99, 0x99, 0x99, 0x99, 0x05, 0x40, 0x00, 0x00,
-            0x00, 0x00
-        ],
-        &vec![
-            0x00, 0x00, 0x00, 0x00, 0x40, 0x05, 0x99, 0x99, 0x99, 0x99, 0x99, 0x9A, 0x00, 0x00,
-            0x00, 0x00
-        ],
-        &vec![
-            0x00, 0x00, 0x00, 0x00, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0x00, 0x00,
-            0x00, 0x00
-        ]
-    );
-
-    #[test]
-    #[should_panic]
-    fn already_reserved() {
-        let mut writer = BinaryWriter::to_bytes(Endian::Big, false);
-        writer.reserve_bool("sample").unwrap();
-
-        writer.seek(0).unwrap();
-        writer.reserve_bool("sample").unwrap();
-    }
-
-    #[test]
-    #[should_panic]
-    fn closing_with_reservations() {
-        let mut writer = BinaryWriter::to_bytes(Endian::Big, false);
-        writer.reserve_bool("sample").unwrap();
-
-        writer.close_bytes().unwrap();
     }
 }

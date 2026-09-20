@@ -1,9 +1,10 @@
 use soulsformats_rs::{
-    binder::{
-        bnd2::{Binder2File, FileInfoFlags, FilePathMode},
-        BND, BND2, BND3, BND4, bnd::Binder1File,
-    },
     ByteIO, DCX, FileIO,
+    binder::{
+        BND, BND2, BND3, BND4,
+        bnd::Binder1File,
+        bnd2::{Binder2File, FileInfoFlags, FilePathMode},
+    },
 };
 
 #[test]
@@ -13,7 +14,7 @@ fn bnd() {
     bnd.root_file_path = Some(String::from("L:\\"));
     bnd.files = vec![
         Binder1File::new(1, String::from("こんにちは"), vec![1, 2, 3, 4, 5, 6, 7]),
-        Binder1File::new(2, String::from("こんにちは"), vec![1, 2, 3, 4, 5, 6, 7])
+        Binder1File::new(2, String::from("こんにちは"), vec![1, 2, 3, 4, 5, 6, 7]),
     ];
     let round_trip = BND::from_bytes(bnd.to_bytes().unwrap()).unwrap();
     assert_eq!(bnd.internal_version, round_trip.internal_version);
@@ -71,11 +72,7 @@ fn bnd2() {
 fn bnd2_no_names() {
     let mut bnd = BND2::with_path_mode(FilePathMode::Nameless);
     bnd.file_info_flags = FileInfoFlags::ID | FileInfoFlags::Offset | FileInfoFlags::Size;
-    bnd.files = vec![Binder2File::new(
-        9,
-        "test.bin".to_string(),
-        vec![1, 2, 3],
-    )];
+    bnd.files = vec![Binder2File::new(9, "test.bin".to_string(), vec![1, 2, 3])];
 
     let round_trip = BND2::from_bytes(bnd.to_bytes().unwrap()).unwrap();
     assert_eq!(round_trip.files[0].id, 9);

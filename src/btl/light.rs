@@ -114,7 +114,7 @@ impl Light {
     /// Creates an empty `Light` with default values
     pub fn empty() -> Self {
         Self {
-            unk_00: vec![0 as u8; 16],
+            unk_00: vec![0_u8; 16],
             name: "".to_string(),
             diffuse_color: ByteVector3 {
                 x: 255,
@@ -160,9 +160,9 @@ impl Light {
         R: Read + Seek,
     {
         let mut output = Self::empty();
-        output.unk_00 = br.read_u8_vec(16)?;
+        output.unk_00 = br.read_vec_u8(16)?;
         let varint = br.read_varint()?;
-        output.name = br.get_utf16(util::try_from_to_io_result(names_start + varint)?)?;
+        output.name = br.get_utf16(util::convert_num(names_start + varint)?)?;
         output.light_type = br.read_enum_u32::<LightType>()?;
         output.unk_1c = br.read_bool()?;
         output.diffuse_color = br.read_byte_vector_3()?;
@@ -180,7 +180,7 @@ impl Light {
         output.radius = br.read_f32()?;
         output.unk_5c = br.read_i32()?;
         br.assert_i32(&[0])?;
-        output.unk_64 = br.read_u8_vec(4)?;
+        output.unk_64 = br.read_vec_u8(4)?;
         output.unk_68 = br.read_f32()?;
         output.shadow_color = br.read_byte_vector_4_rgba()?;
         output.unk_70 = br.read_f32()?;
@@ -188,21 +188,21 @@ impl Light {
         output.flicker_interval_max = br.read_f32()?;
         output.flicker_brightness_multiplier = br.read_f32()?;
         output.unk_80 = br.read_i32()?;
-        output.unk_84 = br.read_u8_vec(4)?;
+        output.unk_84 = br.read_vec_u8(4)?;
         output.unk_88 = br.read_f32()?;
         br.assert_i32(&[0])?;
         output.unk_90 = br.read_f32()?;
         br.assert_i32(&[0])?;
         output.unk_98 = br.read_f32()?;
         output.near_clip = br.read_f32()?;
-        output.unk_a0 = br.read_u8_vec(4)?;
+        output.unk_a0 = br.read_vec_u8(4)?;
         output.sharpness = br.read_f32()?;
         br.assert_i32(&[0])?;
         output.unk_ac = br.read_f32()?;
         br.assert_varint(&[0])?;
         output.width = br.read_f32()?;
         output.unk_bc = br.read_f32()?;
-        output.unk_c0 = br.read_u8_vec(4)?;
+        output.unk_c0 = br.read_vec_u8(4)?;
         output.unk_c4 = br.read_f32()?;
 
         if version >= 16 {
@@ -233,7 +233,7 @@ impl Light {
         W: Write + Seek,
     {
         let out = self.clone();
-        bw.write_u8_vec(out.unk_00)?;
+        bw.write_vec_u8(out.unk_00)?;
         bw.write_varint(name_offset)?;
         bw.write_u32(out.light_type as u32)?;
         bw.write_bool(out.unk_1c)?;
@@ -252,7 +252,7 @@ impl Light {
         bw.write_f32(out.radius)?;
         bw.write_i32(out.unk_5c)?;
         bw.write_i32(0)?;
-        bw.write_u8_vec(out.unk_64)?;
+        bw.write_vec_u8(out.unk_64)?;
         bw.write_f32(out.unk_68)?;
         bw.write_byte_vector4_rgba(out.shadow_color)?;
         bw.write_f32(out.unk_70)?;
@@ -260,62 +260,54 @@ impl Light {
         bw.write_f32(out.flicker_interval_max)?;
         bw.write_f32(out.flicker_brightness_multiplier)?;
         bw.write_i32(out.unk_80)?;
-        bw.write_u8_vec(out.unk_84)?;
+        bw.write_vec_u8(out.unk_84)?;
         bw.write_f32(out.unk_88)?;
         bw.write_i32(0)?;
         bw.write_f32(out.unk_90)?;
         bw.write_i32(0)?;
         bw.write_f32(out.unk_98)?;
         bw.write_f32(out.near_clip)?;
-        bw.write_u8_vec(out.unk_a0)?;
+        bw.write_vec_u8(out.unk_a0)?;
         bw.write_f32(out.sharpness)?;
         bw.write_i32(0)?;
         bw.write_f32(out.unk_ac)?;
         bw.write_varint(0)?;
         bw.write_f32(out.width)?;
         bw.write_f32(out.unk_bc)?;
-        bw.write_u8_vec(out.unk_c0)?;
+        bw.write_vec_u8(out.unk_c0)?;
         bw.write_f32(out.unk_c4)?;
 
-        match out.unk_c8 {
-            Some(value) => bw.write_f32(value)?,
-            None => (),
-        };
+        if let Some(value) = out.unk_c8 {
+            bw.write_f32(value)?
+        }
 
-        match out.unk_cc {
-            Some(value) => bw.write_f32(value)?,
-            None => (),
-        };
+        if let Some(value) = out.unk_cc {
+            bw.write_f32(value)?
+        }
 
-        match out.unk_d0 {
-            Some(value) => bw.write_f32(value)?,
-            None => (),
-        };
+        if let Some(value) = out.unk_d0 {
+            bw.write_f32(value)?
+        }
 
-        match out.unk_d4 {
-            Some(value) => bw.write_f32(value)?,
-            None => (),
-        };
+        if let Some(value) = out.unk_d4 {
+            bw.write_f32(value)?
+        }
 
-        match out.unk_d8 {
-            Some(value) => bw.write_f32(value)?,
-            None => (),
-        };
+        if let Some(value) = out.unk_d8 {
+            bw.write_f32(value)?
+        }
 
-        match out.unk_dc {
-            Some(value) => bw.write_i32(value)?,
-            None => (),
-        };
+        if let Some(value) = out.unk_dc {
+            bw.write_i32(value)?
+        }
 
-        match out.unk_e0 {
-            Some(value) => bw.write_f32(value)?,
-            None => (),
-        };
+        if let Some(value) = out.unk_e0 {
+            bw.write_f32(value)?
+        }
 
-        match out.unk_e4 {
-            Some(value) => bw.write_i32(value)?,
-            None => (),
-        };
+        if let Some(value) = out.unk_e4 {
+            bw.write_i32(value)?
+        }
 
         Ok(())
     }

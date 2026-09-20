@@ -1,11 +1,13 @@
 use std::io::{self, Read, Seek, Write};
 
 use crate::{
+    ByteIO, FileIO,
     io::{BinaryReader, BinaryWriter, StreamIO},
-    ByteIO, FileIO, util,
+    util,
 };
 
 /// A file in a `BND` container.
+#[derive(Debug, Clone, PartialEq)]
 pub struct Binder1File {
     pub id: i32,
     pub name: String,
@@ -64,12 +66,13 @@ impl Binder1FileHeader {
         Ok(Binder1File::new(
             self.id,
             self.name.clone(),
-            br.get_u8_vec(self.offset as u64, self.size as u64)?,
+            br.get_vec_u8(self.offset as u64, self.size as u64)?,
         ))
     }
 }
 
 /// BND file, used in old titles
+#[derive(Debug, Clone, PartialEq)]
 pub struct BND {
     /// `BND` version
     pub internal_version: i32,
@@ -143,18 +146,14 @@ impl StreamIO<BND> for BND {
     where
         W: Write + Seek,
     {
-        let file_headers: Vec<_> = self
-            .files
-            .iter()
-            .map(Binder1FileHeader::from)
-            .collect();
+        let file_headers: Vec<_> = self.files.iter().map(Binder1FileHeader::from).collect();
 
         bw.write_ascii("BND", true)?;
         bw.write_u16(0xFFFF)?;
         bw.write_u16(0)?;
         bw.write_i32(self.internal_version)?;
         bw.reserve_i32("file-size")?;
-        bw.write_i32(util::try_from_to_io_result(self.files.len())?)?;
+        bw.write_i32(util::convert_num(self.files.len())?)?;
         bw.reserve_i32("root-file-path")?;
         bw.write_u16(self.format0)?;
         bw.write_u16(self.format1)?;
@@ -163,14 +162,14 @@ impl StreamIO<BND> for BND {
         for (index, (header, file)) in file_headers.iter().zip(&self.files).enumerate() {
             bw.write_i32(header.id)?;
             bw.reserve_i32(format!("file-offset-{index}"))?;
-            bw.write_i32(util::try_from_to_io_result(file.bytes.len())?)?;
+            bw.write_i32(util::convert_num(file.bytes.len())?)?;
             bw.reserve_i32(format!("file-name-{index}"))?;
         }
 
         match &self.root_file_path {
             Some(path) => {
                 let position = bw.position()?;
-                bw.fill_i32("root-file-path", util::try_from_to_io_result(position)?)?;
+                bw.fill_i32("root-file-path", util::convert_num(position)?)?;
                 bw.write_shift_jis(path, true)?;
             }
             None => bw.fill_i32("root-file-path", 0)?,
@@ -178,20 +177,14 @@ impl StreamIO<BND> for BND {
 
         for (index, header) in file_headers.iter().enumerate() {
             let position = bw.position()?;
-            bw.fill_i32(
-                format!("file-name-{index}"),
-                util::try_from_to_io_result(position)?,
-            )?;
+            bw.fill_i32(format!("file-name-{index}"), util::convert_num(position)?)?;
             bw.write_shift_jis(&header.name, true)?;
         }
         bw.pad_00(0x10)?;
 
         for (index, file) in self.files.iter().enumerate() {
             let position = bw.position()?;
-            bw.fill_i32(
-                format!("file-offset-{index}"),
-                util::try_from_to_io_result(position)?,
-            )?;
+            bw.fill_i32(format!("file-offset-{index}"), util::convert_num(position)?)?;
             bw.write_bytes(&file.bytes)?;
             if index + 1 != self.files.len() {
                 bw.pad_00(0x10)?;
@@ -199,7 +192,7 @@ impl StreamIO<BND> for BND {
         }
 
         let position = bw.position()?;
-        bw.fill_i32("file-size", util::try_from_to_io_result(position)?)?;
+        bw.fill_i32("file-size", util::convert_num(position)?)?;
         Ok(())
     }
 

@@ -16,6 +16,7 @@ use crate::{
 /// A general-purpose split header and data binder, used in older FromSoftware games.<br>
 /// Header `.bhd`<br>
 /// Data `.bdt`
+#[derive(Debug, Clone, PartialEq)]
 pub struct BXF3 {
     /// Files contained in this `BXF3`
     pub files: Vec<BinderFile>,
@@ -185,19 +186,19 @@ impl BXF3 {
         let mut file_headers = Vec::with_capacity(self.files.len());
 
         for file in &self.files {
-            file_headers.push(BinderFileHeader::from_binder_file(&file));
+            file_headers.push(BinderFileHeader::from_binder_file(file));
         }
 
         self.write_bdf_header(bdt)?;
         self.write_bhf_header(bhd, &file_headers)?;
 
-        for i in 0..self.files.len() {
-            file_headers[i].write_bxf3_file_data(
+        for (index, header) in file_headers.iter_mut().enumerate() {
+            header.write_bxf3_file_data(
                 bhd,
                 bdt,
                 self.format,
-                util::try_from_to_io_result(i)?,
-                &self.files[i].bytes,
+                util::convert_num(index)?,
+                &self.files[index].bytes,
             )?;
         }
 
@@ -237,27 +238,22 @@ impl BXF3 {
         bhd.write_u8(0)?;
         bhd.write_u8(0)?;
 
-        bhd.write_i32(util::try_from_to_io_result(file_headers.len())?)?;
+        bhd.write_i32(util::convert_num(file_headers.len())?)?;
         bhd.write_i32(0)?;
         bhd.write_i32(0)?;
         bhd.write_i32(0)?;
 
-        for i in 0..file_headers.len() {
-            file_headers[i].write_bnd3_header(
+        for (index, header) in file_headers.iter().enumerate() {
+            header.write_bnd3_header(
                 bhd,
                 self.format,
                 self.bit_endian,
-                util::try_from_to_io_result(i)?,
+                util::convert_num(index)?,
             )?;
         }
 
-        for i in 0..file_headers.len() {
-            file_headers[i].write_file_name(
-                bhd,
-                self.format,
-                util::try_from_to_io_result(i)?,
-                false,
-            )?;
+        for (index, header) in file_headers.iter().enumerate() {
+            header.write_file_name(bhd, self.format, util::convert_num(index)?, false)?;
         }
 
         Ok(())

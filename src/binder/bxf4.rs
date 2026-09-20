@@ -16,6 +16,7 @@ use crate::{
 
 /// A general-purpose split header and data binder, used in newer FromSoftware games.
 /// Header `.bhd`; data `.bdt`.
+#[derive(Debug, Clone, PartialEq)]
 pub struct BXF4 {
     /// Files contained within this `BXF4`
     pub files: Vec<BinderFile>,
@@ -146,7 +147,7 @@ impl BXF4 {
         if file_header_size != format::get_bnd4_file_header_size(self.format) {
             return Err(io::Error::new(InvalidData, "Invalid file header size"));
         }
-        let mut file_headers = Vec::with_capacity(util::try_from_to_io_result(file_count)?);
+        let mut file_headers = Vec::with_capacity(util::convert_num(file_count)?);
         for _ in 0..file_count {
             file_headers.push(BinderFileHeader::read_bnd4_header(
                 bhd,
@@ -234,7 +235,7 @@ impl BXF4 {
                 bhd,
                 bdt,
                 self.format,
-                util::try_from_to_io_result(index)?,
+                util::convert_num(index)?,
                 &file.bytes,
             )?;
         }
@@ -284,7 +285,7 @@ impl BXF4 {
         bhd.write_bool(self.bit_endian == Endian::Little)?;
         bhd.write_u8(0)?;
 
-        bhd.write_i32(util::try_from_to_io_result(file_headers.len())?)?;
+        bhd.write_i32(util::convert_num(file_headers.len())?)?;
         bhd.write_i64(0x40)?;
         bhd.write_fix_str(&self.version, 8, 0)?;
         bhd.write_i64(format::get_bnd4_file_header_size(self.format))?;
@@ -303,22 +304,17 @@ impl BXF4 {
                 bhd,
                 self.format,
                 self.bit_endian,
-                util::try_from_to_io_result(index)?,
+                util::convert_num(index)?,
             )?;
         }
         for (index, header) in file_headers.iter().enumerate() {
-            header.write_file_name(
-                bhd,
-                self.format,
-                util::try_from_to_io_result(index)?,
-                self.unicode,
-            )?;
+            header.write_file_name(bhd, self.format, util::convert_num(index)?, self.unicode)?;
         }
         if self.extended == 4 {
             bhd.pad_00(0x8)?;
             let position = bhd.position()?;
             hashtable::write(bhd, file_headers)?;
-            bhd.fill_i64("hash-table-offset", util::try_from_to_io_result(position)?)?;
+            bhd.fill_i64("hash-table-offset", util::convert_num(position)?)?;
         } else {
             bhd.fill_i64("hash-table-offset", 0)?;
         }

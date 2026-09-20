@@ -14,7 +14,7 @@ pub enum CompressionInfo {
     DcxZstd(u8),
 }
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, Eq)]
 /// Presets for `DCX DFLT` compression
 pub enum DcxDfltPreset {
     DcxDflt10000_24_9,
@@ -116,7 +116,13 @@ impl DcxKrakArgs {
     }
 }
 
-#[derive(Clone, Copy)]
+impl Default for DcxKrakArgs {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /// Presets for `DCX` Kraken compression
 pub enum KrakCompressionPreset {
     EldenRing,

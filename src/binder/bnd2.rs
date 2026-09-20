@@ -11,6 +11,7 @@ use crate::{
 };
 
 /// Generic binder archive use in games: Metal Wolf Chaos, A.C.E. 2, AC: FF (PSP), AC: NB, AC: LR (PSP+PS2)
+#[derive(Debug, Clone, PartialEq)]
 pub struct BND2 {
     /// Header Info Flags
     pub header_info_flags: HeaderInfoFlags,
@@ -144,7 +145,7 @@ impl BND2 {
     fn write_header<W>(
         &self,
         bw: &mut BinaryWriter<W>,
-        file_headers: &Vec<Binder2FileHeader>,
+        file_headers: &[Binder2FileHeader],
     ) -> io::Result<()>
     where
         W: Write + Seek,
@@ -158,7 +159,7 @@ impl BND2 {
         bw.write_u8(self.unk_07)?;
         bw.write_i32(self.file_version)?;
         bw.reserve_i32("file-size")?;
-        bw.write_i32(util::try_from_to_io_result(file_headers.len())?)?;
+        bw.write_i32(util::convert_num(file_headers.len())?)?;
         bw.reserve_i32("base-dir-offset")?;
         bw.write_u16(self.alignment_size)?;
         bw.write_u8(self.file_path_mode as u8)?;
@@ -169,12 +170,12 @@ impl BND2 {
             bw.write_u32(0)?;
         }
 
-        for i in 0..file_headers.len() {
-            file_headers[i].write(
+        for (index, header) in file_headers.iter().enumerate() {
+            header.write(
                 bw,
                 self.file_path_mode,
                 self.file_info_flags,
-                util::try_from_to_io_result(i)?,
+                util::convert_num(index)?,
             )?;
         }
 
@@ -190,7 +191,7 @@ impl BND2 {
     fn write_file_names<W>(
         &self,
         bw: &mut BinaryWriter<W>,
-        file_headers: &Vec<Binder2FileHeader>,
+        file_headers: &[Binder2FileHeader],
     ) -> io::Result<()>
     where
         W: Write + Seek,
@@ -198,7 +199,7 @@ impl BND2 {
         match self.file_path_mode {
             FilePathMode::BaseDirectory => {
                 let pos = bw.position()?;
-                bw.fill_i32("base-dir-offset", util::try_from_to_io_result(pos)?)?;
+                bw.fill_i32("base-dir-offset", util::convert_num(pos)?)?;
                 bw.write_shift_jis(&self.base_directory, true)?;
             }
             _ => bw.fill_i32("base-dir-offset", 0)?,
@@ -207,20 +208,13 @@ impl BND2 {
         match self.file_path_mode {
             FilePathMode::Nameless => Ok(()),
             _ => {
-                for i in 0..file_headers.len() {
+                for (index, header) in file_headers.iter().enumerate() {
                     let pos = bw.position()?;
-                    bw.fill_i32(
-                        format!("name-offset-{i}"),
-                        util::try_from_to_io_result(pos)?,
-                    )?;
-                    let mut name = PathBuf::from(&file_headers[i].name);
-                    match self.file_path_mode {
-                        FilePathMode::FullPath => {
-                            if !name.is_absolute() {
-                                name = Path::new(r"K:\").join(name);
-                            }
-                        }
-                        _ => (),
+                    bw.fill_i32(format!("name-offset-{index}"), util::convert_num(pos)?)?;
+                    let mut name = PathBuf::from(&header.name);
+
+                    if self.file_path_mode == FilePathMode::FullPath && !name.is_absolute() {
+                        name = Path::new(r"K:\").join(name);
                     }
 
                     bw.write_shift_jis(
@@ -231,7 +225,7 @@ impl BND2 {
                         true,
                     )?;
                 }
-                return Ok(());
+                Ok(())
             }
         }
     }
@@ -257,20 +251,16 @@ impl StreamIO<BND2> for BND2 {
         let unk_1c = br.read_u32()?;
 
         let valid_names_offset = match file_path_mode {
-            0 | 1 | 2 => {
-                base_dir_offset <= util::try_from_to_io_result(br.length()?)?
-                    && base_dir_offset == 0
-            }
-            3 => base_dir_offset <= util::try_from_to_io_result(br.length()?)?,
+            0..=2 => base_dir_offset <= util::convert_num(br.length()?)? && base_dir_offset == 0,
+            3 => base_dir_offset <= util::convert_num(br.length()?)?,
             _ => return Ok(false), // Invalid FilePathMode (reason for not casting `u8` to enum)
         };
 
-        let valid_magic = magic == "BND\0";
-        let valid_file_version = file_version >= 202 && file_version <= 211;
-        let valid_unk_1b = unk_1b == 0 || unk_1b == 1;
-        let valid_unk_1c = unk_1c == 0;
-
-        Ok(valid_magic && valid_file_version && valid_names_offset && valid_unk_1b && valid_unk_1c)
+        Ok(magic == "BND\0"
+            && (202..=211).contains(&file_version)
+            && valid_names_offset
+            && (unk_1b == 0 || unk_1b == 1)
+            && unk_1c == 0)
     }
 
     fn read<R>(br: &mut BinaryReader<R>) -> io::Result<BND2>
@@ -297,16 +287,16 @@ impl StreamIO<BND2> for BND2 {
 
         self.write_header(bw, &file_headers)?;
 
-        for i in 0..self.files.len() {
-            file_headers[i].write_file_data(
+        for (index, header) in file_headers.iter().enumerate() {
+            header.write_file_data(
                 bw,
-                util::try_from_to_io_result(i)?,
+                util::convert_num(index)?,
                 self.alignment_size,
-                &self.files[i].bytes,
+                &self.files[index].bytes,
             )?;
         }
         let pos = bw.position()?;
-        bw.fill_i32("file-size", util::try_from_to_io_result(pos)?)?;
+        bw.fill_i32("file-size", util::convert_num(pos)?)?;
 
         Ok(())
     }
@@ -316,6 +306,7 @@ impl ByteIO<BND2> for BND2 {}
 impl FileIO<BND2> for BND2 {}
 
 /// A file in `BND2`
+#[derive(Debug, Clone, PartialEq)]
 pub struct Binder2File {
     /// ID of this `Binder2File`
     pub id: i32,
@@ -423,7 +414,7 @@ impl Binder2FileHeader {
     where
         R: Read + Seek,
     {
-        let bytes = br.get_u8_vec(self.offset as u64, self.size as u64)?;
+        let bytes = br.get_vec_u8(self.offset as u64, self.size as u64)?;
         Ok(Binder2File::new(self.id, self.name.clone(), bytes))
     }
 
@@ -438,9 +429,9 @@ impl Binder2FileHeader {
         W: Write + Seek,
     {
         bw.pad_00(alignment_size as u64)?;
-        let offset: i32 = util::try_from_to_io_result(bw.position()?)?;
-        let size: i32 = util::try_from_to_io_result(bytes.len())?;
-        bw.write_u8_vec(bytes.to_vec())?;
+        let offset: i32 = util::convert_num(bw.position()?)?;
+        let size: i32 = util::convert_num(bytes.len())?;
+        bw.write_vec_u8(bytes.to_vec())?;
         bw.fill_i32(format!("file-offset-{index}"), offset)?;
         bw.fill_i32(format!("file-size-{index}"), size)?;
 
@@ -448,7 +439,7 @@ impl Binder2FileHeader {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /// An enum for the different supported file path modes
 pub enum FilePathMode {
     /// Files in this BND have no name

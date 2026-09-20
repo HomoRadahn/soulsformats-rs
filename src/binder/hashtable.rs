@@ -41,8 +41,8 @@ where
 
     let mut hash_lists: Vec<Vec<PathHash>> = (0..group_count).map(|_| Vec::new()).collect();
 
-    for i in 0..files.len() {
-        let path_hash = PathHash::new(util::try_from_to_io_result(i)?, files[i].name.clone());
+    for (index, file) in files.iter().enumerate() {
+        let path_hash = PathHash::new(util::convert_num(index)?, file.name.clone());
         let group = path_hash.hash % group_count;
         hash_lists[group as usize].push(path_hash);
     }
@@ -76,7 +76,7 @@ where
     }
 
     let hashes_offset = bw.position()?;
-    bw.fill_i64("hashes-offset", util::try_from_to_io_result(hashes_offset)?)?;
+    bw.fill_i64("hashes-offset", util::convert_num(hashes_offset)?)?;
 
     for path_hash in path_hashes {
         path_hash.write(bw)?;

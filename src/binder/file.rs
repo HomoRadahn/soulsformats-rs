@@ -10,6 +10,7 @@ use crate::{
 };
 
 /// A generic file in `BND3`, `BND4`, `BXF3`, `BXF4` containers
+#[derive(Debug, Clone, PartialEq)]
 pub struct BinderFile {
     /// Flags of this `BinderFile`
     pub flags: FileFlags,
@@ -113,7 +114,7 @@ impl BinderFileHeader {
         let data_offset = if format.contains(Format::LongOffsets) {
             br.read_i64()?
         } else {
-            util::try_from_to_io_result(br.read_u32()?)?
+            util::convert_num(br.read_u32()?)?
         };
 
         let id = if format.contains(Format::IDs) {
@@ -123,7 +124,7 @@ impl BinderFileHeader {
         };
 
         let name = if format.contains(Format::Names1 | Format::Names2) {
-            let name_offset = util::try_from_to_io_result(br.read_i32()?)?;
+            let name_offset = util::convert_num(br.read_i32()?)?;
             br.get_shift_jis(name_offset)?
         } else {
             "".to_string()
@@ -172,7 +173,7 @@ impl BinderFileHeader {
         let data_offset = if format.contains(Format::LongOffsets) {
             br.read_i64()?
         } else {
-            util::try_from_to_io_result(br.read_u32()?)?
+            util::convert_num(br.read_u32()?)?
         };
 
         let mut id = if format.contains(Format::IDs) {
@@ -212,7 +213,7 @@ impl BinderFileHeader {
     where
         R: Read + Seek,
     {
-        let compressed = br.get_u8_vec(self.data_offset as u64, self.compressed_size as u64)?;
+        let compressed = br.get_vec_u8(self.data_offset as u64, self.compressed_size as u64)?;
 
         let (bytes, compression) = if self.flags.contains(FileFlags::Compressed) {
             let dcx = DCX::from_bytes(compressed)?;
@@ -316,19 +317,19 @@ impl BinderFileHeader {
     where
         W: Write + Seek,
     {
-        if bytes.len() > 0 {
+        if !bytes.is_empty() {
             bw.pad_00(0x10)?;
         }
 
-        self.data_offset = util::try_from_to_io_result(bw.position()?)?;
-        self.uncompressed_size = util::try_from_to_io_result(bytes.len())?;
+        self.data_offset = util::convert_num(bw.position()?)?;
+        self.uncompressed_size = util::convert_num(bytes.len())?;
 
         if self.flags.contains(FileFlags::Compressed) {
             let compressed = DCX::new(bytes.to_vec(), self.compression).to_bytes()?;
-            self.compressed_size = util::try_from_to_io_result(compressed.len())?;
-            bw.write_u8_vec(compressed)?;
+            self.compressed_size = util::convert_num(compressed.len())?;
+            bw.write_vec_u8(compressed)?;
         } else {
-            self.compressed_size = util::try_from_to_io_result(bytes.len())?;
+            self.compressed_size = util::convert_num(bytes.len())?;
             bw.write_bytes(bytes)?;
         }
 
@@ -350,13 +351,13 @@ impl BinderFileHeader {
 
         bw.fill_i32(
             format!("file_{index}_compressed_size"),
-            util::try_from_to_io_result(self.compressed_size)?,
+            util::convert_num(self.compressed_size)?,
         )?;
 
         if format.contains(Format::Compression) {
             bw.fill_i32(
                 format!("file_{index}_uncompressed_size"),
-                util::try_from_to_io_result(self.uncompressed_size)?,
+                util::convert_num(self.uncompressed_size)?,
             )?;
         }
 
@@ -365,7 +366,7 @@ impl BinderFileHeader {
         } else {
             bw.fill_u32(
                 format!("file_{index}_data_offset"),
-                util::try_from_to_io_result(self.data_offset)?,
+                util::convert_num(self.data_offset)?,
             )?;
         }
 
@@ -389,13 +390,13 @@ impl BinderFileHeader {
 
         bw_header.fill_i32(
             format!("file_{index}_compressed_size"),
-            util::try_from_to_io_result(self.compressed_size)?,
+            util::convert_num(self.compressed_size)?,
         )?;
 
         if format.contains(Format::Compression) {
             bw_header.fill_i32(
                 format!("file_{index}_uncompressed_size"),
-                util::try_from_to_io_result(self.uncompressed_size)?,
+                util::convert_num(self.uncompressed_size)?,
             )?;
         }
 
@@ -404,7 +405,7 @@ impl BinderFileHeader {
         } else {
             bw_header.fill_u32(
                 format!("file_{index}_data_offset"),
-                util::try_from_to_io_result(self.data_offset)?,
+                util::convert_num(self.data_offset)?,
             )?;
         }
 
@@ -441,7 +442,7 @@ impl BinderFileHeader {
         } else {
             bw.fill_u32(
                 format!("file_{index}_data_offset"),
-                util::try_from_to_io_result(self.data_offset)?,
+                util::convert_num(self.data_offset)?,
             )?;
         }
 
@@ -480,7 +481,7 @@ impl BinderFileHeader {
         } else {
             bw_header.fill_u32(
                 format!("file_{index}_data_offset"),
-                util::try_from_to_io_result(self.data_offset)?,
+                util::convert_num(self.data_offset)?,
             )?;
         }
 
@@ -500,10 +501,7 @@ impl BinderFileHeader {
         // Calling bare unwrap(), since name can only be none if format doesn't have names
         if format.contains(Format::Names1 | Format::Names2) {
             let pos = bw.position()?;
-            bw.fill_i32(
-                format!("file_{index}_name_offset"),
-                util::try_from_to_io_result(pos)?,
-            )?;
+            bw.fill_i32(format!("file_{index}_name_offset"), util::convert_num(pos)?)?;
             match unicode {
                 true => bw.write_utf16(&self.name, true)?,
                 false => bw.write_shift_jis(&self.name, true)?,

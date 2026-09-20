@@ -12,6 +12,7 @@ pub use light::Light;
 pub use light::LightType;
 
 /// Point light sources in a map, used in BB, DS3, and Sekiro
+#[derive(Debug, Clone, PartialEq)]
 pub struct BTL {
     /// Version
     pub version: i32,
@@ -53,11 +54,7 @@ impl StreamIO<BTL> for BTL {
         let mut lights: Vec<Light> = Vec::with_capacity(lights_count as usize);
 
         for _ in 0..lights_count {
-            lights.push(Light::read(
-                br,
-                util::try_from_to_io_result(names_start)?,
-                version,
-            )?);
+            lights.push(Light::read(br, util::convert_num(names_start)?, version)?);
         }
 
         Ok(Self {
@@ -76,7 +73,7 @@ impl StreamIO<BTL> for BTL {
 
         bw.write_i32(2)?;
         bw.write_i32(self.version)?;
-        bw.write_i32(util::try_from_to_io_result(self.lights.len())?)?;
+        bw.write_i32(util::convert_num(self.lights.len())?)?;
         bw.reserve_i32("names_length")?;
         bw.write_i32(0)?;
         let next_var = if self.version >= 16 {
@@ -93,25 +90,19 @@ impl StreamIO<BTL> for BTL {
         let mut name_offsets: Vec<i64> = Vec::with_capacity(self.lights.len());
 
         for entry in &self.lights {
-            let name_offset: i64 = util::try_from_to_io_result(bw.position()? - names_start)?;
+            let name_offset: i64 = util::convert_num(bw.position()? - names_start)?;
             name_offsets.push(name_offset);
             bw.write_utf16(&entry.name, true)?;
             if name_offset % 0x10 != 0 {
-                bw.write_pattern(
-                    util::try_from_to_io_result(0x10 - (name_offset % 0x10))?,
-                    0x00,
-                )?;
+                bw.write_pattern(util::convert_num(0x10 - (name_offset % 0x10))?, 0x00)?;
             }
         }
 
         let pos = bw.position()?;
-        bw.fill_i32(
-            "names_length",
-            util::try_from_to_io_result(pos - names_start)?,
-        )?;
+        bw.fill_i32("names_length", util::convert_num(pos - names_start)?)?;
 
-        for i in 0..self.lights.len() {
-            self.lights[i].write(bw, name_offsets[i])?;
+        for (index, light) in self.lights.iter().enumerate() {
+            light.write(bw, name_offsets[index])?;
         }
 
         Ok(())
