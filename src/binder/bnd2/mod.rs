@@ -1,4 +1,3 @@
-use bitflags::bitflags;
 use std::{
     io::{self, ErrorKind::InvalidData, Read, Seek, Write},
     path::{Path, PathBuf},
@@ -9,6 +8,12 @@ use crate::{
     io::{BinaryReader, BinaryWriter, Endian, StreamIO},
     util,
 };
+
+pub mod file;
+pub mod format;
+
+pub use format::*;
+pub use file::*;
 
 /// Generic binder archive use in games: Metal Wolf Chaos, A.C.E. 2, AC: FF (PSP), AC: NB, AC: LR (PSP+PS2)
 #[derive(Debug, Clone, PartialEq)]
@@ -29,7 +34,7 @@ pub struct BND2 {
     /// Base directory of all files - used only if `FilePathMode::BaseDirectory` is set
     pub base_directory: String,
     /// Files contained in this `BND2`
-    pub files: Vec<Binder2File>,
+    pub files: Vec<File>,
 }
 
 impl BND2 {
@@ -96,7 +101,7 @@ impl BND2 {
         }
     }
 
-    fn read_header<R>(&mut self, br: &mut BinaryReader<R>) -> io::Result<Vec<Binder2FileHeader>>
+    fn read_header<R>(&mut self, br: &mut BinaryReader<R>) -> io::Result<Vec<FileHeader>>
     where
         R: Read + Seek,
     {
@@ -132,7 +137,7 @@ impl BND2 {
         let mut file_headers = Vec::with_capacity(file_count as usize);
 
         for _ in 0..file_count {
-            file_headers.push(Binder2FileHeader::read(
+            file_headers.push(FileHeader::read(
                 br,
                 self.file_path_mode,
                 self.file_info_flags,
@@ -145,7 +150,7 @@ impl BND2 {
     fn write_header<W>(
         &self,
         bw: &mut BinaryWriter<W>,
-        file_headers: &[Binder2FileHeader],
+        file_headers: &[FileHeader],
     ) -> io::Result<()>
     where
         W: Write + Seek,
@@ -191,7 +196,7 @@ impl BND2 {
     fn write_file_names<W>(
         &self,
         bw: &mut BinaryWriter<W>,
-        file_headers: &[Binder2FileHeader],
+        file_headers: &[FileHeader],
     ) -> io::Result<()>
     where
         W: Write + Seek,
@@ -282,7 +287,7 @@ impl StreamIO<BND2> for BND2 {
     {
         let mut file_headers = Vec::with_capacity(self.files.len());
         for file in &self.files {
-            file_headers.push(Binder2FileHeader::from(file));
+            file_headers.push(FileHeader::from(file));
         }
 
         self.write_header(bw, &file_headers)?;
@@ -304,215 +309,3 @@ impl StreamIO<BND2> for BND2 {
 
 impl ByteIO<BND2> for BND2 {}
 impl FileIO<BND2> for BND2 {}
-
-/// A file in `BND2`
-#[derive(Debug, Clone, PartialEq)]
-pub struct Binder2File {
-    /// ID of this `Binder2File`
-    pub id: i32,
-    /// The name of this `Binder2File`<br>
-    /// Will be set to `id` if name does not exist<br>
-    /// Will be a path with a drive letter if `FilePathMode::FullPath` is set<br>
-    /// Will need `BaseDirectory` added as the base directory if `FilePathMode::BaseDirectory` is set
-    pub name: String,
-    /// Raw data contained in the `Binder2File`
-    pub bytes: Vec<u8>,
-}
-
-impl Binder2File {
-    /// Initializes a new `Binder2File` with specified parameters
-    pub fn new(id: i32, name: String, bytes: Vec<u8>) -> Self {
-        Self { id, name, bytes }
-    }
-
-    /// Creates an empty `Binder2File`
-    pub fn empty() -> Self {
-        Self {
-            id: -1,
-            name: String::new(),
-            bytes: Vec::new(),
-        }
-    }
-}
-
-struct Binder2FileHeader {
-    id: i32,
-    name: String,
-    offset: i32,
-    size: i32,
-}
-
-impl Binder2FileHeader {
-    fn empty() -> Self {
-        Self {
-            id: -1,
-            name: String::new(),
-            offset: -1,
-            size: -1,
-        }
-    }
-
-    fn from(file: &Binder2File) -> Self {
-        Self {
-            id: file.id,
-            name: file.name.clone(),
-            offset: -1,
-            size: -1,
-        }
-    }
-
-    fn read<R>(
-        br: &mut BinaryReader<R>,
-        path_mode: FilePathMode,
-        info_flags: FileInfoFlags,
-    ) -> io::Result<Self>
-    where
-        R: Read + Seek,
-    {
-        let mut out = Self::empty();
-        out.id = br.read_i32()?;
-        out.offset = br.read_i32()?;
-        out.size = br.read_i32()?;
-
-        if info_flags.contains(FileInfoFlags::NameOffset) {
-            let name_offset = br.read_i32()?;
-
-            match path_mode {
-                FilePathMode::Nameless => out.name = format!("{}", out.id),
-                _ => out.name = br.get_shift_jis(name_offset as u64)?,
-            }
-        }
-
-        Ok(out)
-    }
-
-    fn write<W>(
-        &self,
-        bw: &mut BinaryWriter<W>,
-        path_mode: FilePathMode,
-        info_flags: FileInfoFlags,
-        index: i32,
-    ) -> io::Result<()>
-    where
-        W: Write + Seek,
-    {
-        bw.write_i32(self.id)?;
-        bw.reserve_i32(format!("file-offset-{index}"))?;
-        bw.reserve_i32(format!("file-size-{index}"))?;
-
-        if info_flags.contains(FileInfoFlags::NameOffset) {
-            match path_mode {
-                FilePathMode::Nameless => bw.write_i32(0)?,
-                _ => bw.reserve_i32(format!("name-offset-{index}"))?,
-            }
-        }
-
-        Ok(())
-    }
-
-    fn read_file_data<R>(&self, br: &mut BinaryReader<R>) -> io::Result<Binder2File>
-    where
-        R: Read + Seek,
-    {
-        let bytes = br.get_vec_u8(self.offset as u64, self.size as u64)?;
-        Ok(Binder2File::new(self.id, self.name.clone(), bytes))
-    }
-
-    fn write_file_data<W>(
-        &self,
-        bw: &mut BinaryWriter<W>,
-        index: i32,
-        alignment_size: u16,
-        bytes: &[u8],
-    ) -> io::Result<()>
-    where
-        W: Write + Seek,
-    {
-        bw.pad_00(alignment_size as u64)?;
-        let offset: i32 = util::convert_num(bw.position()?)?;
-        let size: i32 = util::convert_num(bytes.len())?;
-        bw.write_vec_u8(bytes.to_vec())?;
-        bw.fill_i32(format!("file-offset-{index}"), offset)?;
-        bw.fill_i32(format!("file-size-{index}"), size)?;
-
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-/// An enum for the different supported file path modes
-pub enum FilePathMode {
-    /// Files in this BND have no name
-    Nameless = 0,
-    /// Files in this BND only have file names
-    FileName = 1,
-    /// All files use a full file path
-    FullPath = 2,
-    /// Add a base directory all paths start from, then write the rest of the path as each file name
-    BaseDirectory = 3,
-}
-
-impl TryFrom<u8> for FilePathMode {
-    type Error = io::Error;
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value {
-            0 => Ok(Self::Nameless),
-            1 => Ok(Self::FileName),
-            2 => Ok(Self::FullPath),
-            3 => Ok(Self::BaseDirectory),
-            _ => Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "invalid enum value",
-            )),
-        }
-    }
-}
-
-bitflags! {
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    /// Header Info flags describing what features are enabled
-    pub struct HeaderInfoFlags: u8 {
-        const HeaderItem = 0b00000001;
-        const Endian = 0b00000010;
-        const FileVersion = 0b00000100;
-        const FileSize = 0b00001000;
-        const FileNum = 0b00010000;
-        const BaseDirOffset = 0b00100000;
-        const AlignmentSize = 0b01000000;
-        const Option = 0b10000000;
-    }
-}
-
-impl TryFrom<u8> for HeaderInfoFlags {
-    type Error = io::Error;
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        Self::from_bits(value)
-            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "invalid format flags"))
-    }
-}
-
-bitflags! {
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    /// File Info flags describing what features are enabled
-    pub struct FileInfoFlags: u8 {
-        const ID = 0b00000001;
-        const Offset = 0b00000010;
-        const Size = 0b00000100;
-        const NameOffset = 0b00001000;
-        const Flag5 = 0b00010000;
-        const Flag6 = 0b00100000;
-        const Flag7 = 0b01000000;
-        const Flag8 = 0b10000000;
-    }
-}
-
-impl TryFrom<u8> for FileInfoFlags {
-    type Error = io::Error;
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        Self::from_bits(value)
-            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "invalid format flags"))
-    }
-}

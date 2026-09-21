@@ -147,7 +147,7 @@ impl FileFlags {
 }
 
 #[derive(Debug, Clone, Copy)]
-/// Used for writing to `BND` / `BXF` timestamp string. Implementation is sloppy on purpose, as it is not widely used
+/// Used for writing to `BND` / `BXF` timestamp string
 pub struct DateTime {
     pub year: u16,
     pub month: u32,

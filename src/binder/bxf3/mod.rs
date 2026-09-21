@@ -5,13 +5,13 @@ use std::{
 
 use crate::{
     binder::{
-        BinderFile, DateTime,
-        file::BinderFileHeader,
-        format::{self, Format},
+        DateTime, file::BinderFileHeader
     },
     io::{BinaryReader, BinaryWriter, Endian},
     util,
 };
+
+pub use crate::binder::{file::File, format::{Format, FileFlags}};
 
 /// A general-purpose split header and data binder, used in older FromSoftware games.<br>
 /// Header `.bhd`<br>
@@ -19,7 +19,7 @@ use crate::{
 #[derive(Debug, Clone, PartialEq)]
 pub struct BXF3 {
     /// Files contained in this `BXF3`
-    pub files: Vec<BinderFile>,
+    pub files: Vec<File>,
     /// A timestamp or version number, 8 characters maximum
     pub version: String,
     /// Formats of this `BXF3`
@@ -32,7 +32,7 @@ pub struct BXF3 {
 
 impl BXF3 {
     /// Initializes `BXF3` with specifies parameters, and rest of parameters set to most common values
-    pub fn new(date: DateTime, files: Vec<BinderFile>) -> Self {
+    pub fn new(date: DateTime, files: Vec<File>) -> Self {
         let mut out = Self::empty();
         out.version = date.to_bnd_timestamp();
         out.files = files;
@@ -43,7 +43,7 @@ impl BXF3 {
     pub fn empty() -> Self {
         Self {
             files: Vec::new(),
-            version: format::DateTime {
+            version: DateTime {
                 year: 2026,
                 month: 1,
                 day: 1,

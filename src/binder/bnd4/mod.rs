@@ -1,25 +1,20 @@
 use crate::{
-    ByteIO, FileIO,
-    binder::{
-        BinderFile,
-        file::BinderFileHeader,
-        format::{self, *},
-        hashtable,
-    },
-    io::{BinaryReader, BinaryWriter, Endian, StreamIO},
-    util,
+    ByteIO, FileIO, binder::{
+        DateTime, file::BinderFileHeader, format, hashtable,
+    }, io::{BinaryReader, BinaryWriter, Endian, StreamIO}, util,
 };
 use std::io::{self, ErrorKind::InvalidData, Read, Seek, Write};
+pub use crate::binder::{file::File, format::{Format, FileFlags}};
 
 /// A general-purpose file container used since DS2
 #[derive(Debug, Clone, PartialEq)]
 pub struct BND4 {
     /// The files contained within this `BND4`
-    pub files: Vec<BinderFile>,
+    pub files: Vec<File>,
     /// A timestamp or version number, 8 characters maximum
     pub version: String,
     /// Indicates the format of this `BND4`
-    pub format: format::Format,
+    pub format: Format,
     pub unk_04: bool,
     pub unk_05: bool,
     /// Endian format of the data
@@ -34,7 +29,7 @@ pub struct BND4 {
 
 impl BND4 {
     /// Initializes `BND3` with specifies parameters, and rest of parameters set to most common values
-    pub fn new(date: DateTime, files: Vec<BinderFile>) -> Self {
+    pub fn new(date: DateTime, files: Vec<File>) -> Self {
         let mut out = Self::empty();
         out.version = date.to_bnd_timestamp();
         out.files = files;
@@ -109,7 +104,7 @@ impl BND4 {
             br.assert_i64(&[0])?;
         }
 
-        if file_header_size != get_bnd4_file_header_size(self.format) {
+        if file_header_size != format::get_bnd4_file_header_size(self.format) {
             return Err(io::Error::new(InvalidData, "Invalid file header size"));
         }
 
@@ -205,7 +200,7 @@ impl StreamIO<BND4> for BND4 {
         let mut bnd = BND4::empty();
 
         let file_headers = bnd.read_header(br)?;
-        let mut files: Vec<BinderFile> = Vec::with_capacity(file_headers.len());
+        let mut files: Vec<File> = Vec::with_capacity(file_headers.len());
 
         for header in file_headers {
             files.push(header.read_file_data(br)?);

@@ -1,5 +1,5 @@
 use soulsformats_rs::{
-    binder::{BXF3, BXF4, BinderFile, FileFlags},
+    binder::{BXF3, BXF4, bxf3, bxf4},
     dcx::compression_info::CompressionInfo,
 };
 
@@ -7,15 +7,15 @@ use soulsformats_rs::{
 fn bxf3() {
     let mut bxf = BXF3::empty();
     bxf.files = vec![
-        BinderFile::new(
-            FileFlags::None,
+        bxf3::File::new(
+            bxf3::FileFlags::None,
             10,
             "first.bin".to_string(),
             b"BXF3 first file".to_vec(),
             CompressionInfo::DcpDflt,
         ),
-        BinderFile::new(
-            FileFlags::Compressed,
+        bxf3::File::new(
+            bxf3::FileFlags::Compressed,
             20,
             "second.bin".to_string(),
             b"BXF3 second file with per-file compression".to_vec(),
@@ -39,7 +39,7 @@ fn bxf3() {
         assert_eq!(file.id, round_trip_file.id);
         assert_eq!(file.name, round_trip_file.name);
         assert_eq!(file.bytes, round_trip_file.bytes);
-        if file.flags.contains(FileFlags::Compressed) {
+        if file.flags.contains(bxf3::FileFlags::Compressed) {
             assert_eq!(file.compression, round_trip_file.compression);
         } else {
             assert_eq!(CompressionInfo::Zlib, round_trip_file.compression);
@@ -50,8 +50,8 @@ fn bxf3() {
 #[test]
 fn bxf4() {
     let mut bxf = BXF4::empty();
-    bxf.files = vec![BinderFile::new(
-        FileFlags::None,
+    bxf.files = vec![bxf4::File::new(
+        bxf4::FileFlags::None,
         40,
         "bxf4.bin".to_string(),
         b"BXF4 in memory".to_vec(),

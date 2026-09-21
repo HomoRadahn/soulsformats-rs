@@ -11,58 +11,49 @@ use crate::{
 
 /// A generic file in `BND3`, `BND4`, `BXF3`, `BXF4` containers
 #[derive(Debug, Clone, PartialEq)]
-pub struct BinderFile {
-    /// Flags of this `BinderFile`
+pub struct File {
+    /// Flags of this `File`
     pub flags: FileFlags,
-    /// ID of this `BinderFile`
+    /// ID of this `File`
     pub id: i32,
-    /// Name of this `BinderFile`
+    /// Name of this `File`
     pub name: String,
-    /// Bytes contained in this `BinderFile`
+    /// Bytes contained in this `File`
     pub bytes: Vec<u8>,
-    /// Compression of this `BinderFile`, different from `DCX compression`
+    /// Compression of this `File`, different from DCX compression
     pub compression: CompressionInfo,
 }
 
-impl BinderFile {
-    /// Creates a new `BinderFile`, with `Zlib` compression
+impl File {
+    /// Creates a new `File`, with zlib compression
     pub fn new(
         flags: FileFlags,
         id: i32,
-        name: String,
+        name: impl Into<String>,
         bytes: Vec<u8>,
         compression: CompressionInfo,
     ) -> Self {
         Self {
             flags,
             id,
-            name,
+            name: name.into(),
             bytes,
             compression,
         }
     }
 }
 
-/// Metadata for a file in a binder container
 pub(crate) struct BinderFileHeader {
-    /// Flags of this `BinderFileHeader`
     pub flags: FileFlags,
-    /// ID of this `BinderFileHeader`
     pub id: i32,
-    /// Name of this `BinderFileHeader`
     pub name: String,
-    /// Compression of this `BinderFileHeader`, different from `DCX` compression
     pub compression: CompressionInfo,
-    /// Compressed size of the data of the `BinderFile` this header describes
     pub compressed_size: i64,
-    /// Uncompressed size of the data of the `BinderFile` this header describes
     pub uncompressed_size: i64,
-    /// Offset of the data
     pub data_offset: i64,
 }
 
 impl BinderFileHeader {
-    /// Creates a new `BinderFileHeader`, with `Zlib` compression
     pub(crate) fn new(
         flags: FileFlags,
         id: i32,
@@ -82,8 +73,7 @@ impl BinderFileHeader {
         }
     }
 
-    /// Creates a `BinderFileHeader` from `BinderFile`
-    pub(crate) fn from_binder_file(file: &BinderFile) -> Self {
+    pub(crate) fn from_binder_file(file: &File) -> Self {
         Self {
             flags: file.flags,
             id: file.id,
@@ -95,7 +85,6 @@ impl BinderFileHeader {
         }
     }
 
-    /// Reads a `BND3` `BinderFileHeader` from `BinaryReader`
     pub(crate) fn read_bnd3_header<R>(
         br: &mut BinaryReader<R>,
         format: Format,
@@ -146,7 +135,6 @@ impl BinderFileHeader {
         ))
     }
 
-    /// Reads a `BND4` `BinderFileHeader` from `BinaryReader`
     pub(crate) fn read_bnd4_header<R>(
         br: &mut BinaryReader<R>,
         format: Format,
@@ -208,8 +196,7 @@ impl BinderFileHeader {
         ))
     }
 
-    /// Reads a `BinderFile` from `BinderFileHeader` and `BinaryReader`
-    pub(crate) fn read_file_data<R>(&self, br: &mut BinaryReader<R>) -> io::Result<BinderFile>
+    pub(crate) fn read_file_data<R>(&self, br: &mut BinaryReader<R>) -> io::Result<File>
     where
         R: Read + Seek,
     {
@@ -222,7 +209,7 @@ impl BinderFileHeader {
             (compressed, CompressionInfo::Zlib)
         };
 
-        Ok(BinderFile::new(
+        Ok(File::new(
             self.flags,
             self.id,
             self.name.clone(),
@@ -336,7 +323,6 @@ impl BinderFileHeader {
         Ok(())
     }
 
-    /// Writes `BND3` file data
     pub(crate) fn write_bnd3_file_data<W>(
         &mut self,
         bw: &mut BinaryWriter<W>,
@@ -373,7 +359,6 @@ impl BinderFileHeader {
         Ok(())
     }
 
-    /// Writes `BXF3` file data - which requires two separate `BinaryWriter` references
     pub(crate) fn write_bxf3_file_data<WH, WD>(
         &mut self,
         bw_header: &mut BinaryWriter<WH>,
@@ -412,7 +397,6 @@ impl BinderFileHeader {
         Ok(())
     }
 
-    /// Writes `BND4` file data
     pub(crate) fn write_bnd4_file_data<W>(
         &mut self,
         bw: &mut BinaryWriter<W>,
@@ -449,7 +433,6 @@ impl BinderFileHeader {
         Ok(())
     }
 
-    /// Writes `BXF4` file data - which requires two separate `BinaryWriter` references
     pub(crate) fn write_bxf4_file_data<WH, WD>(
         &mut self,
         bw_header: &mut BinaryWriter<WH>,
@@ -512,13 +495,7 @@ impl BinderFileHeader {
     }
 }
 
-impl fmt::Display for BinderFileHeader {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {}", self.id, self.name)
-    }
-}
-
-impl fmt::Display for BinderFile {
+impl fmt::Display for File {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,

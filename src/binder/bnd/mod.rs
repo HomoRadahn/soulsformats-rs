@@ -6,70 +6,9 @@ use crate::{
     util,
 };
 
-/// A file in a `BND` container.
-#[derive(Debug, Clone, PartialEq)]
-pub struct Binder1File {
-    pub id: i32,
-    pub name: String,
-    pub bytes: Vec<u8>,
-}
-
-impl Binder1File {
-    pub fn new(id: i32, name: String, bytes: Vec<u8>) -> Self {
-        Self { id, name, bytes }
-    }
-}
-
-struct Binder1FileHeader {
-    id: i32,
-    name: String,
-    offset: u32,
-    size: u32,
-}
-
-impl Binder1FileHeader {
-    fn from(file: &Binder1File) -> Self {
-        Self {
-            id: file.id,
-            name: file.name.clone(),
-            offset: 0,
-            size: 0,
-        }
-    }
-
-    fn read<R>(br: &mut BinaryReader<R>) -> io::Result<Self>
-    where
-        R: Read + Seek,
-    {
-        let id = br.read_i32()?;
-        let offset = br.read_u32()?;
-        let size = br.read_u32()?;
-        let name_offset = br.read_u32()?;
-        let name = if name_offset != 0 {
-            br.get_shift_jis(name_offset as u64)?
-        } else {
-            format!("file_{id}")
-        };
-
-        Ok(Self {
-            id,
-            name,
-            offset,
-            size,
-        })
-    }
-
-    fn read_file_data<R>(&self, br: &mut BinaryReader<R>) -> io::Result<Binder1File>
-    where
-        R: Read + Seek,
-    {
-        Ok(Binder1File::new(
-            self.id,
-            self.name.clone(),
-            br.get_vec_u8(self.offset as u64, self.size as u64)?,
-        ))
-    }
-}
+mod file;
+pub use file::File;
+use file::FileHeader;
 
 /// BND file, used in old titles
 #[derive(Debug, Clone, PartialEq)]
@@ -83,7 +22,7 @@ pub struct BND {
     /// Bit 1 determines if `root_file_path` exists
     pub format1: u16,
     /// Files in the `BND`
-    pub files: Vec<Binder1File>,
+    pub files: Vec<File>,
     /// Root file path. Not all `BND` have this
     pub root_file_path: Option<String>,
 }
@@ -100,7 +39,7 @@ impl BND {
         }
     }
 
-    fn read_header<R>(&mut self, br: &mut BinaryReader<R>) -> io::Result<Vec<Binder1FileHeader>>
+    fn read_header<R>(&mut self, br: &mut BinaryReader<R>) -> io::Result<Vec<FileHeader>>
     where
         R: Read + Seek,
     {
@@ -123,7 +62,7 @@ impl BND {
 
         let mut file_headers = Vec::with_capacity(file_count as usize);
         for _ in 0..file_count {
-            file_headers.push(Binder1FileHeader::read(br)?);
+            file_headers.push(FileHeader::read(br)?);
         }
         Ok(file_headers)
     }
@@ -146,7 +85,7 @@ impl StreamIO<BND> for BND {
     where
         W: Write + Seek,
     {
-        let file_headers: Vec<_> = self.files.iter().map(Binder1FileHeader::from).collect();
+        let file_headers: Vec<_> = self.files.iter().map(FileHeader::from).collect();
 
         bw.write_ascii("BND", true)?;
         bw.write_u16(0xFFFF)?;

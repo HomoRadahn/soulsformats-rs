@@ -2,8 +2,8 @@ use soulsformats_rs::{
     ByteIO, DCX, FileIO,
     binder::{
         BND, BND2, BND3, BND4,
-        bnd::Binder1File,
-        bnd2::{Binder2File, FileInfoFlags, FilePathMode},
+        bnd,
+        bnd2,
     },
 };
 
@@ -13,8 +13,8 @@ fn bnd() {
     bnd.internal_version = 1;
     bnd.root_file_path = Some(String::from("L:\\"));
     bnd.files = vec![
-        Binder1File::new(1, String::from("こんにちは"), vec![1, 2, 3, 4, 5, 6, 7]),
-        Binder1File::new(2, String::from("こんにちは"), vec![1, 2, 3, 4, 5, 6, 7]),
+        bnd::File::new(1, "こんにちは", vec![1, 2, 3, 4, 5, 6, 7]),
+        bnd::File::new(2, "こんにちは", vec![1, 2, 3, 4, 5, 6, 7]),
     ];
     let round_trip = BND::from_bytes(bnd.to_bytes().unwrap()).unwrap();
     assert_eq!(bnd.internal_version, round_trip.internal_version);
@@ -54,7 +54,7 @@ fn bnd2_read() {
 #[test]
 fn bnd2() {
     let mut bnd = BND2::empty();
-    bnd.files = vec![Binder2File::new(
+    bnd.files = vec![bnd2::File::new(
         7,
         "test.bin".to_string(),
         b"BND2 test".to_vec(),
@@ -70,9 +70,9 @@ fn bnd2() {
 
 #[test]
 fn bnd2_no_names() {
-    let mut bnd = BND2::with_path_mode(FilePathMode::Nameless);
-    bnd.file_info_flags = FileInfoFlags::ID | FileInfoFlags::Offset | FileInfoFlags::Size;
-    bnd.files = vec![Binder2File::new(9, "test.bin".to_string(), vec![1, 2, 3])];
+    let mut bnd = BND2::with_path_mode(bnd2::FilePathMode::Nameless);
+    bnd.file_info_flags = bnd2::FileInfoFlags::ID | bnd2::FileInfoFlags::Offset | bnd2::FileInfoFlags::Size;
+    bnd.files = vec![bnd2::File::new(9, "test.bin".to_string(), vec![1, 2, 3])];
 
     let round_trip = BND2::from_bytes(bnd.to_bytes().unwrap()).unwrap();
     assert_eq!(round_trip.files[0].id, 9);

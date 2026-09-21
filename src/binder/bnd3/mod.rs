@@ -1,19 +1,15 @@
 use crate::{
-    binder::{
-        BinderFile, DateTime,
-        file::BinderFileHeader,
-        format::{self, Format},
-    },
-    io::{BinaryReader, BinaryWriter, ByteIO, Endian, FileIO, StreamIO},
-    util,
+    binder::{DateTime, file::BinderFileHeader}, io::{BinaryReader, BinaryWriter, ByteIO, Endian, FileIO, StreamIO}, util,
 };
 use std::io::{self, Read, Seek, Write};
+
+pub use crate::binder::{file::File, format::{Format, FileFlags}};
 
 /// A general-purpose file container used before DS2
 #[derive(Debug, Clone, PartialEq)]
 pub struct BND3 {
     /// The files contained within this `BND3`
-    pub files: Vec<BinderFile>,
+    pub files: Vec<File>,
     /// A timestamp or version number, 8 characters maximum
     pub version: String,
     /// Indicates the format of the `BND3`
@@ -29,7 +25,7 @@ pub struct BND3 {
 
 impl BND3 {
     /// Initializes `BND3` with specifies parameters, and rest of parameters set to most common values
-    pub fn new(date: DateTime, files: Vec<BinderFile>) -> Self {
+    pub fn new(date: DateTime, files: Vec<File>) -> Self {
         let mut out = Self::empty();
         out.version = date.to_bnd_timestamp();
         out.files = files;
@@ -41,7 +37,7 @@ impl BND3 {
     pub fn empty() -> Self {
         Self {
             files: Vec::new(),
-            version: format::DateTime {
+            version: DateTime {
                 year: 2026,
                 month: 1,
                 day: 1,
@@ -167,7 +163,7 @@ impl StreamIO<BND3> for BND3 {
         let mut bnd = BND3::empty();
 
         let file_headers = bnd.read_header(br)?;
-        let mut files: Vec<BinderFile> = Vec::with_capacity(file_headers.len());
+        let mut files: Vec<File> = Vec::with_capacity(file_headers.len());
 
         for header in file_headers {
             files.push(header.read_file_data(br)?);
