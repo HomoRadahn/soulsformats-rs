@@ -1,6 +1,6 @@
 [package]
 name = "soulsformats-rs"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 
 [dependencies]
@@ -10,3 +10,4 @@ flate2 = "1"
 zstd = "0.13"
 oodle = { version = "0.2.0", git = "https://github.com/meszmate/oodle-rs", tag = "v0.2.0" }
 libloading = "0.8"
+md-5 = "0.10"
