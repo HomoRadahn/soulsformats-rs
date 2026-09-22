@@ -623,14 +623,14 @@ impl DCX {
 
         let data_start = bw.position()?;
         let mut chunk_headers: Vec<EdgeChunk> = Vec::new();
-        for i in 0..chunk_count {
+        for index in 0..chunk_count {
             let mut chunk_size = 0x10000;
 
-            if i == chunk_count - 1 && chunk_remainder > 0 {
+            if index == chunk_count - 1 && chunk_remainder > 0 {
                 chunk_size = chunk_remainder;
             }
 
-            let chunk_offset = i * 0x10000;
+            let chunk_offset = index * 0x10000;
 
             let input = &data[chunk_offset..(chunk_offset + chunk_size)];
             let compressed = deflate_helper::compress_deflate_bytes(input)?;
@@ -671,11 +671,11 @@ impl DCX {
         bw.write_i32(util::convert_num(chunk_count)?)?;
         bw.write_i32(0x100000)?;
 
-        for i in chunk_headers {
+        for index in chunk_headers {
             bw.write_i32(0)?;
-            bw.write_i32(i.compressed_offset)?;
-            bw.write_i32(i.compressed_length)?;
-            match i.is_compressed {
+            bw.write_i32(index.compressed_offset)?;
+            bw.write_i32(index.compressed_length)?;
+            match index.is_compressed {
                 true => bw.write_i32(1)?,
                 false => bw.write_i32(0)?,
             };
@@ -732,11 +732,11 @@ impl DCX {
         bw.write_i32(util::convert_num(chunk_count)?)?;
         bw.write_i32(0x100000)?;
 
-        for i in 0..chunk_count {
+        for index in 0..chunk_count {
             bw.write_i32(0)?;
-            bw.reserve_i32(format!("chunk_{i}_offset"))?;
-            bw.reserve_i32(format!("chunk_{i}_size"))?;
-            bw.reserve_i32(format!("chunk_{i}_compressed"))?;
+            bw.reserve_i32(format!("chunk_{index}_offset"))?;
+            bw.reserve_i32(format!("chunk_{index}_size"))?;
+            bw.reserve_i32(format!("chunk_{index}_compressed"))?;
         }
 
         let pos = bw.position()?;
@@ -746,14 +746,14 @@ impl DCX {
         let data_start = bw.position()?;
 
         let mut compressed_size: i32 = 0;
-        for i in 0..chunk_count {
+        for index in 0..chunk_count {
             let mut chunk_size = 0x10000;
 
-            if i == chunk_count - 1 && chunk_remainder > 0 {
+            if index == chunk_count - 1 && chunk_remainder > 0 {
                 chunk_size = chunk_remainder;
             }
 
-            let chunk_offset = i * 0x10000;
+            let chunk_offset = index * 0x10000;
 
             let input = &data[chunk_offset..(chunk_offset + chunk_size)];
             let compressed = deflate_helper::compress_deflate_bytes(input)?;
@@ -765,17 +765,17 @@ impl DCX {
             };
 
             match is_compressed {
-                true => bw.fill_i32(format!("chunk_{i}_compressed"), 1)?,
-                false => bw.fill_i32(format!("chunk_{i}_compressed"), 0)?,
+                true => bw.fill_i32(format!("chunk_{index}_compressed"), 1)?,
+                false => bw.fill_i32(format!("chunk_{index}_compressed"), 0)?,
             };
 
             compressed_size += util::convert_num::<usize, i32>(chunk.len())?;
             let pos = bw.position()?;
             bw.fill_i32(
-                format!("chunk_{i}_offset"),
+                format!("chunk_{index}_offset"),
                 util::convert_num(pos - data_start)?,
             )?;
-            bw.fill_i32(format!("chunk_{i}_size"), util::convert_num(chunk.len())?)?;
+            bw.fill_i32(format!("chunk_{index}_size"), util::convert_num(chunk.len())?)?;
             bw.write_vec_u8(chunk)?;
             bw.pad_00(0x10)?;
         }

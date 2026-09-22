@@ -10,7 +10,7 @@ fn btl() {
     assert_eq!(btl.version, round_trip.version);
     assert_eq!(btl.lights.len(), round_trip.lights.len());
 
-    for i in 0..btl.lights.len() {
-        assert_eq!(btl.lights[i], round_trip.lights[i]);
+    for index in 0..btl.lights.len() {
+        assert_eq!(btl.lights[index], round_trip.lights[index]);
     }
 }

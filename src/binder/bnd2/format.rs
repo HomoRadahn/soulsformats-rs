@@ -1,6 +1,5 @@
-use std::io::{self};
 use bitflags::bitflags;
-
+use std::io::{self};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /// An enum for the different supported file path modes

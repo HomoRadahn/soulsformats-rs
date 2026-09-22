@@ -1,7 +1,10 @@
 use std::io::{self, Read, Seek, Write};
 
-use crate::{binder::bnd2::{FileInfoFlags, FilePathMode}, io::{BinaryReader, BinaryWriter}, util};
-
+use crate::{
+    binder::bnd2::{FileInfoFlags, FilePathMode},
+    io::{BinaryReader, BinaryWriter},
+    util,
+};
 
 /// A file in `BND2`
 #[derive(Debug, Clone, PartialEq)]

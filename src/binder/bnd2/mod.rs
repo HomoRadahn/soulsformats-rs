@@ -12,8 +12,8 @@ use crate::{
 pub mod file;
 pub mod format;
 
-pub use format::*;
 pub use file::*;
+pub use format::*;
 
 /// Generic binder archive use in games: Metal Wolf Chaos, A.C.E. 2, AC: FF (PSP), AC: NB, AC: LR (PSP+PS2)
 #[derive(Debug, Clone, PartialEq)]

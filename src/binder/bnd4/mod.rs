@@ -1,10 +1,14 @@
+pub use crate::binder::{
+    file::File,
+    format::{FileFlags, Format},
+};
 use crate::{
-    ByteIO, FileIO, binder::{
-        DateTime, file::BinderFileHeader, format, hashtable,
-    }, io::{BinaryReader, BinaryWriter, Endian, StreamIO}, util,
+    ByteIO, FileIO,
+    binder::{DateTime, file::BinderFileHeader, format, hashtable},
+    io::{BinaryReader, BinaryWriter, Endian, StreamIO},
+    util,
 };
 use std::io::{self, ErrorKind::InvalidData, Read, Seek, Write};
-pub use crate::binder::{file::File, format::{Format, FileFlags}};
 
 /// A general-purpose file container used since DS2
 #[derive(Debug, Clone, PartialEq)]

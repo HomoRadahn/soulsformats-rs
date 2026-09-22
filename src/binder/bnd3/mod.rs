@@ -1,9 +1,14 @@
 use crate::{
-    binder::{DateTime, file::BinderFileHeader}, io::{BinaryReader, BinaryWriter, ByteIO, Endian, FileIO, StreamIO}, util,
+    binder::{DateTime, file::BinderFileHeader},
+    io::{BinaryReader, BinaryWriter, ByteIO, Endian, FileIO, StreamIO},
+    util,
 };
 use std::io::{self, Read, Seek, Write};
 
-pub use crate::binder::{file::File, format::{Format, FileFlags}};
+pub use crate::binder::{
+    file::File,
+    format::{FileFlags, Format},
+};
 
 /// A general-purpose file container used before DS2
 #[derive(Debug, Clone, PartialEq)]

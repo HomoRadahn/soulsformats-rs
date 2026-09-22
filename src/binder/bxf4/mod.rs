@@ -4,12 +4,15 @@ use std::{
 };
 
 use crate::{
-    binder::{
-        DateTime, file::BinderFileHeader, hashtable, format
-    }, io::{BinaryReader, BinaryWriter, Endian}, util,
+    binder::{DateTime, file::BinderFileHeader, format, hashtable},
+    io::{BinaryReader, BinaryWriter, Endian},
+    util,
 };
 
-pub use crate::binder::{file::File, format::{Format, FileFlags}};
+pub use crate::binder::{
+    file::File,
+    format::{FileFlags, Format},
+};
 
 /// A general-purpose split header and data binder, used in newer FromSoftware games.
 /// Header `.bhd`; data `.bdt`.

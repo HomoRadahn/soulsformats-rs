@@ -68,8 +68,8 @@ pub(crate) fn is_prime(n: u32) -> bool {
         return false;
     }
 
-    for i in 2..=(n as f64).sqrt() as u32 {
-        if n.is_multiple_of(i) {
+    for index in 2..=(n as f64).sqrt() as u32 {
+        if n.is_multiple_of(index) {
             return false;
         }
     }

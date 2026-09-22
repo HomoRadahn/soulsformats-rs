@@ -1,4 +1,4 @@
-use crate::io::{BinaryReader};
+use crate::io::BinaryReader;
 use std::io::{self, Read, Seek};
 
 /// A file in a `BND` container.
@@ -12,7 +12,11 @@ pub struct File {
 impl File {
     /// Creates a new `File`
     pub fn new(id: i32, name: impl Into<String>, bytes: Vec<u8>) -> Self {
-        Self { id, name: name.into(), bytes }
+        Self {
+            id,
+            name: name.into(),
+            bytes,
+        }
     }
 }
 

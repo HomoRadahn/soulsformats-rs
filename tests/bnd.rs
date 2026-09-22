@@ -1,10 +1,6 @@
 use soulsformats_rs::{
     ByteIO, DCX, FileIO,
-    binder::{
-        BND, BND2, BND3, BND4,
-        bnd,
-        bnd2,
-    },
+    binder::{BND, BND2, BND3, BND4, bnd, bnd2},
 };
 
 #[test]
@@ -21,10 +17,10 @@ fn bnd() {
     assert_eq!(bnd.format0, round_trip.format0);
     assert_eq!(bnd.format1, round_trip.format1);
     assert_eq!(bnd.root_file_path, round_trip.root_file_path);
-    for i in 0..bnd.files.len() {
-        assert_eq!(bnd.files[i].id, round_trip.files[i].id);
-        assert_eq!(bnd.files[i].name, round_trip.files[i].name);
-        assert_eq!(bnd.files[i].bytes, round_trip.files[i].bytes);
+    for index in 0..bnd.files.len() {
+        assert_eq!(bnd.files[index].id, round_trip.files[index].id);
+        assert_eq!(bnd.files[index].name, round_trip.files[index].name);
+        assert_eq!(bnd.files[index].bytes, round_trip.files[index].bytes);
     }
 
     assert_eq!(bnd.to_bytes().unwrap(), round_trip.to_bytes().unwrap());
@@ -42,10 +38,10 @@ fn bnd2_read() {
     assert_eq!(bnd.alignment_size, round_trip.alignment_size);
     assert_eq!(bnd.unk_1b, round_trip.unk_1b);
     assert_eq!(bnd.base_directory, round_trip.base_directory);
-    for i in 0..bnd.files.len() {
-        assert_eq!(bnd.files[i].id, round_trip.files[i].id);
-        assert_eq!(bnd.files[i].name, round_trip.files[i].name);
-        assert_eq!(bnd.files[i].bytes, round_trip.files[i].bytes);
+    for index in 0..bnd.files.len() {
+        assert_eq!(bnd.files[index].id, round_trip.files[index].id);
+        assert_eq!(bnd.files[index].name, round_trip.files[index].name);
+        assert_eq!(bnd.files[index].bytes, round_trip.files[index].bytes);
     }
 
     assert_eq!(bnd.to_bytes().unwrap(), round_trip.to_bytes().unwrap());
@@ -71,7 +67,8 @@ fn bnd2() {
 #[test]
 fn bnd2_no_names() {
     let mut bnd = BND2::with_path_mode(bnd2::FilePathMode::Nameless);
-    bnd.file_info_flags = bnd2::FileInfoFlags::ID | bnd2::FileInfoFlags::Offset | bnd2::FileInfoFlags::Size;
+    bnd.file_info_flags =
+        bnd2::FileInfoFlags::ID | bnd2::FileInfoFlags::Offset | bnd2::FileInfoFlags::Size;
     bnd.files = vec![bnd2::File::new(9, "test.bin".to_string(), vec![1, 2, 3])];
 
     let round_trip = BND2::from_bytes(bnd.to_bytes().unwrap()).unwrap();
