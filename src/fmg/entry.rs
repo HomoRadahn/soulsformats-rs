@@ -11,7 +11,10 @@ pub struct Entry {
 impl Entry {
     /// Creates `Entry` with specified parameters
     pub fn new(id: i32, text: Option<impl Into<String>>) -> Self {
-        Self { id, text: text.map(Into::into) }
+        Self {
+            id,
+            text: text.map(Into::into),
+        }
     }
 }
 

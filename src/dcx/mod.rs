@@ -775,7 +775,10 @@ impl DCX {
                 format!("chunk_{index}_offset"),
                 util::convert_num(pos - data_start)?,
             )?;
-            bw.fill_i32(format!("chunk_{index}_size"), util::convert_num(chunk.len())?)?;
+            bw.fill_i32(
+                format!("chunk_{index}_size"),
+                util::convert_num(chunk.len())?,
+            )?;
             bw.write_vec_u8(chunk)?;
             bw.pad_00(0x10)?;
         }

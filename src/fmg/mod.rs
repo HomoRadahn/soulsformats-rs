@@ -1,11 +1,16 @@
 mod entry;
-use std::{collections::HashMap, io::{self, Read, Seek, Write}};
 use md5::{Digest, Md5};
+use std::{
+    collections::HashMap,
+    io::{self, Read, Seek, Write},
+};
 
 pub use entry::Entry;
 
 use crate::{
-    ByteIO, FileIO, io::{BinaryReader, BinaryWriter, Endian, StreamIO}, util,
+    ByteIO, FileIO,
+    io::{BinaryReader, BinaryWriter, Endian, StreamIO},
+    util,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -49,8 +54,7 @@ impl FMG {
     pub fn find(&self, id: i32) -> Option<String> {
         if let Some(entry) = self.entries.iter().find(|entry| entry.id == id) {
             entry.text.clone()
-        }
-        else {
+        } else {
             None
         }
     }
@@ -69,9 +73,13 @@ impl FMG {
         }
     }
 
-    pub fn write_strings_reuse_offsets<W>(&self, bw: &mut BinaryWriter<W>, entries: Vec<Entry>) -> io::Result<()>
-    where 
-        W: Write + Seek
+    pub fn write_strings_reuse_offsets<W>(
+        &self,
+        bw: &mut BinaryWriter<W>,
+        entries: Vec<Entry>,
+    ) -> io::Result<()>
+    where
+        W: Write + Seek,
     {
         let mut offset_dict: HashMap<String, i64> = HashMap::new();
         for (index, entry) in entries.into_iter().enumerate() {
@@ -88,13 +96,11 @@ impl FMG {
 
                     if self.unicode {
                         bw.write_utf16(text, true)?;
-                    }
-                    else {
+                    } else {
                         bw.write_shift_jis(text, true)?;
                     }
                 }
-            }
-            else {
+            } else {
                 bw.fill_varint(reservation_name, 0)?;
             }
         }
@@ -102,8 +108,8 @@ impl FMG {
     }
 
     pub fn write_strings<W>(&self, bw: &mut BinaryWriter<W>, entries: Vec<Entry>) -> io::Result<()>
-    where 
-        W: Write + Seek
+    where
+        W: Write + Seek,
     {
         for (index, entry) in entries.into_iter().enumerate() {
             let reservation_name = format!("string-offset-{index}");
@@ -113,16 +119,13 @@ impl FMG {
 
                 if self.unicode {
                     bw.write_utf16(text, true)?;
-                }
-                else {
+                } else {
                     bw.write_shift_jis(text, true)?;
                 }
-            }
-            else {
+            } else {
                 bw.fill_varint(reservation_name, 0)?;
             }
         }
-
 
         Ok(())
     }
@@ -231,7 +234,7 @@ impl StreamIO<FMG> for FMG {
         ref_bw.write_u8(0)?;
         ref_bw.write_bool(match ref_bw.endian {
             Endian::Big => true,
-            Endian::Little => false
+            Endian::Little => false,
         })?;
         ref_bw.write_u8(self.version as u8)?;
         ref_bw.write_u8(0)?;
@@ -241,8 +244,7 @@ impl StreamIO<FMG> for FMG {
 
         if self.version == Version::DemonsSouls {
             ref_bw.write_u8(0xFF)?;
-        }
-        else {
+        } else {
             ref_bw.write_u8(0x00)?;
         }
         ref_bw.write_u8(0)?;
@@ -260,7 +262,7 @@ impl StreamIO<FMG> for FMG {
         let mut group_count = 0;
         let mut entries = self.entries.clone();
         entries.sort_by(|e1, e2| e1.id.cmp(&e2.id));
-        
+
         let mut iter = 0;
         while iter < entries.len() {
             ref_bw.write_i32(util::convert_num(iter)?)?;
@@ -277,7 +279,7 @@ impl StreamIO<FMG> for FMG {
             group_count += 1;
             iter += 1;
         }
-        
+
         ref_bw.fill_i32("group-count", group_count)?;
         let pos = ref_bw.position()?;
         ref_bw.fill_varint("string-offsets", util::convert_num(pos)?)?;
@@ -288,8 +290,7 @@ impl StreamIO<FMG> for FMG {
 
         if self.reuse_offsets {
             self.write_strings_reuse_offsets(&mut ref_bw, entries)?;
-        }
-        else {
+        } else {
             self.write_strings(&mut ref_bw, entries)?;
         }
 
@@ -308,8 +309,7 @@ impl StreamIO<FMG> for FMG {
             bw.seek(0)?;
             bw.write_vec_u8(hash)?;
             bw.write_vec_u8(final_data)?;
-        }
-        else {
+        } else {
             let final_data = ref_bw.close_bytes()?;
             bw.write_vec_u8(final_data)?;
         }

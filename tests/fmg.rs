@@ -1,4 +1,4 @@
-use soulsformats_rs::{FMG, FileIO, ByteIO};
+use soulsformats_rs::{ByteIO, FMG, FileIO};
 
 #[test]
 fn fmg() {

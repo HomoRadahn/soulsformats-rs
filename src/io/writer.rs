@@ -416,8 +416,6 @@ impl BinaryWriter<Cursor<Vec<u8>>> {
         self.inner.get_ref()
     }
 
-    
-
     /// Finalizes the `BinaryWriter` and return the written bytes (the writer can still technically be used afterwards, but this should the last step of using it - followed by dropping it)
     pub fn close_bytes(&mut self) -> io::Result<Vec<u8>> {
         self.finalize()?;
