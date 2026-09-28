@@ -17,11 +17,14 @@ For an example use, see `examples/decompress-bnd4.rs`. You can run it with:
 cargo run --example decompress-bnd4
 ```
 
+For integration tests, which can serve as crude examples, see `tests` folder.
+
 ## Credits
-- [SoulsFormatsNEXT](https://github.com/soulsmods/SoulsFormatsNEXT) (and the original SoulsFormats library). Without the authors' work, this library would never exist.
+- [SoulsFormatsNEXT](https://github.com/soulsmods/SoulsFormatsNEXT) (and the original SoulsFormats library). Without the authors' work, this project would never exist.
 - [oodle-rs](https://github.com/meszmate/oodle-rs)
 - [flate2](https://docs.rs/flate2/latest/flate2/)
 - [zstd](https://docs.rs/zstd/latest/zstd/)
 - [encoding_rs](https://docs.rs/encoding_rs/latest/encoding_rs/)
 - [bitflags](https://docs.rs/bitflags/latest/bitflags/)
 - [libloading](https://docs.rs/libloading/latest/libloading/)
+- [chrono](https://docs.rs/chrono/latest/chrono/)

@@ -29,10 +29,10 @@ impl File {
 
 impl Default for File {
     fn default() -> Self {
-        Self { 
+        Self {
             id: -1,
             name: Default::default(),
-            bytes: Default::default()
+            bytes: Default::default(),
         }
     }
 }
@@ -46,11 +46,11 @@ pub(crate) struct FileHeader {
 
 impl Default for FileHeader {
     fn default() -> Self {
-        Self { 
+        Self {
             id: -1,
             name: Default::default(),
             offset: -1,
-            size: -1
+            size: -1,
         }
     }
 }

@@ -3,10 +3,12 @@ use std::{
     io::{self, ErrorKind::InvalidData, Read, Seek, Write},
 };
 
+use chrono::{DateTime, Local, TimeZone};
+
 use crate::{
-    binder::{DateTime, file::BinderFileHeader, format, hashtable},
+    binder::{file::BinderFileHeader, format, hashtable},
     io::{BinaryReader, BinaryWriter, Endian},
-    util,
+    util::{self, DateTimeExt},
 };
 
 pub use crate::binder::{
@@ -38,30 +40,26 @@ pub struct Bxf4 {
 
 impl Default for Bxf4 {
     fn default() -> Self {
-        Self { 
-            files: Default::default(), 
-            version: DateTime {
-                year: 2026,
-                month: 1,
-                day: 1,
-                hour: 20,
-                minute: 0,
-            }
-            .to_bnd_timestamp(), 
-            format: Format::IDs | Format::Names1 | Format::Names2 | Format::Compression, 
-            unk_04: Default::default(), 
-            unk_05: Default::default(), 
+        Self {
+            files: Default::default(),
+            version: Local::now().to_bnd_timestamp(),
+            format: Format::IDs | Format::Names1 | Format::Names2 | Format::Compression,
+            unk_04: Default::default(),
+            unk_05: Default::default(),
             endian: Endian::Little,
             bit_endian: Endian::Little,
             unicode: true,
-            extended: 4
+            extended: 4,
         }
     }
 }
 
 impl Bxf4 {
     /// Initializes `Bxf3` with specifies parameters, and rest of parameters set to most common values
-    pub fn new(date: DateTime, files: Vec<File>) -> Self {
+    pub fn new<Tz>(date: DateTime<Tz>, files: Vec<File>) -> Self
+    where
+        Tz: TimeZone,
+    {
         let mut out = Self::default();
         out.version = date.to_bnd_timestamp();
         out.files = files;

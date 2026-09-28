@@ -39,7 +39,7 @@ pub struct Bnd2 {
 
 impl Default for Bnd2 {
     fn default() -> Self {
-        Self { 
+        Self {
             header_info_flags: HeaderInfoFlags::all(),
             file_info_flags: FileInfoFlags::all(),
             unk_06: 0x00,
@@ -49,7 +49,7 @@ impl Default for Bnd2 {
             file_path_mode: FilePathMode::FileName,
             unk_1b: 0,
             base_directory: Default::default(),
-            files: Default::default()
+            files: Default::default(),
         }
     }
 }

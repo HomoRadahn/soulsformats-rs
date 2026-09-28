@@ -1,6 +1,15 @@
 use std::io::{self, Read, Seek, Write};
 
-use crate::{io::BinaryReader, param::{format::ParamCellValue, paramdef::{ParamDef, format::{EditFlags, ParamDefType}}}};
+use crate::{
+    io::BinaryReader,
+    param::{
+        format::ParamCellValue,
+        paramdef::{
+            ParamDef,
+            format::{EditFlags, ParamDefType},
+        },
+    },
+};
 
 /// Information about a field present in each row in a param
 pub struct Field {
@@ -41,7 +50,7 @@ pub struct Field {
 
 impl Default for Field {
     fn default() -> Self {
-        Self { 
+        Self {
             display_name: "placeholder".to_string(),
             display_type: ParamDefType::f32,
             display_format: Default::default(),
@@ -60,15 +69,15 @@ impl Default for Field {
             unk_c0: Default::default(),
             unk_c8: Default::default(),
             first_regulation_version: Default::default(),
-            removed_regulation_version: Default::default()
+            removed_regulation_version: Default::default(),
         }
     }
 }
 
 impl Field {
     pub fn from_binary_reader<R>(br: &mut BinaryReader<R>, paramdef: &ParamDef) -> io::Result<Self>
-    where 
-        R: Read + Seek
+    where
+        R: Read + Seek,
     {
         todo!()
     }

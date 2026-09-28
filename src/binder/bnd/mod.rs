@@ -29,12 +29,12 @@ pub struct Bnd {
 
 impl Default for Bnd {
     fn default() -> Self {
-        Self { 
+        Self {
             internal_version: -1,
             format0: Default::default(),
             format1: Default::default(),
             files: Default::default(),
-            root_file_path: Default::default()
+            root_file_path: Default::default(),
         }
     }
 }

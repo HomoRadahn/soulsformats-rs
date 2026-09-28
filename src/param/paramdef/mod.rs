@@ -1,6 +1,9 @@
 use std::io::{self, ErrorKind::InvalidData, Read, Seek, Write};
 
-use crate::{ByteIO, FileIO, io::{BinaryReader, BinaryWriter, Endian, StreamIO}};
+use crate::{
+    ByteIO, FileIO,
+    io::{BinaryReader, BinaryWriter, Endian, StreamIO},
+};
 
 pub mod field;
 pub mod format;
@@ -61,13 +64,13 @@ impl ParamDef {
 impl StreamIO<ParamDef> for ParamDef {
     fn read<R>(br: &mut BinaryReader<R>) -> io::Result<ParamDef>
     where
-        R: Read + Seek
+        R: Read + Seek,
     {
         let mut out = Self::default();
 
         out.endian = match br.get_i8(0x2C)? == -1 {
             true => Endian::Big,
-            false => Endian::Little
+            false => Endian::Little,
         };
 
         br.endian = out.endian;
@@ -87,19 +90,17 @@ impl StreamIO<ParamDef> for ParamDef {
             br.assert_i64(&[0])?;
             br.assert_i64(&[0])?;
             br.assert_i32(&[0])?;
-        }
-        else if out.format_version >= 106 && out.format_version < 200 {
+        } else if out.format_version >= 106 && out.format_version < 200 {
             let len = br.read_i32()?;
             out.param_type = br.get_shift_jis(len as u64)?;
             br.assert_i64(&[0])?;
             br.assert_i64(&[0])?;
             br.assert_i64(&[0])?;
             br.assert_i32(&[0])?;
-        }
-        else {
+        } else {
             out.param_type = br.read_fix_str(0x20)?;
         }
-        
+
         br.assert_i8(&[0, -1])?; // Endianness
         out.unicode = br.read_bool()?;
         br.assert_i16(&[0, 101, 102, 103, 104, 106, 201, 202, 203])?; // Format version
@@ -107,24 +108,37 @@ impl StreamIO<ParamDef> for ParamDef {
             br.assert_i64(&[0x38])?;
         }
 
-        if !(out.format_version < 200 && header_size == 0x30 || out.format_version >= 200 && header_size == 0xFF) {
-            return Err(io::Error::new(InvalidData, format!("Unexpected header size 0x{header_size:X} for version {}", out.format_version)));
+        if !(out.format_version < 200 && header_size == 0x30
+            || out.format_version >= 200 && header_size == 0xFF)
+        {
+            return Err(io::Error::new(
+                InvalidData,
+                format!(
+                    "Unexpected header size 0x{header_size:X} for version {}",
+                    out.format_version
+                ),
+            ));
         }
 
         out.basic_fields = out.format_version == 0 && field_size == 0x68;
 
         // Currently omitting format_version == 103, as SoulsFormatsNEXT labels its corresponding field_size as incorrect
-        if !(out.basic_fields 
+        if !(out.basic_fields
             || out.format_version == 101 && field_size == 0x8C
             || out.format_version == 102 && field_size == 0xAC
             || out.format_version == 104 && field_size == 0xB0
             || out.format_version == 106 && field_size == 0x48
             || out.format_version == 201 && field_size == 0xD0
             || out.format_version == 202 && field_size == 0x68
-            || out.format_version == 203 && field_size == 0x88
-        )
+            || out.format_version == 203 && field_size == 0x88)
         {
-            return Err(io::Error::new(InvalidData, format!("Unexpected header size 0x{header_size:X} for version {}", out.format_version)));
+            return Err(io::Error::new(
+                InvalidData,
+                format!(
+                    "Unexpected header size 0x{header_size:X} for version {}",
+                    out.format_version
+                ),
+            ));
         }
 
         for _ in 0..field_count {
@@ -136,7 +150,7 @@ impl StreamIO<ParamDef> for ParamDef {
 
     fn write<W>(&self, bw: &mut BinaryWriter<W>) -> io::Result<()>
     where
-        W: Write + Seek
+        W: Write + Seek,
     {
         todo!()
     }

@@ -64,5 +64,5 @@ pub enum ParamCellValue {
     F64(f64),
     ArrayU8(Vec<u8>),
     StringShiftJIS(String),
-    StringUTF16(String)
+    StringUTF16(String),
 }

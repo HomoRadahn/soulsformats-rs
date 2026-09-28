@@ -23,7 +23,7 @@ pub enum ParamDefType {
     /// Fixed-width Shift-JIS string
     fixstr,
     /// Fixed-width UTF-16 string
-    fixstrW
+    fixstrW,
 }
 
 bitflags! {

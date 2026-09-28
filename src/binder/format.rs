@@ -1,7 +1,9 @@
 use std::io::{self, Read, Seek, Write};
 
 use crate::io::{BinaryReader, BinaryWriter, Endian};
+use crate::util::DateTimeExt;
 use bitflags::bitflags;
+use chrono::{DateTime, Datelike, Local, TimeZone, Timelike};
 
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -146,30 +148,47 @@ impl FileFlags {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-/// Used for writing to `Bnd` / `Bxf` timestamp string
-pub struct DateTime {
-    pub year: u16,
-    pub month: u32,
-    pub day: u32,
+/// Converts a
+pub fn date_to_bnd_timestamp(date: DateTime<Local>) -> String {
+    let year = if date.year() - 2000 > 99 || date.year() < 0 {
+        0
+    } else {
+        date.year() - 2000
+    };
 
-    pub hour: u32,
-    pub minute: u32,
+    let month = char::from_u32(date.month() + 'A' as u32).unwrap_or('1');
+    let hour = char::from_u32(date.month() + 'A' as u32).unwrap_or('1');
+
+    let string: String = format!("{}{}{}{}{}", year, month, date.day(), hour, date.minute());
+
+    let len = string.chars().count();
+
+    if len >= 8 {
+        string
+    } else {
+        let padding_count = 8 - len;
+        let mut result = String::with_capacity(string.len() + padding_count);
+        result.push_str(&string);
+        result.extend(std::iter::repeat_n('\0', padding_count));
+        result
+    }
 }
 
-impl DateTime {
-    /// Converts `DateTime` to a `Bnd` / `Bxf` timestamp string
-    pub fn to_bnd_timestamp(&self) -> String {
-        let mut year = self.year - 2000;
+impl<Tz> DateTimeExt for DateTime<Tz>
+where
+    Tz: TimeZone,
+{
+    fn to_bnd_timestamp(&self) -> String {
+        let year = if self.year() - 2000 > 99 || self.year() < 0 {
+            0
+        } else {
+            self.year() - 2000
+        };
 
-        if year > 99 {
-            year = 0;
-        }
+        let month = char::from_u32(self.month() + 'A' as u32).unwrap_or('1');
+        let hour = char::from_u32(self.month() + 'A' as u32).unwrap_or('1');
 
-        let month = char::from_u32(self.month + 'A' as u32).unwrap_or('1');
-        let hour = char::from_u32(self.hour + 'A' as u32).unwrap_or('1');
-
-        let string: String = format!("{}{}{}{}{}", year, month, self.day, hour, self.minute);
+        let string: String = format!("{}{}{}{}{}", year, month, self.day(), hour, self.minute());
 
         let len = string.chars().count();
 

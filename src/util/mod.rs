@@ -76,3 +76,8 @@ pub(crate) fn is_prime(n: u32) -> bool {
 
     true
 }
+
+/// Trait for using `chrono::DateTime<Local>` with `Bnd` timestamps
+pub trait DateTimeExt {
+    fn to_bnd_timestamp(&self) -> String;
+}

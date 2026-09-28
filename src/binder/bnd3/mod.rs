@@ -1,7 +1,9 @@
+use chrono::{DateTime, Local, TimeZone};
+
 use crate::{
-    binder::{DateTime, file::BinderFileHeader},
+    binder::{file::BinderFileHeader, format},
     io::{BinaryReader, BinaryWriter, ByteIO, Endian, FileIO, StreamIO},
-    util,
+    util::{self, DateTimeExt},
 };
 use std::io::{self, Read, Seek, Write};
 
@@ -32,26 +34,22 @@ impl Default for Bnd3 {
     fn default() -> Self {
         Self {
             files: Default::default(),
-            version: DateTime {
-                year: 2026,
-                month: 1,
-                day: 1,
-                hour: 20,
-                minute: 0,
-            }
-            .to_bnd_timestamp(),
+            version: format::date_to_bnd_timestamp(Local::now()),
             format: Format::IDs | Format::Names1 | Format::Names2 | Format::Compression,
             endian: Endian::Little,
             bit_endian: Endian::Little,
             unk_18: Default::default(),
-            write_file_headers_end: Default::default()
+            write_file_headers_end: Default::default(),
         }
     }
 }
 
 impl Bnd3 {
     /// Initializes `Bnd3` with specifies parameters, and rest of parameters set to most common values
-    pub fn new(date: DateTime, files: Vec<File>) -> Self {
+    pub fn new<Tz>(date: DateTime<Tz>, files: Vec<File>) -> Self
+    where
+        Tz: TimeZone,
+    {
         let mut out = Self::default();
         out.version = date.to_bnd_timestamp();
         out.files = files;
