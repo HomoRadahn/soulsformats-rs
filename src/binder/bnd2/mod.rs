@@ -86,7 +86,7 @@ impl Bnd2 {
     {
         br.endian = Endian::Little;
 
-        br.assert_ascii(&["Bnd\0"])?;
+        br.assert_ascii(&["BND\0"])?;
         self.header_info_flags = HeaderInfoFlags::try_from(br.read_u8()?)?;
         self.file_info_flags = FileInfoFlags::try_from(br.read_u8()?)?;
         self.unk_06 = br.read_u8()?;
@@ -136,7 +136,7 @@ impl Bnd2 {
     {
         bw.endian = Endian::Little;
 
-        bw.write_ascii("Bnd", true)?;
+        bw.write_ascii("BND", true)?;
         bw.write_u8(self.header_info_flags.bits())?;
         bw.write_u8(self.file_info_flags.bits())?;
         bw.write_u8(self.unk_06)?;
@@ -240,7 +240,7 @@ impl StreamIO<Bnd2> for Bnd2 {
             _ => return Ok(false), // Invalid FilePathMode (reason for not casting `u8` to enum)
         };
 
-        Ok(magic == "Bnd\0"
+        Ok(magic == "BND\0"
             && (202..=211).contains(&file_version)
             && valid_names_offset
             && (unk_1b == 0 || unk_1b == 1)

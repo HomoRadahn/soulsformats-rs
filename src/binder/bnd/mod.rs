@@ -44,7 +44,7 @@ impl Bnd {
     where
         R: Read + Seek,
     {
-        br.assert_ascii(&["Bnd\0"])?;
+        br.assert_ascii(&["BND\0"])?;
         br.assert_u16(&[0xFFFF])?;
         br.assert_u16(&[0])?;
         self.internal_version = br.read_i32()?;
@@ -88,7 +88,7 @@ impl StreamIO<Bnd> for Bnd {
     {
         let file_headers: Vec<_> = self.files.iter().map(FileHeader::from).collect();
 
-        bw.write_ascii("Bnd", true)?;
+        bw.write_ascii("BND", true)?;
         bw.write_u16(0xFFFF)?;
         bw.write_u16(0)?;
         bw.write_i32(self.internal_version)?;
@@ -143,7 +143,7 @@ impl StreamIO<Bnd> for Bnd {
         if br.length()? < 4 {
             return Ok(false);
         }
-        Ok(br.get_ascii_len(0, 4)? == "Bnd\0")
+        Ok(br.get_ascii_len(0, 4)? == "BND\0")
     }
 }
 

@@ -33,7 +33,7 @@ impl Dcx {
 
         let magic = br.get_ascii_len(0, 4)?;
 
-        Ok(magic == "DCP\0" || magic == "Dcx\0")
+        Ok(magic == "DCP\0" || magic == "DCX\0")
     }
 
     /// Checks whether provided `Vec<u8>` is a valid `Dcx`
@@ -107,7 +107,7 @@ impl Dcx {
                     ));
                 }
             }
-        } else if magic == "Dcx\0" {
+        } else if magic == "DCX\0" {
             let format = br.get_ascii_len(0x28, 4)?;
 
             match format.as_str() {
@@ -202,7 +202,7 @@ impl Dcx {
     where
         R: Read + Seek,
     {
-        br.assert_ascii(&["Dcx\0"])?;
+        br.assert_ascii(&["DCX\0"])?;
         br.assert_i32(&[args.unk_04])?;
         br.assert_i32(&[0x18])?;
         br.assert_i32(&[0x24])?;
@@ -298,7 +298,7 @@ impl Dcx {
     where
         R: Read + Seek,
     {
-        br.assert_ascii(&["Dcx\0"])?;
+        br.assert_ascii(&["DCX\0"])?;
         br.assert_i32(&[0x10000])?;
         br.assert_i32(&[0x18])?;
         br.assert_i32(&[0x24])?;
@@ -378,7 +378,7 @@ impl Dcx {
     where
         R: Read + Seek,
     {
-        br.assert_ascii(&["Dcx\0"])?;
+        br.assert_ascii(&["DCX\0"])?;
         br.assert_i32(&[0x11000])?;
         br.assert_i32(&[0x18])?;
         br.assert_i32(&[0x24])?;
@@ -409,7 +409,7 @@ impl Dcx {
     where
         R: Read + Seek,
     {
-        br.assert_ascii(&["Dcx\0"])?;
+        br.assert_ascii(&["DCX\0"])?;
         br.assert_i32(&[0x11000])?;
         br.assert_i32(&[0x18])?;
         br.assert_i32(&[0x24])?;
@@ -515,7 +515,7 @@ impl Dcx {
     where
         W: Write + Seek,
     {
-        bw.write_ascii("Dcx", true)?;
+        bw.write_ascii("DCX", true)?;
 
         bw.write_i32(args.unk_04)?;
 
@@ -567,7 +567,7 @@ impl Dcx {
     {
         let compressed = oodle::compress(data, args.oodle_compressor, args.compression_level)?;
 
-        bw.write_ascii("Dcx", true)?;
+        bw.write_ascii("DCX", true)?;
         bw.write_i32(0x11000)?;
         bw.write_i32(0x18)?;
         bw.write_i32(0x24)?;
@@ -698,7 +698,7 @@ impl Dcx {
             chunk_count += 1;
         }
 
-        bw.write_ascii("Dcx", true)?;
+        bw.write_ascii("DCX", true)?;
         bw.write_i32(0x10000)?;
         bw.write_i32(0x18)?;
         bw.write_i32(0x24)?;
@@ -800,7 +800,7 @@ impl Dcx {
     {
         let compressed = ZstdHelper::write_zstd(data, compression_level)?;
 
-        bw.write_ascii("Dcx", true)?;
+        bw.write_ascii("DCX", true)?;
         bw.write_i32(0x11000)?;
         bw.write_i32(0x18)?;
         bw.write_i32(0x24)?;

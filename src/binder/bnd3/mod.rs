@@ -63,7 +63,7 @@ impl Bnd3 {
     where
         R: Read + Seek,
     {
-        br.assert_ascii(&["Bnd3"])?;
+        br.assert_ascii(&["BND3"])?;
         self.version = br.read_fix_str(8)?;
 
         self.bit_endian = match br.get_bool(0xE)? {
@@ -119,7 +119,7 @@ impl Bnd3 {
             Endian::Little => Endian::Little,
         };
 
-        bw.write_ascii("Bnd3", false)?;
+        bw.write_ascii("BND3", false)?;
         bw.write_fix_str(&self.version, 8, 0)?;
         self.format.write(bw, self.bit_endian)?;
         bw.write_bool(match self.endian {
@@ -210,7 +210,7 @@ impl StreamIO<Bnd3> for Bnd3 {
     {
         let (mut br_dec, _) = util::get_decompressed_binary_reader(br)?;
         let len = br_dec.length()?;
-        Ok(len >= 4 && br_dec.get_ascii_len(0, 4)? == "Bnd3")
+        Ok(len >= 4 && br_dec.get_ascii_len(0, 4)? == "BND3")
     }
 }
 

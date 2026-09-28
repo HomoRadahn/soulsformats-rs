@@ -39,6 +39,32 @@ pub struct Field {
     pub removed_regulation_version: usize,
 }
 
+impl Default for Field {
+    fn default() -> Self {
+        Self { 
+            display_name: "placeholder".to_string(),
+            display_type: ParamDefType::f32,
+            display_format: Default::default(),
+            default: todo!(),
+            min: todo!(),
+            max: todo!(),
+            increment: todo!(),
+            edit_flags: todo!(),
+            array_length: 1,
+            description: Default::default(),
+            internal_type: "f32".to_string(),
+            internal_name: "placeholder".to_string(),
+            bit_size: Default::default(),
+            sort_id: Default::default(),
+            unk_b8: Default::default(),
+            unk_c0: Default::default(),
+            unk_c8: Default::default(),
+            first_regulation_version: Default::default(),
+            removed_regulation_version: Default::default()
+        }
+    }
+}
+
 impl Field {
     pub fn from_binary_reader<R>(br: &mut BinaryReader<R>, paramdef: &ParamDef) -> io::Result<Self>
     where 

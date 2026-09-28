@@ -65,7 +65,7 @@ impl Bnd4 {
     where
         R: Read + Seek,
     {
-        br.assert_ascii(&["Bnd4"])?;
+        br.assert_ascii(&["BND4"])?;
         self.unk_04 = br.read_bool()?;
         self.unk_05 = br.read_bool()?;
         br.assert_u8(&[0])?;
@@ -134,7 +134,7 @@ impl Bnd4 {
     {
         bw.endian = self.endian;
 
-        bw.write_ascii("Bnd4", false)?;
+        bw.write_ascii("BND4", false)?;
 
         bw.write_bool(self.unk_04)?;
         bw.write_bool(self.unk_05)?;
@@ -243,7 +243,7 @@ impl StreamIO<Bnd4> for Bnd4 {
     {
         let (mut br_dec, _) = util::get_decompressed_binary_reader(br)?;
         let len = br_dec.length()?;
-        Ok(len >= 4 && br_dec.get_ascii_len(0, 4)? == "Bnd4")
+        Ok(len >= 4 && br_dec.get_ascii_len(0, 4)? == "BND4")
     }
 }
 

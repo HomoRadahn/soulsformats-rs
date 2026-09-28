@@ -53,7 +53,7 @@ fn bnd2() {
     bnd.files = vec![bnd2::File::new(
         7,
         "test.bin".to_string(),
-        b"Bnd2 test".to_vec(),
+        b"BND2 test".to_vec(),
     )];
 
     let round_trip = Bnd2::from_bytes(bnd.to_bytes().unwrap()).unwrap();
@@ -61,7 +61,7 @@ fn bnd2() {
     assert_eq!(round_trip.file_path_mode as u8, bnd.file_path_mode as u8);
     assert_eq!(round_trip.files[0].id, 7);
     assert_eq!(round_trip.files[0].name, "test.bin");
-    assert_eq!(round_trip.files[0].bytes, b"Bnd2 test");
+    assert_eq!(round_trip.files[0].bytes, b"BND2 test");
 }
 
 #[test]
@@ -119,8 +119,8 @@ fn bnd4() {
     let bnd = Bnd4::from_bytes(dcx.data).unwrap();
     let text1 = String::from_utf8(bnd.files[0].bytes.clone()).unwrap();
     let text2 = String::from_utf8(bnd.files[1].bytes.clone()).unwrap();
-    assert_eq!(text1, "Bnd4 Test");
-    assert_eq!(text2, "Bnd4 Test 2");
+    assert_eq!(text1, "BND4 Test");
+    assert_eq!(text2, "BND4 Test 2");
     let round_trip = Bnd4::from_bytes(bnd.to_bytes().unwrap()).unwrap();
 
     assert_eq!(bnd.version, round_trip.version);
