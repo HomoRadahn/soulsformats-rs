@@ -15,7 +15,7 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq)]
 /// A simple string container used throughout the series
-pub struct FMG {
+pub struct Fmg {
     /// The strings contained in this `FMG`
     pub entries: Vec<Entry>,
     /// Indicates file format; 0 - DeS, 1 - DS1/DS2, 2 - DS3/BB
@@ -30,22 +30,23 @@ pub struct FMG {
     pub reuse_offsets: bool,
 }
 
-impl FMG {
-    /// Creates an empty `FMG`, formatted for DS1/DS2
-    pub fn empty() -> Self {
+impl Default for Fmg {
+    fn default() -> Self {
         Self {
-            entries: Vec::new(),
+            entries: Default::default(),
             version: Version::DarkSouls1,
             endian: Endian::Little,
             unicode: true,
-            md5: false,
-            reuse_offsets: false,
+            md5: Default::default(),
+            reuse_offsets: Default::default(),
         }
     }
+}
 
+impl Fmg {
     /// Initializes `FMG` with specified version
     pub fn with_version(version: Version) -> Self {
-        let mut out = Self::empty();
+        let mut out = Self::default();
         out.version = version;
         out
     }
@@ -131,12 +132,12 @@ impl FMG {
     }
 }
 
-impl StreamIO<FMG> for FMG {
-    fn read<R>(br: &mut BinaryReader<R>) -> io::Result<FMG>
+impl StreamIO<Fmg> for Fmg {
+    fn read<R>(br: &mut BinaryReader<R>) -> io::Result<Fmg>
     where
         R: Read + Seek,
     {
-        let mut out = Self::empty();
+        let mut out = Self::default();
         if br.get_u8(0)? != 0 {
             out.md5 = true;
             br.skip(16)?;
@@ -318,8 +319,8 @@ impl StreamIO<FMG> for FMG {
     }
 }
 
-impl ByteIO<FMG> for FMG {}
-impl FileIO<FMG> for FMG {}
+impl ByteIO<Fmg> for Fmg {}
+impl FileIO<Fmg> for Fmg {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /// Indicates the game this FMG is for, and thus the format it will be written in

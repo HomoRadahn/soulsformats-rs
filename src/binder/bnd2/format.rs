@@ -4,9 +4,9 @@ use std::io::{self};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /// An enum for the different supported file path modes
 pub enum FilePathMode {
-    /// Files in this BND have no name
+    /// Files in this Bnd have no name
     Nameless = 0,
-    /// Files in this BND only have file names
+    /// Files in this Bnd only have file names
     FileName = 1,
     /// All files use a full file path
     FullPath = 2,

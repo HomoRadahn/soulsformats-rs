@@ -234,11 +234,11 @@ impl<W: Write + Seek> BinaryWriter<W> {
     }
 
     fn write_chars(&mut self, terminate: bool, bytes: Vec<u8>) -> io::Result<()> {
-        let mut output = bytes;
+        let mut out = bytes;
         if terminate {
-            output.push(0);
+            out.push(0);
         }
-        self.inner.write_all(&output)
+        self.inner.write_all(&out)
     }
 
     /// Writes an ASCII string, with a null terminator when requested

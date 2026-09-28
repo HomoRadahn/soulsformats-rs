@@ -18,12 +18,12 @@ pub use crate::binder::{
 /// Header `.bhd`<br>
 /// Data `.bdt`
 #[derive(Debug, Clone, PartialEq)]
-pub struct BXF3 {
-    /// Files contained in this `BXF3`
+pub struct Bxf3 {
+    /// Files contained in this `Bxf3`
     pub files: Vec<File>,
     /// A timestamp or version number, 8 characters maximum
     pub version: String,
-    /// Formats of this `BXF3`
+    /// Formats of this `Bxf3`
     pub format: Format,
     /// Endian format of the data
     pub endian: Endian,
@@ -31,19 +31,10 @@ pub struct BXF3 {
     pub bit_endian: Endian,
 }
 
-impl BXF3 {
-    /// Initializes `BXF3` with specifies parameters, and rest of parameters set to most common values
-    pub fn new(date: DateTime, files: Vec<File>) -> Self {
-        let mut out = Self::empty();
-        out.version = date.to_bnd_timestamp();
-        out.files = files;
-
-        out
-    }
-    /// Creates an empty `BXF3` formatted for DS1.
-    pub fn empty() -> Self {
+impl Default for Bxf3 {
+    fn default() -> Self {
         Self {
-            files: Vec::new(),
+            files: Default::default(),
             version: DateTime {
                 year: 2026,
                 month: 1,
@@ -56,6 +47,17 @@ impl BXF3 {
             endian: Endian::Little,
             bit_endian: Endian::Little,
         }
+    }
+}
+
+impl Bxf3 {
+    /// Initializes `Bxf3` with specifies parameters, and rest of parameters set to most common values
+    pub fn new(date: DateTime, files: Vec<File>) -> Self {
+        let mut out = Self::default();
+        out.version = date.to_bnd_timestamp();
+        out.files = files;
+
+        out
     }
 
     fn read_bdf_header<R>(bdt: &mut BinaryReader<R>) -> io::Result<()>
@@ -117,25 +119,25 @@ impl BXF3 {
         Ok(file_headers)
     }
 
-    /// Reads `BXF3` from two `BinaryReaders`. Only accepts decompressed data
+    /// Reads `Bxf3` from two `BinaryReaders`. Only accepts decompressed data
     pub fn read<RH, RD>(bhd: &mut BinaryReader<RH>, bdt: &mut BinaryReader<RD>) -> io::Result<Self>
     where
         RH: Read + Seek,
         RD: Read + Seek,
     {
-        let mut bxf = Self::empty();
+        let mut out = Self::default();
 
         Self::read_bdf_header(bdt)?;
-        let file_headers = bxf.read_bhf_header(bhd)?;
+        let file_headers = out.read_bhf_header(bhd)?;
 
         for header in file_headers {
-            bxf.files.push(header.read_file_data(bdt)?);
+            out.files.push(header.read_file_data(bdt)?);
         }
 
-        Ok(bxf)
+        Ok(out)
     }
 
-    /// Reads `BXF3` from two files, decompressing as necessary
+    /// Reads `Bxf3` from two files, decompressing as necessary
     pub fn from_files(
         bhd_path: impl Into<String>,
         bdt_path: impl Into<String>,
@@ -145,7 +147,7 @@ impl BXF3 {
         Self::read(&mut bhd, &mut bdt)
     }
 
-    /// Reads `BXF3` from a `bhd` file and `bdt` bytes, decompressing as necessary
+    /// Reads `Bxf3` from a `bhd` file and `bdt` bytes, decompressing as necessary
     pub fn from_bhd_file_bdt_bytes(
         bhd_path: impl Into<String>,
         bdt_bytes: Vec<u8>,
@@ -155,7 +157,7 @@ impl BXF3 {
         Self::read(&mut bhd, &mut bdt)
     }
 
-    /// Reads `BXF3` from `bhd` bytes and `bdt` file, decompressing as necessary
+    /// Reads `Bxf3` from `bhd` bytes and `bdt` file, decompressing as necessary
     pub fn from_bhd_bytes_bdt_file(
         bhd_bytes: Vec<u8>,
         bdt_path: impl Into<String>,
@@ -165,7 +167,7 @@ impl BXF3 {
         Self::read(&mut bhd, &mut bdt)
     }
 
-    /// Reads `BXF3` from two `Vec<u8>`, decompressing as necessary
+    /// Reads `Bxf3` from two `Vec<u8>`, decompressing as necessary
     pub fn from_bytes(bhd_bytes: Vec<u8>, bdt_bytes: Vec<u8>) -> io::Result<Self> {
         let mut bhd = BinaryReader::from_bytes(bhd_bytes, Endian::Little, false);
         let mut bdt = BinaryReader::from_bytes(bdt_bytes, Endian::Little, false);
@@ -173,8 +175,8 @@ impl BXF3 {
     }
 }
 
-impl BXF3 {
-    /// Writes `BXF3` to two separate `BinaryWriters`. Doesn't compress data
+impl Bxf3 {
+    /// Writes `Bxf3` to two separate `BinaryWriters`. Doesn't compress data
     pub fn write<WH, WD>(
         &self,
         bhd: &mut BinaryWriter<WH>,
@@ -267,7 +269,7 @@ impl BXF3 {
         Ok((bhd.close_bytes()?, bdt.close_bytes()?))
     }
 
-    /// Writes `BXF3` to two files, compressing as necessary
+    /// Writes `Bxf3` to two files, compressing as necessary
     pub fn to_files(
         &self,
         bhd_path: impl Into<String>,
@@ -281,7 +283,7 @@ impl BXF3 {
         Ok(())
     }
 
-    /// Writes `BXF3` - `bhd` to file and `bdt` to bytes
+    /// Writes `Bxf3` - `bhd` to file and `bdt` to bytes
     pub fn to_bhd_file_bdt_bytes(&self, bhd_path: impl Into<String>) -> io::Result<Vec<u8>> {
         let (bhd, bdt) = self.preprocess_to_bytes()?;
         fs::write(bhd_path.into(), bhd)?;
@@ -289,7 +291,7 @@ impl BXF3 {
         Ok(bdt)
     }
 
-    /// Writes `BXF3` - `bhd` to file and `bdt` to bytes
+    /// Writes `Bxf3` - `bhd` to file and `bdt` to bytes
     pub fn to_bhd_bytes_bdt_file(&self, bdt_path: impl Into<String>) -> io::Result<Vec<u8>> {
         let (bhd, bdt) = self.preprocess_to_bytes()?;
         fs::write(bdt_path.into(), bdt)?;
@@ -297,7 +299,7 @@ impl BXF3 {
         Ok(bhd)
     }
 
-    /// Writes `BXF3` to two `Vec<u8>`, compressing as necessary
+    /// Writes `Bxf3` to two `Vec<u8>`, compressing as necessary
     pub fn to_bytes(&self) -> io::Result<(Vec<u8>, Vec<u8>)> {
         let (bhd, bdt) = self.preprocess_to_bytes()?;
 
@@ -305,7 +307,7 @@ impl BXF3 {
     }
 }
 
-impl BXF3 {
+impl Bxf3 {
     /// Checks if the provided `BinaryReader` appears to contain a valid header
     pub fn is_header<R>(br: &mut BinaryReader<R>) -> io::Result<bool>
     where

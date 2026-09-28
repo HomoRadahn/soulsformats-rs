@@ -1,7 +1,7 @@
 use crate::io::BinaryReader;
 use std::io::{self, Read, Seek};
 
-/// A file in a `BND` container.
+/// A file in a `Bnd` container.
 #[derive(Debug, Clone, PartialEq)]
 pub struct File {
     pub id: i32,

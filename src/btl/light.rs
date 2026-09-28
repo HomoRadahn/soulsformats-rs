@@ -34,7 +34,7 @@ impl TryFrom<u32> for LightType {
     }
 }
 
-#[derive(Default, Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Light {
     pub unk_00: Vec<u8>,
     /// Name of this light
@@ -110,12 +110,13 @@ pub struct Light {
     pub unk_e4: Option<i32>,
 }
 
-impl Light {
-    /// Creates an empty `Light` with default values
-    pub fn empty() -> Self {
+impl Default for Light {
+    fn default() -> Self {
         Self {
             unk_00: vec![0_u8; 16],
             name: "".to_string(),
+            light_type: LightType::default(),
+            unk_1c: false,
             diffuse_color: ByteVector3 {
                 x: 255,
                 y: 255,
@@ -127,29 +128,55 @@ impl Light {
                 y: 255,
                 z: 255,
             },
+            cast_shadows: false,
             specular_power: 1.0,
+            cone_angle: 0.0,
+            unk_30: 0.0,
+            unk_34: 0.0,
+            position: Vector3::default(),
+            rotation: Vector3::default(),
             unk_50: 4,
+            unk_54: 0.0,
             radius: 10.0,
             unk_5c: -1,
             unk_64: vec![0, 0, 0, 1],
+            unk_68: 0.0,
             shadow_color: ByteVector4 {
                 x: 0,
                 y: 0,
                 z: 0,
                 w: 100,
             },
+            unk_70: 0.0,
+            flicker_interval_min: 0.0,
+            flicker_interval_max: 0.0,
             flicker_brightness_multiplier: 1.0,
             unk_80: -1,
             unk_84: vec![0, 0, 0, 0],
+            unk_88: 0.0,
+            unk_90: 0.0,
             unk_98: 1.0,
             near_clip: 1.0,
             unk_a0: vec![1, 0, 2, 1],
             sharpness: 1.0,
+            unk_ac: 0.0,
+            width: 0.0,
+            unk_bc: 0.0,
             unk_c0: vec![0, 0, 0, 0],
-            ..Default::default()
+            unk_c4: 0.0,
+            unk_c8: None,
+            unk_cc: None,
+            unk_d0: None,
+            unk_d4: None,
+            unk_d8: None,
+            unk_dc: None,
+            unk_e0: None,
+            unk_e4: None,
         }
     }
+}
 
+impl Light {
     /// Reads the `Light` from the supplied `BinaryReader`
     pub(crate) fn read<R>(
         br: &mut BinaryReader<R>,
@@ -159,73 +186,73 @@ impl Light {
     where
         R: Read + Seek,
     {
-        let mut output = Self::empty();
-        output.unk_00 = br.read_vec_u8(16)?;
+        let mut out = Self::default();
+        out.unk_00 = br.read_vec_u8(16)?;
         let varint = br.read_varint()?;
-        output.name = br.get_utf16(util::convert_num(names_start + varint)?)?;
-        output.light_type = br.read_enum_u32::<LightType>()?;
-        output.unk_1c = br.read_bool()?;
-        output.diffuse_color = br.read_byte_vector_3()?;
-        output.diffuse_power = br.read_f32()?;
-        output.specular_color = br.read_byte_vector_3()?;
-        output.cast_shadows = br.read_bool()?;
-        output.specular_power = br.read_f32()?;
-        output.cone_angle = br.read_f32()?;
-        output.unk_30 = br.read_f32()?;
-        output.unk_34 = br.read_f32()?;
-        output.position = br.read_vector_3()?;
-        output.rotation = br.read_vector_3()?;
-        output.unk_50 = br.read_i32()?;
-        output.unk_54 = br.read_f32()?;
-        output.radius = br.read_f32()?;
-        output.unk_5c = br.read_i32()?;
+        out.name = br.get_utf16(util::convert_num(names_start + varint)?)?;
+        out.light_type = br.read_enum_u32::<LightType>()?;
+        out.unk_1c = br.read_bool()?;
+        out.diffuse_color = br.read_byte_vector_3()?;
+        out.diffuse_power = br.read_f32()?;
+        out.specular_color = br.read_byte_vector_3()?;
+        out.cast_shadows = br.read_bool()?;
+        out.specular_power = br.read_f32()?;
+        out.cone_angle = br.read_f32()?;
+        out.unk_30 = br.read_f32()?;
+        out.unk_34 = br.read_f32()?;
+        out.position = br.read_vector_3()?;
+        out.rotation = br.read_vector_3()?;
+        out.unk_50 = br.read_i32()?;
+        out.unk_54 = br.read_f32()?;
+        out.radius = br.read_f32()?;
+        out.unk_5c = br.read_i32()?;
         br.assert_i32(&[0])?;
-        output.unk_64 = br.read_vec_u8(4)?;
-        output.unk_68 = br.read_f32()?;
-        output.shadow_color = br.read_byte_vector_4_rgba()?;
-        output.unk_70 = br.read_f32()?;
-        output.flicker_interval_min = br.read_f32()?;
-        output.flicker_interval_max = br.read_f32()?;
-        output.flicker_brightness_multiplier = br.read_f32()?;
-        output.unk_80 = br.read_i32()?;
-        output.unk_84 = br.read_vec_u8(4)?;
-        output.unk_88 = br.read_f32()?;
+        out.unk_64 = br.read_vec_u8(4)?;
+        out.unk_68 = br.read_f32()?;
+        out.shadow_color = br.read_byte_vector_4_rgba()?;
+        out.unk_70 = br.read_f32()?;
+        out.flicker_interval_min = br.read_f32()?;
+        out.flicker_interval_max = br.read_f32()?;
+        out.flicker_brightness_multiplier = br.read_f32()?;
+        out.unk_80 = br.read_i32()?;
+        out.unk_84 = br.read_vec_u8(4)?;
+        out.unk_88 = br.read_f32()?;
         br.assert_i32(&[0])?;
-        output.unk_90 = br.read_f32()?;
+        out.unk_90 = br.read_f32()?;
         br.assert_i32(&[0])?;
-        output.unk_98 = br.read_f32()?;
-        output.near_clip = br.read_f32()?;
-        output.unk_a0 = br.read_vec_u8(4)?;
-        output.sharpness = br.read_f32()?;
+        out.unk_98 = br.read_f32()?;
+        out.near_clip = br.read_f32()?;
+        out.unk_a0 = br.read_vec_u8(4)?;
+        out.sharpness = br.read_f32()?;
         br.assert_i32(&[0])?;
-        output.unk_ac = br.read_f32()?;
+        out.unk_ac = br.read_f32()?;
         br.assert_varint(&[0])?;
-        output.width = br.read_f32()?;
-        output.unk_bc = br.read_f32()?;
-        output.unk_c0 = br.read_vec_u8(4)?;
-        output.unk_c4 = br.read_f32()?;
+        out.width = br.read_f32()?;
+        out.unk_bc = br.read_f32()?;
+        out.unk_c0 = br.read_vec_u8(4)?;
+        out.unk_c4 = br.read_f32()?;
 
         if version >= 16 {
-            output.unk_c8 = Some(br.read_f32()?);
-            output.unk_cc = Some(br.read_f32()?);
-            output.unk_d0 = Some(br.read_f32()?);
-            output.unk_d4 = Some(br.read_f32()?);
-            output.unk_d8 = Some(br.read_f32()?);
-            output.unk_dc = Some(br.read_i32()?);
-            output.unk_e0 = Some(br.read_f32()?);
-            output.unk_e4 = Some(br.read_i32()?);
+            out.unk_c8 = Some(br.read_f32()?);
+            out.unk_cc = Some(br.read_f32()?);
+            out.unk_d0 = Some(br.read_f32()?);
+            out.unk_d4 = Some(br.read_f32()?);
+            out.unk_d8 = Some(br.read_f32()?);
+            out.unk_dc = Some(br.read_i32()?);
+            out.unk_e0 = Some(br.read_f32()?);
+            out.unk_e4 = Some(br.read_i32()?);
         } else {
-            output.unk_c8 = None;
-            output.unk_cc = None;
-            output.unk_d0 = None;
-            output.unk_d4 = None;
-            output.unk_d8 = None;
-            output.unk_dc = None;
-            output.unk_e0 = None;
-            output.unk_e4 = None;
+            out.unk_c8 = None;
+            out.unk_cc = None;
+            out.unk_d0 = None;
+            out.unk_d4 = None;
+            out.unk_d8 = None;
+            out.unk_dc = None;
+            out.unk_e0 = None;
+            out.unk_e4 = None;
         }
 
-        Ok(output)
+        Ok(out)
     }
 
     pub(crate) fn write<W>(&self, bw: &mut BinaryWriter<W>, name_offset: i64) -> io::Result<()>

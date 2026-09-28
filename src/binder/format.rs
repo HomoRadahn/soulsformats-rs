@@ -72,7 +72,7 @@ impl Format {
     }
 }
 
-/// Calculates the size of each file header for `BND4` / `BXF4`
+/// Calculates the size of each file header for `Bnd4` / `Bxf4`
 pub(crate) fn get_bnd4_file_header_size(format: Format) -> i64 {
     0x10 + match format.contains(Format::LongOffsets) {
         true => 8,
@@ -147,7 +147,7 @@ impl FileFlags {
 }
 
 #[derive(Debug, Clone, Copy)]
-/// Used for writing to `BND` / `BXF` timestamp string
+/// Used for writing to `Bnd` / `Bxf` timestamp string
 pub struct DateTime {
     pub year: u16,
     pub month: u32,
@@ -158,7 +158,7 @@ pub struct DateTime {
 }
 
 impl DateTime {
-    /// Converts `DateTime` to a `BND` / `BXF` timestamp string
+    /// Converts `DateTime` to a `Bnd` / `Bxf` timestamp string
     pub fn to_bnd_timestamp(&self) -> String {
         let mut year = self.year - 2000;
 

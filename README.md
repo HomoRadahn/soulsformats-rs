@@ -6,9 +6,10 @@ Rust library for reading and writing formats used by FromSoftware games. Based o
 The library is under active development. Most formats aren't yet implemented. Don't expect a flawless experience.
 
 ### Currently supports:
-- Binder family of formats (`.*bnd`, `.bdt`, `.bhd`)
-- DCX compression
-- BTL (light sources in map)
+- Binder family of formats
+- Dcx compression
+- Btl (light sources in map)
+- Fmg (text data)
 
 ## Example
 For an example use, see `examples/decompress-bnd4.rs`. You can run it with:

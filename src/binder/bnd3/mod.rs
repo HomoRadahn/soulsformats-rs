@@ -12,12 +12,12 @@ pub use crate::binder::{
 
 /// A general-purpose file container used before DS2
 #[derive(Debug, Clone, PartialEq)]
-pub struct BND3 {
-    /// The files contained within this `BND3`
+pub struct Bnd3 {
+    /// The files contained within this `Bnd3`
     pub files: Vec<File>,
     /// A timestamp or version number, 8 characters maximum
     pub version: String,
-    /// Indicates the format of the `BND3`
+    /// Indicates the format of the `Bnd3`
     pub format: Format,
     /// Endian format of the data
     pub endian: Endian,
@@ -28,20 +28,10 @@ pub struct BND3 {
     pub write_file_headers_end: bool,
 }
 
-impl BND3 {
-    /// Initializes `BND3` with specifies parameters, and rest of parameters set to most common values
-    pub fn new(date: DateTime, files: Vec<File>) -> Self {
-        let mut out = Self::empty();
-        out.version = date.to_bnd_timestamp();
-        out.files = files;
-
-        out
-    }
-
-    /// Creates an empty `BND3` formatted for DS1
-    pub fn empty() -> Self {
+impl Default for Bnd3 {
+    fn default() -> Self {
         Self {
-            files: Vec::new(),
+            files: Default::default(),
             version: DateTime {
                 year: 2026,
                 month: 1,
@@ -53,16 +43,27 @@ impl BND3 {
             format: Format::IDs | Format::Names1 | Format::Names2 | Format::Compression,
             endian: Endian::Little,
             bit_endian: Endian::Little,
-            unk_18: 0,
-            write_file_headers_end: false,
+            unk_18: Default::default(),
+            write_file_headers_end: Default::default()
         }
+    }
+}
+
+impl Bnd3 {
+    /// Initializes `Bnd3` with specifies parameters, and rest of parameters set to most common values
+    pub fn new(date: DateTime, files: Vec<File>) -> Self {
+        let mut out = Self::default();
+        out.version = date.to_bnd_timestamp();
+        out.files = files;
+
+        out
     }
 
     fn read_header<R>(&mut self, br: &mut BinaryReader<R>) -> io::Result<Vec<BinderFileHeader>>
     where
         R: Read + Seek,
     {
-        br.assert_ascii(&["BND3"])?;
+        br.assert_ascii(&["Bnd3"])?;
         self.version = br.read_fix_str(8)?;
 
         self.bit_endian = match br.get_bool(0xE)? {
@@ -118,7 +119,7 @@ impl BND3 {
             Endian::Little => Endian::Little,
         };
 
-        bw.write_ascii("BND3", false)?;
+        bw.write_ascii("Bnd3", false)?;
         bw.write_fix_str(&self.version, 8, 0)?;
         self.format.write(bw, self.bit_endian)?;
         bw.write_bool(match self.endian {
@@ -160,23 +161,23 @@ impl BND3 {
     }
 }
 
-impl StreamIO<BND3> for BND3 {
-    fn read<R>(br: &mut BinaryReader<R>) -> io::Result<BND3>
+impl StreamIO<Bnd3> for Bnd3 {
+    fn read<R>(br: &mut BinaryReader<R>) -> io::Result<Bnd3>
     where
         R: Read + Seek,
     {
-        let mut bnd = BND3::empty();
+        let mut out = Bnd3::default();
 
-        let file_headers = bnd.read_header(br)?;
+        let file_headers = out.read_header(br)?;
         let mut files: Vec<File> = Vec::with_capacity(file_headers.len());
 
         for header in file_headers {
             files.push(header.read_file_data(br)?);
         }
 
-        bnd.files = files;
+        out.files = files;
 
-        Ok(bnd)
+        Ok(out)
     }
 
     fn write<W>(&self, bw: &mut BinaryWriter<W>) -> io::Result<()>
@@ -209,9 +210,9 @@ impl StreamIO<BND3> for BND3 {
     {
         let (mut br_dec, _) = util::get_decompressed_binary_reader(br)?;
         let len = br_dec.length()?;
-        Ok(len >= 4 && br_dec.get_ascii_len(0, 4)? == "BND3")
+        Ok(len >= 4 && br_dec.get_ascii_len(0, 4)? == "Bnd3")
     }
 }
 
-impl ByteIO<BND3> for BND3 {}
-impl FileIO<BND3> for BND3 {}
+impl ByteIO<Bnd3> for Bnd3 {}
+impl FileIO<Bnd3> for Bnd3 {}

@@ -8,10 +8,10 @@ mod file;
 mod format;
 mod hashtable;
 
-pub use bnd::BND;
-pub use bnd2::BND2;
-pub use bnd3::BND3;
-pub use bnd4::BND4;
-pub use bxf3::BXF3;
-pub use bxf4::BXF4;
+pub use bnd::Bnd;
+pub use bnd2::Bnd2;
+pub use bnd3::Bnd3;
+pub use bnd4::Bnd4;
+pub use bxf3::Bxf3;
+pub use bxf4::Bxf4;
 pub use format::DateTime;

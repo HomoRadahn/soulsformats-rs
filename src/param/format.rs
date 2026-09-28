@@ -49,3 +49,20 @@ impl TryFrom<u8> for FormatFlags2 {
             .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "invalid format flags"))
     }
 }
+
+/// Values each cell can take, each holding the value itself within
+pub enum ParamCellValue {
+    I8(i8),
+    U8(u8),
+    I16(i16),
+    U16(u16),
+    I32(i32),
+    U32(u32),
+    Bool(bool),
+    F32(f32),
+    Angle(f32),
+    F64(f64),
+    ArrayU8(Vec<u8>),
+    StringShiftJIS(String),
+    StringUTF16(String)
+}

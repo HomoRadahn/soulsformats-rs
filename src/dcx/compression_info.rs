@@ -1,7 +1,7 @@
 use oodle::OodleCompressor;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-/// Compression info of `DCX`
+/// Compression info of `Dcx`
 pub enum CompressionInfo {
     Unknown,
     None,
@@ -15,7 +15,7 @@ pub enum CompressionInfo {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Eq)]
-/// Presets for `DCX DFLT` compression
+/// Presets for `Dcx DFLT` compression
 pub enum DcxDfltPreset {
     DcxDflt10000_24_9,
     DcxDflt10000_44_9,
@@ -25,7 +25,7 @@ pub enum DcxDfltPreset {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-/// Arguments for `DCX DFLT` compression
+/// Arguments for `Dcx DFLT` compression
 pub struct DcxDfltArgs {
     pub unk_04: i32,
     pub unk_10: i32,
@@ -89,7 +89,7 @@ impl DcxDfltArgs {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-/// Arguments for `DCX` Kraken compression
+/// Arguments for `Dcx` Kraken compression
 pub struct DcxKrakArgs {
     pub compression_level: u8,
     pub(crate) oodle_compressor: OodleCompressor,
@@ -123,7 +123,7 @@ impl Default for DcxKrakArgs {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-/// Presets for `DCX` Kraken compression
+/// Presets for `Dcx` Kraken compression
 pub enum KrakCompressionPreset {
     EldenRing,
     ArmoredCore6,

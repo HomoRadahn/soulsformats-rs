@@ -13,16 +13,16 @@ pub use light::LightType;
 
 /// Point light sources in a map, used in BB, DS3, and Sekiro
 #[derive(Debug, Clone, PartialEq)]
-pub struct BTL {
+pub struct Btl {
     /// Version
     pub version: i32,
     /// Whether offsets are 64-bit; set to false for Dark Souls 2
     pub offsets_64bit: bool,
-    /// Light sources in this BT
+    /// Light sources in this `Btl`
     pub lights: Vec<Light>,
 }
 
-impl BTL {
+impl Btl {
     pub fn new(version: i32, offsets_64bit: bool) -> Self {
         Self {
             version,
@@ -32,7 +32,7 @@ impl BTL {
     }
 }
 
-impl StreamIO<BTL> for BTL {
+impl StreamIO<Btl> for Btl {
     fn read<R>(br: &mut BinaryReader<R>) -> io::Result<Self>
     where
         R: Read + Seek,
@@ -109,5 +109,5 @@ impl StreamIO<BTL> for BTL {
     }
 }
 
-impl ByteIO<BTL> for BTL {}
-impl FileIO<BTL> for BTL {}
+impl ByteIO<Btl> for Btl {}
+impl FileIO<Btl> for Btl {}

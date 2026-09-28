@@ -1,14 +1,15 @@
-use std::io::{self, Read, Seek, Write};
+use std::io::{self, ErrorKind::InvalidData, Read, Seek, Write};
 
-use crate::{ByteIO, FileIO, io::{BinaryReader, BinaryWriter, Endian, StreamIO}, util};
+use crate::{ByteIO, FileIO, io::{BinaryReader, BinaryWriter, Endian, StreamIO}};
 
 pub mod field;
+pub mod format;
 use field::Field;
 
-pub struct PARAMDEF {
+pub struct ParamDef {
     /// Indicates a revision of the row data structure
     pub data_version: i16,
-    /// Identifies corresponding `PARAM` and `PARAMDEF`
+    /// Identifies corresponding `Param` and `ParamDEF`
     pub param_type: String,
     /// Endianness of data
     pub endian: Endian,
@@ -27,7 +28,7 @@ pub struct PARAMDEF {
     pub format_version: i16,
     /// Fields in each param row, in order of appearance
     pub fields: Vec<Field>,
-    /// PARAMDEF is "regulation version aware" and can be applied to older regulation params that may have a
+    /// ParamDEF is "regulation version aware" and can be applied to older regulation params that may have a
     /// different layout that the latest params if the XML paramdef supports it.
     pub version_aware: bool,
     /// Only basic fields are present;
@@ -35,33 +36,34 @@ pub struct PARAMDEF {
     pub basic_fields: bool,
 }
 
-impl PARAMDEF {
-    /// Whether field default, minimum, maximum, and increment may be variable type. If false, they are always floats.
-    pub fn variable_editor_value_types(&self) -> bool {
-        self.format_version >= 203
-    }
-
-    /// Creates an empty `PARAMDEF` formatted for DS1
-    pub fn empty() -> Self {
+impl Default for ParamDef {
+    fn default() -> Self {
         Self {
-            data_version: 0,
-            param_type: String::new(),
+            data_version: Default::default(),
+            param_type: Default::default(),
             endian: Endian::Little,
-            unicode: false,
+            unicode: Default::default(),
             format_version: 104,
-            fields: Vec::new(),
-            version_aware: false,
-            basic_fields: false,
+            fields: Default::default(),
+            version_aware: Default::default(),
+            basic_fields: Default::default(),
         }
     }
 }
 
-impl StreamIO<PARAMDEF> for PARAMDEF {
-    fn read<R>(br: &mut BinaryReader<R>) -> io::Result<PARAMDEF>
+impl ParamDef {
+    /// Whether field default, minimum, maximum, and increment may be variable type. If false, they are always floats.
+    pub fn variable_editor_value_types(&self) -> bool {
+        self.format_version >= 203
+    }
+}
+
+impl StreamIO<ParamDef> for ParamDef {
+    fn read<R>(br: &mut BinaryReader<R>) -> io::Result<ParamDef>
     where
         R: Read + Seek
     {
-        let mut out = Self::empty();
+        let mut out = Self::default();
 
         out.endian = match br.get_i8(0x2C)? == -1 {
             true => Endian::Big,
@@ -100,9 +102,33 @@ impl StreamIO<PARAMDEF> for PARAMDEF {
         
         br.assert_i8(&[0, -1])?; // Endianness
         out.unicode = br.read_bool()?;
-        br.assert_i16(&[0, 101, 102, 103, 104, 106, 201, 202, 203])?;
+        br.assert_i16(&[0, 101, 102, 103, 104, 106, 201, 202, 203])?; // Format version
         if out.format_version >= 200 {
             br.assert_i64(&[0x38])?;
+        }
+
+        if !(out.format_version < 200 && header_size == 0x30 || out.format_version >= 200 && header_size == 0xFF) {
+            return Err(io::Error::new(InvalidData, format!("Unexpected header size 0x{header_size:X} for version {}", out.format_version)));
+        }
+
+        out.basic_fields = out.format_version == 0 && field_size == 0x68;
+
+        // Currently omitting format_version == 103, as SoulsFormatsNEXT labels its corresponding field_size as incorrect
+        if !(out.basic_fields 
+            || out.format_version == 101 && field_size == 0x8C
+            || out.format_version == 102 && field_size == 0xAC
+            || out.format_version == 104 && field_size == 0xB0
+            || out.format_version == 106 && field_size == 0x48
+            || out.format_version == 201 && field_size == 0xD0
+            || out.format_version == 202 && field_size == 0x68
+            || out.format_version == 203 && field_size == 0x88
+        )
+        {
+            return Err(io::Error::new(InvalidData, format!("Unexpected header size 0x{header_size:X} for version {}", out.format_version)));
+        }
+
+        for _ in 0..field_count {
+            out.fields.push(Field::from_binary_reader(br, &out)?);
         }
 
         Ok(out)
@@ -116,5 +142,5 @@ impl StreamIO<PARAMDEF> for PARAMDEF {
     }
 }
 
-impl ByteIO<PARAMDEF> for PARAMDEF {}
-impl FileIO<PARAMDEF> for PARAMDEF {}
+impl ByteIO<ParamDef> for ParamDef {}
+impl FileIO<ParamDef> for ParamDef {}

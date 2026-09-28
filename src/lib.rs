@@ -7,11 +7,11 @@ mod oodle;
 pub mod param;
 pub mod util;
 
-pub use btl::BTL;
+pub use btl::Btl;
 pub use dcx::{
-    DCX,
+    Dcx,
     compression_info::{CompressionInfo, DcxDfltArgs, DcxDfltPreset, DcxKrakArgs},
 };
-pub use fmg::FMG;
+pub use fmg::Fmg;
 pub use io::{ByteIO, FileIO};
-pub use param::PARAM;
+pub use param::Param;

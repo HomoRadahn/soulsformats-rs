@@ -6,7 +6,7 @@ use crate::{
     util,
 };
 
-/// A file in `BND2`
+/// A file in `Bnd2`
 #[derive(Debug, Clone, PartialEq)]
 pub struct File {
     /// ID of this `File`
@@ -25,13 +25,14 @@ impl File {
     pub fn new(id: i32, name: String, bytes: Vec<u8>) -> Self {
         Self { id, name, bytes }
     }
+}
 
-    /// Creates an empty `File`
-    pub fn empty() -> Self {
-        Self {
+impl Default for File {
+    fn default() -> Self {
+        Self { 
             id: -1,
-            name: String::new(),
-            bytes: Vec::new(),
+            name: Default::default(),
+            bytes: Default::default()
         }
     }
 }
@@ -43,16 +44,18 @@ pub(crate) struct FileHeader {
     pub(crate) size: i32,
 }
 
-impl FileHeader {
-    pub(crate) fn empty() -> Self {
-        Self {
+impl Default for FileHeader {
+    fn default() -> Self {
+        Self { 
             id: -1,
-            name: String::new(),
+            name: Default::default(),
             offset: -1,
-            size: -1,
+            size: -1
         }
     }
+}
 
+impl FileHeader {
     pub(crate) fn from(file: &File) -> Self {
         Self {
             id: file.id,
@@ -70,7 +73,7 @@ impl FileHeader {
     where
         R: Read + Seek,
     {
-        let mut out = Self::empty();
+        let mut out = Self::default();
         out.id = br.read_i32()?;
         out.offset = br.read_i32()?;
         out.size = br.read_i32()?;

@@ -2,14 +2,14 @@ use core::fmt;
 use std::io::{self, Read, Seek, Write};
 
 use crate::{
-    DCX,
+    Dcx,
     binder::format::{FileFlags, Format},
     dcx::compression_info::CompressionInfo,
     io::{BinaryReader, BinaryWriter, Endian},
     util,
 };
 
-/// A generic file in `BND3`, `BND4`, `BXF3`, `BXF4` containers
+/// A generic file in `Bnd3`, `Bnd4`, `Bxf3`, `Bxf4` containers
 #[derive(Debug, Clone, PartialEq)]
 pub struct File {
     /// Flags of this `File`
@@ -20,7 +20,7 @@ pub struct File {
     pub name: String,
     /// Bytes contained in this `File`
     pub bytes: Vec<u8>,
-    /// Compression of this `File`, different from DCX compression
+    /// Compression of this `File`, different from Dcx compression
     pub compression: CompressionInfo,
 }
 
@@ -203,7 +203,7 @@ impl BinderFileHeader {
         let compressed = br.get_vec_u8(self.data_offset as u64, self.compressed_size as u64)?;
 
         let (bytes, compression) = if self.flags.contains(FileFlags::Compressed) {
-            let dcx = DCX::from_bytes(compressed)?;
+            let dcx = Dcx::from_bytes(compressed)?;
             (dcx.data, dcx.compression)
         } else {
             (compressed, CompressionInfo::Zlib)
@@ -312,7 +312,7 @@ impl BinderFileHeader {
         self.uncompressed_size = util::convert_num(bytes.len())?;
 
         if self.flags.contains(FileFlags::Compressed) {
-            let compressed = DCX::new(bytes.to_vec(), self.compression).to_bytes()?;
+            let compressed = Dcx::new(bytes.to_vec(), self.compression).to_bytes()?;
             self.compressed_size = util::convert_num(compressed.len())?;
             bw.write_vec_u8(compressed)?;
         } else {

@@ -10,40 +10,41 @@ mod file;
 pub use file::File;
 use file::FileHeader;
 
-/// BND file, used in old titles
+/// Bnd file, used in old titles
 #[derive(Debug, Clone, PartialEq)]
-pub struct BND {
-    /// `BND` version
+pub struct Bnd {
+    /// `Bnd` version
     pub internal_version: i32,
-    /// First `BND` format definition
+    /// First `Bnd` format definition
     pub format0: u16,
-    /// The second BND format definition.
+    /// The second Bnd format definition.
     /// Bit 0 determines if filenames exist.
     /// Bit 1 determines if `root_file_path` exists
     pub format1: u16,
-    /// Files in the `BND`
+    /// Files in the `Bnd`
     pub files: Vec<File>,
-    /// Root file path. Not all `BND` have this
+    /// Root file path. Not all `Bnd` have this
     pub root_file_path: Option<String>,
 }
 
-impl BND {
-    /// Initializes an empty `BND`
-    pub fn empty() -> Self {
-        Self {
+impl Default for Bnd {
+    fn default() -> Self {
+        Self { 
             internal_version: -1,
-            format0: 0,
-            format1: 0,
-            files: Vec::new(),
-            root_file_path: None,
+            format0: Default::default(),
+            format1: Default::default(),
+            files: Default::default(),
+            root_file_path: Default::default()
         }
     }
+}
 
+impl Bnd {
     fn read_header<R>(&mut self, br: &mut BinaryReader<R>) -> io::Result<Vec<FileHeader>>
     where
         R: Read + Seek,
     {
-        br.assert_ascii(&["BND\0"])?;
+        br.assert_ascii(&["Bnd\0"])?;
         br.assert_u16(&[0xFFFF])?;
         br.assert_u16(&[0])?;
         self.internal_version = br.read_i32()?;
@@ -68,12 +69,12 @@ impl BND {
     }
 }
 
-impl StreamIO<BND> for BND {
-    fn read<R>(br: &mut BinaryReader<R>) -> io::Result<BND>
+impl StreamIO<Bnd> for Bnd {
+    fn read<R>(br: &mut BinaryReader<R>) -> io::Result<Bnd>
     where
         R: Read + Seek,
     {
-        let mut out = Self::empty();
+        let mut out = Self::default();
         let file_headers = out.read_header(br)?;
         for header in file_headers {
             out.files.push(header.read_file_data(br)?);
@@ -87,7 +88,7 @@ impl StreamIO<BND> for BND {
     {
         let file_headers: Vec<_> = self.files.iter().map(FileHeader::from).collect();
 
-        bw.write_ascii("BND", true)?;
+        bw.write_ascii("Bnd", true)?;
         bw.write_u16(0xFFFF)?;
         bw.write_u16(0)?;
         bw.write_i32(self.internal_version)?;
@@ -142,9 +143,9 @@ impl StreamIO<BND> for BND {
         if br.length()? < 4 {
             return Ok(false);
         }
-        Ok(br.get_ascii_len(0, 4)? == "BND\0")
+        Ok(br.get_ascii_len(0, 4)? == "Bnd\0")
     }
 }
 
-impl ByteIO<BND> for BND {}
-impl FileIO<BND> for BND {}
+impl ByteIO<Bnd> for Bnd {}
+impl FileIO<Bnd> for Bnd {}

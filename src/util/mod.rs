@@ -1,7 +1,7 @@
 use std::io::{self, Cursor, ErrorKind, Read, Seek};
 
 use crate::io::Endian;
-use crate::{DCX, dcx::compression_info::CompressionInfo, io::BinaryReader};
+use crate::{Dcx, dcx::compression_info::CompressionInfo, io::BinaryReader};
 
 /// Decompresses data from `BinaryReader` if necessary, returning a new `BinaryReader` over bytes
 pub fn get_decompressed_binary_reader<R>(
@@ -10,9 +10,9 @@ pub fn get_decompressed_binary_reader<R>(
 where
     R: Read + Seek,
 {
-    if DCX::is(br)? {
+    if Dcx::is(br)? {
         let len = br.length()?;
-        let dcx = DCX::from_bytes(br.get_vec_u8(0, len)?)?;
+        let dcx = Dcx::from_bytes(br.get_vec_u8(0, len)?)?;
         Ok((
             BinaryReader::from_bytes(dcx.data, Endian::Little, false),
             dcx.compression,
@@ -43,7 +43,7 @@ where
     })
 }
 
-/// FromSoft's basic filename hashing algorithm, used in `BND4` and `BXF4`
+/// FromSoft's basic filename hashing algorithm, used in `Bnd4` and `Bxf4`
 pub(crate) fn from_path_hash(text: impl Into<String>) -> u32 {
     let mut hashable = text.into().to_lowercase().replace("\\", "/");
     if !hashable.starts_with('/') {

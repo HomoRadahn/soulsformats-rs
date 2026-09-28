@@ -17,14 +17,14 @@ pub use format::*;
 
 /// Generic binder archive use in games: Metal Wolf Chaos, A.C.E. 2, AC: FF (PSP), AC: NB, AC: LR (PSP+PS2)
 #[derive(Debug, Clone, PartialEq)]
-pub struct BND2 {
+pub struct Bnd2 {
     /// Header Info Flags
     pub header_info_flags: HeaderInfoFlags,
     /// File Info Flags
     pub file_info_flags: FileInfoFlags,
     pub unk_06: u8,
     pub unk_07: u8,
-    /// Version of `BND2` - usually `202` or `211`
+    /// Version of `Bnd2` - usually `202` or `211`
     pub file_version: i32,
     /// Alignment of each `File`
     pub alignment_size: u16,
@@ -33,14 +33,13 @@ pub struct BND2 {
     pub unk_1b: u8,
     /// Base directory of all files - used only if `FilePathMode::BaseDirectory` is set
     pub base_directory: String,
-    /// Files contained in this `BND2`
+    /// Files contained in this `Bnd2`
     pub files: Vec<File>,
 }
 
-impl BND2 {
-    /// Creates an empty `BND2`
-    pub fn empty() -> Self {
-        Self {
+impl Default for Bnd2 {
+    fn default() -> Self {
+        Self { 
             header_info_flags: HeaderInfoFlags::all(),
             file_info_flags: FileInfoFlags::all(),
             unk_06: 0x00,
@@ -49,56 +48,36 @@ impl BND2 {
             alignment_size: 2048,
             file_path_mode: FilePathMode::FileName,
             unk_1b: 0,
-            base_directory: String::new(),
-            files: Vec::new(),
+            base_directory: Default::default(),
+            files: Default::default()
         }
     }
+}
 
-    /// Creates `BND2` with specified version
+impl Bnd2 {
+    /// Creates `Bnd2` with specified version
     pub fn with_version(version: i32) -> Self {
-        Self {
-            header_info_flags: HeaderInfoFlags::empty(),
-            file_info_flags: FileInfoFlags::empty(),
-            unk_06: 0x00,
-            unk_07: 0x00,
-            file_version: version,
-            alignment_size: 2048,
-            file_path_mode: FilePathMode::FileName,
-            unk_1b: 0,
-            base_directory: String::new(),
-            files: Vec::new(),
-        }
+        let mut out = Self::default();
+        out.file_version = version;
+
+        out
     }
 
-    /// Creates `BND2` with specified `FilePathMode`
+    /// Creates `Bnd2` with specified `FilePathMode`
     pub fn with_path_mode(file_path_mode: FilePathMode) -> Self {
-        Self {
-            header_info_flags: HeaderInfoFlags::empty(),
-            file_info_flags: FileInfoFlags::empty(),
-            unk_06: 0x00,
-            unk_07: 0x00,
-            file_version: 211,
-            alignment_size: 2048,
-            file_path_mode,
-            unk_1b: 0,
-            base_directory: String::new(),
-            files: Vec::new(),
-        }
+        let mut out = Self::default();
+        out.file_path_mode = file_path_mode;
+
+        out
     }
 
+    /// Creates `Bnd2` with specified version and `FilePathMode`
     pub fn with_version_path_mode(version: i32, file_path_mode: FilePathMode) -> Self {
-        Self {
-            header_info_flags: HeaderInfoFlags::empty(),
-            file_info_flags: FileInfoFlags::empty(),
-            unk_06: 0x00,
-            unk_07: 0x00,
-            file_version: version,
-            alignment_size: 2048,
-            file_path_mode,
-            unk_1b: 0,
-            base_directory: String::new(),
-            files: Vec::new(),
-        }
+        let mut out = Self::default();
+        out.file_version = version;
+        out.file_path_mode = file_path_mode;
+
+        out
     }
 
     fn read_header<R>(&mut self, br: &mut BinaryReader<R>) -> io::Result<Vec<FileHeader>>
@@ -107,7 +86,7 @@ impl BND2 {
     {
         br.endian = Endian::Little;
 
-        br.assert_ascii(&["BND\0"])?;
+        br.assert_ascii(&["Bnd\0"])?;
         self.header_info_flags = HeaderInfoFlags::try_from(br.read_u8()?)?;
         self.file_info_flags = FileInfoFlags::try_from(br.read_u8()?)?;
         self.unk_06 = br.read_u8()?;
@@ -157,7 +136,7 @@ impl BND2 {
     {
         bw.endian = Endian::Little;
 
-        bw.write_ascii("BND", true)?;
+        bw.write_ascii("Bnd", true)?;
         bw.write_u8(self.header_info_flags.bits())?;
         bw.write_u8(self.file_info_flags.bits())?;
         bw.write_u8(self.unk_06)?;
@@ -236,7 +215,7 @@ impl BND2 {
     }
 }
 
-impl StreamIO<BND2> for BND2 {
+impl StreamIO<Bnd2> for Bnd2 {
     fn is<R>(br: &mut BinaryReader<R>) -> io::Result<bool>
     where
         R: Read + Seek,
@@ -261,18 +240,18 @@ impl StreamIO<BND2> for BND2 {
             _ => return Ok(false), // Invalid FilePathMode (reason for not casting `u8` to enum)
         };
 
-        Ok(magic == "BND\0"
+        Ok(magic == "Bnd\0"
             && (202..=211).contains(&file_version)
             && valid_names_offset
             && (unk_1b == 0 || unk_1b == 1)
             && unk_1c == 0)
     }
 
-    fn read<R>(br: &mut BinaryReader<R>) -> io::Result<BND2>
+    fn read<R>(br: &mut BinaryReader<R>) -> io::Result<Bnd2>
     where
         R: Read + Seek,
     {
-        let mut out = Self::empty();
+        let mut out = Self::default();
         let file_headers = out.read_header(br)?;
         for header in file_headers {
             out.files.push(header.read_file_data(br)?);
@@ -307,5 +286,5 @@ impl StreamIO<BND2> for BND2 {
     }
 }
 
-impl ByteIO<BND2> for BND2 {}
-impl FileIO<BND2> for BND2 {}
+impl ByteIO<Bnd2> for Bnd2 {}
+impl FileIO<Bnd2> for Bnd2 {}

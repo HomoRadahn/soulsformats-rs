@@ -3,21 +3,18 @@ pub use crate::binder::{
     format::{FileFlags, Format},
 };
 use crate::{
-    ByteIO, FileIO,
-    binder::{DateTime, file::BinderFileHeader, format, hashtable},
-    io::{BinaryReader, BinaryWriter, Endian, StreamIO},
-    util,
+    ByteIO, FileIO, binder::{DateTime, file::BinderFileHeader, format, hashtable}, io::{BinaryReader, BinaryWriter, Endian, StreamIO}, util,
 };
 use std::io::{self, ErrorKind::InvalidData, Read, Seek, Write};
 
 /// A general-purpose file container used since DS2
 #[derive(Debug, Clone, PartialEq)]
-pub struct BND4 {
-    /// The files contained within this `BND4`
+pub struct Bnd4 {
+    /// The files contained within this `Bnd4`
     pub files: Vec<File>,
     /// A timestamp or version number, 8 characters maximum
     pub version: String,
-    /// Indicates the format of this `BND4`
+    /// Indicates the format of this `Bnd4`
     pub format: Format,
     pub unk_04: bool,
     pub unk_05: bool,
@@ -31,19 +28,10 @@ pub struct BND4 {
     pub extended: u8,
 }
 
-impl BND4 {
-    /// Initializes `BND3` with specifies parameters, and rest of parameters set to most common values
-    pub fn new(date: DateTime, files: Vec<File>) -> Self {
-        let mut out = Self::empty();
-        out.version = date.to_bnd_timestamp();
-        out.files = files;
-
-        out
-    }
-    /// Creates an empty `BND4` formatted for DS3
-    pub fn empty() -> Self {
-        Self {
-            files: Vec::new(),
+impl Default for Bnd4 {
+    fn default() -> Self {
+        Self { 
+            files: Default::default(),
             version: DateTime {
                 year: 2026,
                 month: 1,
@@ -53,20 +41,31 @@ impl BND4 {
             }
             .to_bnd_timestamp(),
             format: Format::IDs | Format::Names1 | Format::Names2 | Format::Compression,
-            unk_04: false,
-            unk_05: false,
+            unk_04: Default::default(),
+            unk_05: Default::default(),
             endian: Endian::Little,
             bit_endian: Endian::Little,
-            unicode: true,
-            extended: 4,
+            unicode: Default::default(),
+            extended: 4
         }
+    }
+}
+
+impl Bnd4 {
+    /// Initializes `Bnd3` with specifies parameters, and rest of parameters set to most common values
+    pub fn new(date: DateTime, files: Vec<File>) -> Self {
+        let mut out = Self::default();
+        out.version = date.to_bnd_timestamp();
+        out.files = files;
+
+        out
     }
 
     fn read_header<R>(&mut self, br: &mut BinaryReader<R>) -> io::Result<Vec<BinderFileHeader>>
     where
         R: Read + Seek,
     {
-        br.assert_ascii(&["BND4"])?;
+        br.assert_ascii(&["Bnd4"])?;
         self.unk_04 = br.read_bool()?;
         self.unk_05 = br.read_bool()?;
         br.assert_u8(&[0])?;
@@ -135,7 +134,7 @@ impl BND4 {
     {
         bw.endian = self.endian;
 
-        bw.write_ascii("BND4", false)?;
+        bw.write_ascii("Bnd4", false)?;
 
         bw.write_bool(self.unk_04)?;
         bw.write_bool(self.unk_05)?;
@@ -196,22 +195,22 @@ impl BND4 {
     }
 }
 
-impl StreamIO<BND4> for BND4 {
-    fn read<R>(br: &mut BinaryReader<R>) -> io::Result<BND4>
+impl StreamIO<Bnd4> for Bnd4 {
+    fn read<R>(br: &mut BinaryReader<R>) -> io::Result<Bnd4>
     where
         R: Read + Seek,
     {
-        let mut bnd = BND4::empty();
+        let mut out = Bnd4::default();
 
-        let file_headers = bnd.read_header(br)?;
+        let file_headers = out.read_header(br)?;
         let mut files: Vec<File> = Vec::with_capacity(file_headers.len());
 
         for header in file_headers {
             files.push(header.read_file_data(br)?);
         }
 
-        bnd.files = files;
-        Ok(bnd)
+        out.files = files;
+        Ok(out)
     }
 
     fn write<W>(&self, bw: &mut BinaryWriter<W>) -> io::Result<()>
@@ -244,9 +243,9 @@ impl StreamIO<BND4> for BND4 {
     {
         let (mut br_dec, _) = util::get_decompressed_binary_reader(br)?;
         let len = br_dec.length()?;
-        Ok(len >= 4 && br_dec.get_ascii_len(0, 4)? == "BND4")
+        Ok(len >= 4 && br_dec.get_ascii_len(0, 4)? == "Bnd4")
     }
 }
 
-impl ByteIO<BND4> for BND4 {}
-impl FileIO<BND4> for BND4 {}
+impl ByteIO<Bnd4> for Bnd4 {}
+impl FileIO<Bnd4> for Bnd4 {}

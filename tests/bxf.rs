@@ -1,32 +1,32 @@
 use soulsformats_rs::{
-    binder::{BXF3, BXF4, bxf3, bxf4},
+    binder::{Bxf3, Bxf4, bxf3, bxf4},
     dcx::compression_info::CompressionInfo,
 };
 
 #[test]
 fn bxf3() {
-    let mut bxf = BXF3::empty();
+    let mut bxf = Bxf3::default();
     bxf.files = vec![
         bxf3::File::new(
             bxf3::FileFlags::None,
             10,
             "first.bin".to_string(),
-            b"BXF3 first file".to_vec(),
+            b"Bxf3 first file".to_vec(),
             CompressionInfo::DcpDflt,
         ),
         bxf3::File::new(
             bxf3::FileFlags::Compressed,
             20,
             "second.bin".to_string(),
-            b"BXF3 second file with per-file compression".to_vec(),
+            b"Bxf3 second file with per-file compression".to_vec(),
             CompressionInfo::DcpDflt,
         ),
     ];
 
     let (bhd_bytes, bdt_bytes) = bxf.to_bytes().unwrap();
-    assert!(BXF3::is_header_bytes(bhd_bytes.clone()).unwrap());
-    assert!(BXF3::is_data_bytes(bdt_bytes.clone()).unwrap());
-    let round_trip = BXF3::from_bytes(bhd_bytes, bdt_bytes).unwrap();
+    assert!(Bxf3::is_header_bytes(bhd_bytes.clone()).unwrap());
+    assert!(Bxf3::is_data_bytes(bdt_bytes.clone()).unwrap());
+    let round_trip = Bxf3::from_bytes(bhd_bytes, bdt_bytes).unwrap();
 
     assert_eq!(
         bxf.version.trim_end_matches('\0'),
@@ -49,19 +49,19 @@ fn bxf3() {
 
 #[test]
 fn bxf4() {
-    let mut bxf = BXF4::empty();
+    let mut bxf = Bxf4::default();
     bxf.files = vec![bxf4::File::new(
         bxf4::FileFlags::None,
         40,
         "bxf4.bin".to_string(),
-        b"BXF4 in memory".to_vec(),
+        b"Bxf4 in memory".to_vec(),
         CompressionInfo::DcpDflt,
     )];
 
     let (bhd_bytes, bdt_bytes) = bxf.to_bytes().unwrap();
-    assert!(BXF4::is_header_bytes(bhd_bytes.clone()).unwrap());
-    assert!(BXF4::is_data_bytes(bdt_bytes.clone()).unwrap());
-    let round_trip = BXF4::from_bytes(bhd_bytes, bdt_bytes).unwrap();
+    assert!(Bxf4::is_header_bytes(bhd_bytes.clone()).unwrap());
+    assert!(Bxf4::is_data_bytes(bdt_bytes.clone()).unwrap());
+    let round_trip = Bxf4::from_bytes(bhd_bytes, bdt_bytes).unwrap();
 
     assert_eq!(bxf.format, round_trip.format);
     assert_eq!(bxf.unicode, round_trip.unicode);

@@ -184,16 +184,16 @@ pub(crate) fn compress(
     let oodle = load()?;
     let level = compression_level(level)?;
     let output_size = oodle.compressed_buffer_size(compressor, input.len());
-    let mut output = vec![0u8; output_size];
-    let compressed_size = oodle.compress(compressor, level, input, &mut output)?;
-    output.truncate(compressed_size);
-    Ok(output)
+    let mut out = vec![0u8; output_size];
+    let compressed_size = oodle.compress(compressor, level, input, &mut out)?;
+    out.truncate(compressed_size);
+    Ok(out)
 }
 
 pub(crate) fn decompress(input: &[u8], output_size: usize) -> io::Result<Vec<u8>> {
     let oodle = load()?;
-    let mut output = vec![0u8; output_size];
-    let written = oodle.decompress(input, &mut output)?;
-    output.truncate(written);
-    Ok(output)
+    let mut out = vec![0u8; output_size];
+    let written = oodle.decompress(input, &mut out)?;
+    out.truncate(written);
+    Ok(out)
 }
