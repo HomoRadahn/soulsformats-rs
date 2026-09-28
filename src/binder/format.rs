@@ -3,7 +3,7 @@ use std::io::{self, Read, Seek, Write};
 use crate::io::{BinaryReader, BinaryWriter, Endian};
 use crate::util::DateTimeExt;
 use bitflags::bitflags;
-use chrono::{DateTime, Datelike, Local, TimeZone, Timelike};
+use chrono::{DateTime, Datelike, TimeZone, Timelike};
 
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -145,32 +145,6 @@ impl FileFlags {
         };
 
         bw.write_u8(raw)
-    }
-}
-
-/// Converts a
-pub fn date_to_bnd_timestamp(date: DateTime<Local>) -> String {
-    let year = if date.year() - 2000 > 99 || date.year() < 0 {
-        0
-    } else {
-        date.year() - 2000
-    };
-
-    let month = char::from_u32(date.month() + 'A' as u32).unwrap_or('1');
-    let hour = char::from_u32(date.month() + 'A' as u32).unwrap_or('1');
-
-    let string: String = format!("{}{}{}{}{}", year, month, date.day(), hour, date.minute());
-
-    let len = string.chars().count();
-
-    if len >= 8 {
-        string
-    } else {
-        let padding_count = 8 - len;
-        let mut result = String::with_capacity(string.len() + padding_count);
-        result.push_str(&string);
-        result.extend(std::iter::repeat_n('\0', padding_count));
-        result
     }
 }
 

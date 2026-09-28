@@ -9,15 +9,15 @@ fn bxf3() {
     bxf.files = vec![
         bxf3::File::new(
             bxf3::FileFlags::None,
-            10,
-            "first.bin".to_string(),
+            Some(10),
+            Some("first.bin"),
             b"Bxf3 first file".to_vec(),
             CompressionInfo::DcpDflt,
         ),
         bxf3::File::new(
             bxf3::FileFlags::Compressed,
-            20,
-            "second.bin".to_string(),
+            Some(20),
+            Some("second.bin"),
             b"Bxf3 second file with per-file compression".to_vec(),
             CompressionInfo::DcpDflt,
         ),
@@ -52,8 +52,8 @@ fn bxf4() {
     let mut bxf = Bxf4::default();
     bxf.files = vec![bxf4::File::new(
         bxf4::FileFlags::None,
-        40,
-        "bxf4.bin".to_string(),
+        Some(40),
+        Some("bxf4.bin"),
         b"Bxf4 in memory".to_vec(),
         CompressionInfo::DcpDflt,
     )];

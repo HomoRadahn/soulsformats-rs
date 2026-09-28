@@ -74,6 +74,7 @@ macro_rules! impl_numeric_reader {
     };
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct BinaryReader<R> {
     inner: R,
     pub endian: Endian,

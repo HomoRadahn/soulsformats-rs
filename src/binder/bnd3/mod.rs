@@ -1,7 +1,7 @@
 use chrono::{DateTime, Local, TimeZone};
 
 use crate::{
-    binder::{file::BinderFileHeader, format},
+    binder::file::BinderFileHeader,
     io::{BinaryReader, BinaryWriter, ByteIO, Endian, FileIO, StreamIO},
     util::{self, DateTimeExt},
 };
@@ -34,7 +34,7 @@ impl Default for Bnd3 {
     fn default() -> Self {
         Self {
             files: Default::default(),
-            version: format::date_to_bnd_timestamp(Local::now()),
+            version: Local::now().to_bnd_timestamp(),
             format: Format::IDs | Format::Names1 | Format::Names2 | Format::Compression,
             endian: Endian::Little,
             bit_endian: Endian::Little,

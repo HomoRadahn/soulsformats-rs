@@ -9,8 +9,8 @@ use crate::{
 /// A file in `Bnd2`
 #[derive(Debug, Clone, PartialEq)]
 pub struct File {
-    /// ID of this `File`
-    pub id: i32,
+    /// ID of this `File`, or `None` if it has no ID
+    pub id: Option<i32>,
     /// The name of this `File`<br>
     /// Will be set to `id` if name does not exist<br>
     /// Will be a path with a drive letter if `FilePathMode::FullPath` is set<br>
@@ -22,15 +22,15 @@ pub struct File {
 
 impl File {
     /// Initializes a new `File` with specified parameters
-    pub fn new(id: i32, name: String, bytes: Vec<u8>) -> Self {
-        Self { id, name, bytes }
+    pub fn new(id: Option<i32>, name: impl Into<String>, bytes: Vec<u8>) -> Self {
+        Self { id, name: name.into(), bytes }
     }
 }
 
 impl Default for File {
     fn default() -> Self {
         Self {
-            id: -1,
+            id: None,
             name: Default::default(),
             bytes: Default::default(),
         }
@@ -58,7 +58,7 @@ impl Default for FileHeader {
 impl FileHeader {
     pub(crate) fn from(file: &File) -> Self {
         Self {
-            id: file.id,
+            id: file.id.unwrap_or(-1),
             name: file.name.clone(),
             offset: -1,
             size: -1,
@@ -119,7 +119,11 @@ impl FileHeader {
         R: Read + Seek,
     {
         let bytes = br.get_vec_u8(self.offset as u64, self.size as u64)?;
-        Ok(File::new(self.id, self.name.clone(), bytes))
+        Ok(File::new(
+            (self.id != -1).then_some(self.id),
+            self.name.clone(),
+            bytes,
+        ))
     }
 
     pub(crate) fn write_file_data<W>(

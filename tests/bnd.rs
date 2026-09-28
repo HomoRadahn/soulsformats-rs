@@ -1,16 +1,18 @@
 use soulsformats_rs::{
     ByteIO, Dcx, FileIO,
-    binder::{Bnd, Bnd2, Bnd3, Bnd4, bnd, bnd2},
+    binder::{Bnd, Bnd2, Bnd3, Bnd4, bnd, bnd2, bnd3, bnd4},
+    dcx::compression_info::CompressionInfo,
 };
 
 #[test]
 fn bnd() {
     let mut bnd = Bnd::default();
     bnd.internal_version = 1;
-    bnd.root_file_path = Some(String::from("L:\\"));
+    bnd.root_file_path = Some(String::from("Q:\\"));
     bnd.files = vec![
-        bnd::File::new(1, "こんにちは", vec![1, 2, 3, 4, 5, 6, 7]),
-        bnd::File::new(2, "こんにちは", vec![1, 2, 3, 4, 5, 6, 7]),
+        bnd::File::new(Some(1), Some("こんにちは"), vec![1, 2, 3, 4, 5, 6, 7]),
+        bnd::File::new(Some(2), Some("こんにちは"), vec![1, 2, 3, 4, 5, 6, 7]),
+        bnd::File::new(Some(3), None::<String>, vec![8, 9, 10]),
     ];
     let round_trip = Bnd::from_bytes(bnd.to_bytes().unwrap()).unwrap();
     assert_eq!(bnd.internal_version, round_trip.internal_version);
@@ -51,7 +53,7 @@ fn bnd2_read() {
 fn bnd2() {
     let mut bnd = Bnd2::default();
     bnd.files = vec![bnd2::File::new(
-        7,
+        Some(7),
         "test.bin".to_string(),
         b"BND2 test".to_vec(),
     )];
@@ -59,9 +61,22 @@ fn bnd2() {
     let round_trip = Bnd2::from_bytes(bnd.to_bytes().unwrap()).unwrap();
     assert_eq!(round_trip.file_info_flags, bnd.file_info_flags);
     assert_eq!(round_trip.file_path_mode as u8, bnd.file_path_mode as u8);
-    assert_eq!(round_trip.files[0].id, 7);
+    assert_eq!(round_trip.files[0].id, Some(7));
     assert_eq!(round_trip.files[0].name, "test.bin");
     assert_eq!(round_trip.files[0].bytes, b"BND2 test");
+}
+
+#[test]
+fn bnd2_missing_id() {
+    let mut bnd = Bnd2::default();
+    bnd.files = vec![bnd2::File::new(
+        None,
+        "no-id.bin".to_string(),
+        vec![1, 2, 3],
+    )];
+
+    let round_trip = Bnd2::from_bytes(bnd.to_bytes().unwrap()).unwrap();
+    assert_eq!(round_trip.files[0].id, None);
 }
 
 #[test]
@@ -69,10 +84,10 @@ fn bnd2_no_names() {
     let mut bnd = Bnd2::with_path_mode(bnd2::FilePathMode::Nameless);
     bnd.file_info_flags =
         bnd2::FileInfoFlags::ID | bnd2::FileInfoFlags::Offset | bnd2::FileInfoFlags::Size;
-    bnd.files = vec![bnd2::File::new(9, "test.bin".to_string(), vec![1, 2, 3])];
+    bnd.files = vec![bnd2::File::new(Some(9), "test.bin".to_string(), vec![1, 2, 3])];
 
     let round_trip = Bnd2::from_bytes(bnd.to_bytes().unwrap()).unwrap();
-    assert_eq!(round_trip.files[0].id, 9);
+    assert_eq!(round_trip.files[0].id, Some(9));
     assert!(round_trip.files[0].name.is_empty());
     assert_eq!(round_trip.files[0].bytes, vec![1, 2, 3]);
 }
@@ -138,4 +153,35 @@ fn bnd4() {
         assert_eq!(file.bytes, round_trip_file.bytes);
         assert_eq!(file.compression, round_trip_file.compression);
     }
+}
+
+#[test]
+fn bnd3_and_bnd4_missing_file_metadata() {
+    let mut bnd3 = Bnd3::default();
+    bnd3.format = bnd3::Format::IDs | bnd3::Format::Compression;
+    bnd3.files = vec![bnd3::File::new(
+        bnd3::FileFlags::None,
+        None,
+        None::<String>,
+        vec![1, 2, 3],
+        CompressionInfo::Zlib,
+    )];
+
+    let round_trip = Bnd3::from_bytes(bnd3.to_bytes().unwrap()).unwrap();
+    assert_eq!(round_trip.files[0].id, None);
+    assert_eq!(round_trip.files[0].name, None);
+
+    let mut bnd4 = Bnd4::default();
+    bnd4.format = bnd4::Format::IDs | bnd4::Format::Compression;
+    bnd4.files = vec![bnd4::File::new(
+        bnd4::FileFlags::None,
+        None,
+        None::<String>,
+        vec![1, 2, 3],
+        CompressionInfo::Zlib,
+    )];
+
+    let round_trip = Bnd4::from_bytes(bnd4.to_bytes().unwrap()).unwrap();
+    assert_eq!(round_trip.files[0].id, None);
+    assert_eq!(round_trip.files[0].name, None);
 }

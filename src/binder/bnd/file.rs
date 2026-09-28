@@ -4,25 +4,29 @@ use std::io::{self, Read, Seek};
 /// A file in a `Bnd` container.
 #[derive(Debug, Clone, PartialEq)]
 pub struct File {
-    pub id: i32,
-    pub name: String,
+    pub id: Option<i32>,
+    pub name: Option<String>,
     pub bytes: Vec<u8>,
 }
 
 impl File {
     /// Creates a new `File`
-    pub fn new(id: i32, name: impl Into<String>, bytes: Vec<u8>) -> Self {
+    pub fn new(id: Option<i32>, name: Option<impl Into<String>>, bytes: Vec<u8>) -> Self {
+        let name = match name {
+            Some(text) => Some(text.into()),
+            None => None
+        };
         Self {
             id,
-            name: name.into(),
+            name: name,
             bytes,
         }
     }
 }
 
 pub struct FileHeader {
-    pub id: i32,
-    pub name: String,
+    pub id: Option<i32>,
+    pub name: Option<String>,
     pub offset: u32,
     pub size: u32,
 }
@@ -46,13 +50,13 @@ impl FileHeader {
         let size = br.read_u32()?;
         let name_offset = br.read_u32()?;
         let name = if name_offset != 0 {
-            br.get_shift_jis(name_offset as u64)?
+            Some(br.get_shift_jis(name_offset as u64)?)
         } else {
-            format!("file_{id}")
+            None
         };
 
         Ok(Self {
-            id,
+            id: (id != -1).then_some(id),
             name,
             offset,
             size,

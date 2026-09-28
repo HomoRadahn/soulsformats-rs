@@ -14,10 +14,10 @@ use crate::{
 pub struct File {
     /// Flags of this `File`
     pub flags: FileFlags,
-    /// ID of this `File`
-    pub id: i32,
-    /// Name of this `File`
-    pub name: String,
+    /// ID of this `File`, or `None` if the format or file has no ID
+    pub id: Option<i32>,
+    /// Name of this `File`, or `None` if the format or file has no name
+    pub name: Option<String>,
     /// Bytes contained in this `File`
     pub bytes: Vec<u8>,
     /// Compression of this `File`, different from Dcx compression
@@ -28,15 +28,15 @@ impl File {
     /// Creates a new `File`, with zlib compression
     pub fn new(
         flags: FileFlags,
-        id: i32,
-        name: impl Into<String>,
+        id: Option<i32>,
+        name: Option<impl Into<String>>,
         bytes: Vec<u8>,
         compression: CompressionInfo,
     ) -> Self {
         Self {
             flags,
             id,
-            name: name.into(),
+            name: name.map(Into::into),
             bytes,
             compression,
         }
@@ -45,21 +45,21 @@ impl File {
 
 pub(crate) struct BinderFileHeader {
     pub flags: FileFlags,
-    pub id: i32,
-    pub name: String,
+    pub id: Option<i32>,
+    pub name: Option<String>,
     pub compression: CompressionInfo,
     pub compressed_size: i64,
-    pub uncompressed_size: i64,
+    pub uncompressed_size: Option<i64>,
     pub data_offset: i64,
 }
 
 impl BinderFileHeader {
     pub(crate) fn new(
         flags: FileFlags,
-        id: i32,
-        name: String,
+        id: Option<i32>,
+        name: Option<String>,
         compressed_size: i64,
-        uncompressed_size: i64,
+        uncompressed_size: Option<i64>,
         data_offset: i64,
     ) -> Self {
         Self {
@@ -80,7 +80,7 @@ impl BinderFileHeader {
             name: file.name.clone(),
             compression: file.compression,
             compressed_size: -1,
-            uncompressed_size: -1,
+            uncompressed_size: None,
             data_offset: -1,
         }
     }
@@ -107,22 +107,23 @@ impl BinderFileHeader {
         };
 
         let id = if format.contains(Format::IDs) {
-            br.read_i32()?
+            let id = br.read_i32()?;
+            (id != -1).then_some(id)
         } else {
-            -1
+            None
         };
 
         let name = if format.contains(Format::Names1 | Format::Names2) {
             let name_offset = util::convert_num(br.read_i32()?)?;
-            br.get_shift_jis(name_offset)?
+            Some(br.get_shift_jis(name_offset)?)
         } else {
-            "".to_string()
+            None
         };
 
         let uncompressed_size = if format.contains(Format::Compression) {
-            br.read_i32()? as i64
+            Some(br.read_i32()? as i64)
         } else {
-            -1
+            None
         };
 
         Ok(Self::new(
@@ -153,9 +154,9 @@ impl BinderFileHeader {
         let compressed_size = br.read_i64()?;
 
         let uncompressed_size = if format.contains(Format::Compression) {
-            br.read_i64()?
+            Some(br.read_i64()?)
         } else {
-            -1
+            None
         };
 
         let data_offset = if format.contains(Format::LongOffsets) {
@@ -165,24 +166,26 @@ impl BinderFileHeader {
         };
 
         let mut id = if format.contains(Format::IDs) {
-            br.read_i32()?
+            let id = br.read_i32()?;
+            (id != -1).then_some(id)
         } else {
-            -1
+            None
         };
 
         let name = if format.contains(Format::Names1 | Format::Names2) {
             let name_offset = br.read_u32()? as u64;
             if unicode {
-                br.get_utf16(name_offset)?
+                Some(br.get_utf16(name_offset)?)
             } else {
-                br.get_shift_jis(name_offset)?
+                Some(br.get_shift_jis(name_offset)?)
             }
         } else {
-            "".to_string()
+            None
         };
 
         if format == Format::Names1 {
-            id = br.read_i32()?;
+            let read_id = br.read_i32()?;
+            id = (read_id != -1).then_some(read_id);
             br.assert_i32(&[0])?;
         };
 
@@ -242,7 +245,7 @@ impl BinderFileHeader {
         }
 
         if format.contains(Format::IDs) {
-            bw.write_i32(self.id)?;
+            bw.write_i32(self.id.unwrap_or(-1))?;
         }
 
         if format.contains(Format::Names1 | Format::Names2) {
@@ -285,7 +288,7 @@ impl BinderFileHeader {
         }
 
         if format.contains(Format::IDs) {
-            bw.write_i32(self.id)?;
+            bw.write_i32(self.id.unwrap_or(-1))?;
         }
 
         if format.contains(Format::Names1 | Format::Names2) {
@@ -293,7 +296,7 @@ impl BinderFileHeader {
         }
 
         if format == Format::Names1 {
-            bw.write_i32(self.id)?;
+            bw.write_i32(self.id.unwrap_or(-1))?;
             bw.write_i32(0)?;
         }
 
@@ -309,7 +312,7 @@ impl BinderFileHeader {
         }
 
         self.data_offset = util::convert_num(bw.position()?)?;
-        self.uncompressed_size = util::convert_num(bytes.len())?;
+        self.uncompressed_size = Some(util::convert_num(bytes.len())?);
 
         if self.flags.contains(FileFlags::Compressed) {
             let compressed = Dcx::new(bytes.to_vec(), self.compression).to_bytes()?;
@@ -343,7 +346,9 @@ impl BinderFileHeader {
         if format.contains(Format::Compression) {
             bw.fill_i32(
                 format!("file_{index}_uncompressed_size"),
-                util::convert_num(self.uncompressed_size)?,
+                util::convert_num(self.uncompressed_size.ok_or_else(|| {
+                    io::Error::new(io::ErrorKind::InvalidData, "missing uncompressed size")
+                })?)?,
             )?;
         }
 
@@ -381,7 +386,9 @@ impl BinderFileHeader {
         if format.contains(Format::Compression) {
             bw_header.fill_i32(
                 format!("file_{index}_uncompressed_size"),
-                util::convert_num(self.uncompressed_size)?,
+                util::convert_num(self.uncompressed_size.ok_or_else(|| {
+                    io::Error::new(io::ErrorKind::InvalidData, "missing uncompressed size")
+                })?)?,
             )?;
         }
 
@@ -417,7 +424,9 @@ impl BinderFileHeader {
         if format.contains(Format::Compression) {
             bw.fill_i64(
                 format!("file_{index}_uncompressed_size"),
-                self.uncompressed_size,
+                self.uncompressed_size.ok_or_else(|| {
+                    io::Error::new(io::ErrorKind::InvalidData, "missing uncompressed size")
+                })?,
             )?;
         }
 
@@ -455,7 +464,9 @@ impl BinderFileHeader {
         if format.contains(Format::Compression) {
             bw_header.fill_i64(
                 format!("file_{index}_uncompressed_size"),
-                self.uncompressed_size,
+                self.uncompressed_size.ok_or_else(|| {
+                    io::Error::new(io::ErrorKind::InvalidData, "missing uncompressed size")
+                })?,
             )?;
         }
 
@@ -481,13 +492,13 @@ impl BinderFileHeader {
     where
         W: Write + Seek,
     {
-        // Calling bare unwrap(), since name can only be none if format doesn't have names
         if format.contains(Format::Names1 | Format::Names2) {
             let pos = bw.position()?;
             bw.fill_i32(format!("file_{index}_name_offset"), util::convert_num(pos)?)?;
+            let name = self.name.as_deref().unwrap_or_default();
             match unicode {
-                true => bw.write_utf16(&self.name, true)?,
-                false => bw.write_shift_jis(&self.name, true)?,
+                true => bw.write_utf16(name, true)?,
+                false => bw.write_shift_jis(name, true)?,
             };
         }
 
@@ -500,8 +511,8 @@ impl fmt::Display for File {
         write!(
             f,
             "ID: {} | Name: {} | Length: {} | Flags: {}",
-            self.id,
-            self.name,
+            self.id.map_or_else(|| "<none>".to_string(), |id| id.to_string()),
+            self.name.as_deref().unwrap_or("<none>"),
             self.bytes.len(),
             self.flags.bits()
         )

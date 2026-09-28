@@ -42,7 +42,10 @@ where
     let mut hash_lists: Vec<Vec<PathHash>> = (0..group_count).map(|_| Vec::new()).collect();
 
     for (index, file) in files.iter().enumerate() {
-        let path_hash = PathHash::new(util::convert_num(index)?, file.name.clone());
+        let path_hash = PathHash::new(
+            util::convert_num(index)?,
+            file.name.as_deref().unwrap_or_default(),
+        );
         let group = path_hash.hash % group_count;
         hash_lists[group as usize].push(path_hash);
     }

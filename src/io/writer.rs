@@ -47,6 +47,7 @@ macro_rules! impl_numeric_writer {
     };
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct BinaryWriter<W> {
     inner: W,
     pub endian: Endian,

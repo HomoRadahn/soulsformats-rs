@@ -8,13 +8,18 @@ fn decompress_write(path: String) -> Result<(), Box<dyn Error>> {
     fs::create_dir_all(&output_dir)?;
 
     for file in bnd.files {
-        let name_path = Path::new(&file.name);
-        let display_name: std::path::PathBuf = name_path.components().skip(4).collect();
-        let output_path = output_dir.join(display_name);
-        if let Some(parent) = output_path.parent() {
-            fs::create_dir_all(parent)?;
+        if let Some(name) = &file.name {
+            let name_path = Path::new(name);
+            let display_name: std::path::PathBuf = name_path.components().skip(4).collect();
+            let output_path = output_dir.join(display_name);
+            if let Some(parent) = output_path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            fs::write(output_path, file.bytes)?;
         }
-        fs::write(output_path, file.bytes)?;
+        else {
+            eprintln!("Nameless file skipped");
+        }
     }
 
     Ok(())

@@ -100,7 +100,13 @@ impl StreamIO<Bnd> for Bnd {
         bw.write_u32(0)?;
 
         for (index, (header, file)) in file_headers.iter().zip(&self.files).enumerate() {
-            bw.write_i32(header.id)?;
+            if let Some(id) = header.id {
+                bw.write_i32(id)?;
+            }
+            else {
+                bw.write_i32(-1)?;
+            }
+
             bw.reserve_i32(format!("file-offset-{index}"))?;
             bw.write_i32(util::convert_num(file.bytes.len())?)?;
             bw.reserve_i32(format!("file-name-{index}"))?;
@@ -116,9 +122,14 @@ impl StreamIO<Bnd> for Bnd {
         }
 
         for (index, header) in file_headers.iter().enumerate() {
-            let position = bw.position()?;
-            bw.fill_i32(format!("file-name-{index}"), util::convert_num(position)?)?;
-            bw.write_shift_jis(&header.name, true)?;
+            if let Some(name) = &header.name {
+                let position = bw.position()?;
+                bw.fill_i32(format!("file-name-{index}"), util::convert_num(position)?)?;
+                bw.write_shift_jis(name, true)?;
+            }
+            else {
+                bw.fill_i32(format!("file-name-{index}"), 0)?;
+            }
         }
         bw.pad_00(0x10)?;
 
