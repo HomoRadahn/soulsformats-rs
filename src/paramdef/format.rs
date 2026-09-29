@@ -2,28 +2,27 @@ use std::io;
 
 use bitflags::bitflags;
 
-#[allow(non_camel_case_types)]
-/// Supported primitive field types, named after XML paramdef types
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Supported field types
 pub enum ParamDefType {
-    s8,
-    u8,
-    s16,
-    u16,
-    s32,
-    u32,
-    /// 4 bytes representing `bool`
-    b32,
-    f32,
-    /// 4 bytes representing `f32`, used for angles
-    angle32,
-    /// 8 bytes representing `f64`
-    f64,
+    I8,
+    U8,
+    I16,
+    U16,
+    I32,
+    U32,
+    /// Represented by 4 bytes
+    Bool,
+    F32,
+    /// Represented by `f32`
+    Angle,
+    F64,
     /// Byte or array of bytes used for padding / placeholding
-    dummy8,
+    ArrayU8,
     /// Fixed-width Shift-JIS string
-    fixstr,
+    StringShiftJIS,
     /// Fixed-width UTF-16 string
-    fixstrW,
+    StringUTF16,
 }
 
 bitflags! {

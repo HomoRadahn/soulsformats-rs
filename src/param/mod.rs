@@ -2,15 +2,17 @@ use std::io::Cursor;
 
 use crate::io::{BinaryReader, Endian};
 
+pub mod row;
 pub mod cell;
 pub mod format;
-pub mod paramdef;
-pub mod row;
+pub(crate) mod util;
 
-use format::{FormatFlags1, FormatFlags2};
-use paramdef::ParamDef;
-use row::Row;
+pub use format::{FormatFlags1, FormatFlags2, CellValue};
+use crate::ParamDef;
+pub use row::Row;
+pub use cell::Cell;
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Param {
     /// Endianness of the data
     pub endian: Endian,

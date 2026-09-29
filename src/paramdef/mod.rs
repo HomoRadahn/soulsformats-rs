@@ -7,8 +7,10 @@ use crate::{
 
 pub mod field;
 pub mod format;
-use field::Field;
+pub use field::Field;
+pub use format::{EditFlags, ParamDefType};
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct ParamDef {
     /// Indicates a revision of the row data structure
     pub data_version: i16,
@@ -98,7 +100,7 @@ impl StreamIO<ParamDef> for ParamDef {
             br.assert_i64(&[0])?;
             br.assert_i32(&[0])?;
         } else {
-            out.param_type = br.read_fix_str(0x20)?;
+            out.param_type = br.read_fixed_shift_jis(0x20)?;
         }
 
         br.assert_i8(&[0, -1])?; // Endianness
@@ -142,7 +144,7 @@ impl StreamIO<ParamDef> for ParamDef {
         }
 
         for _ in 0..field_count {
-            out.fields.push(Field::from_binary_reader(br, &out)?);
+            out.fields.push(Field::read(br, &out)?);
         }
 
         Ok(out)

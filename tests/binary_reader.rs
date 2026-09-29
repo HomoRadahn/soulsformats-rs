@@ -550,14 +550,14 @@ fn read_strings() {
 
     let mut fixed_reader =
         BinaryReader::from_bytes(b"name\0padding".to_vec(), Endian::Little, true);
-    assert_eq!(fixed_reader.read_fix_str(8).unwrap(), "name");
+    assert_eq!(fixed_reader.read_fixed_shift_jis(8).unwrap(), "name");
 
     let mut fixed_w_reader = BinaryReader::from_bytes(
         vec![0x6E, 0x00, 0x61, 0x00, 0x00, 0x00, 0xFF, 0xFF],
         Endian::Little,
         true,
     );
-    assert_eq!(fixed_w_reader.read_fix_str_w(8).unwrap(), "na");
+    assert_eq!(fixed_w_reader.read_fixed_utf16(8).unwrap(), "na");
 }
 
 #[test]
