@@ -324,14 +324,14 @@ impl<R: Read + Seek> BinaryReader<R> {
     }
 
     /// Reads a null-terminated Shift-JIS string in a fixed-size field
-    pub fn read_fix_str(&mut self, size: usize) -> io::Result<String> {
+    pub fn read_fixed_shift_jis(&mut self, size: usize) -> io::Result<String> {
         let bytes = self.read_bytes(size)?;
         let end = bytes.iter().position(|&byte| byte == 0).unwrap_or(size);
         Ok(Self::decode_shift_jis(&bytes[..end]))
     }
 
     /// Reads a null-terminated UTF-16 string in a fixed-size field
-    pub fn read_fix_str_w(&mut self, size: usize) -> io::Result<String> {
+    pub fn read_fixed_utf16(&mut self, size: usize) -> io::Result<String> {
         let bytes = self.read_bytes(size)?;
         let end = bytes
             .chunks_exact(2)
@@ -341,13 +341,13 @@ impl<R: Read + Seek> BinaryReader<R> {
     }
 
     /// Reads a null-terminated Shift-JIS string in a fixed-size field from the specified offset
-    pub fn get_fix_str(&mut self, position: u64, size: usize) -> io::Result<String> {
-        self.get_string(position, |reader| reader.read_fix_str(size))
+    pub fn get_fixed_shift_jis(&mut self, position: u64, size: usize) -> io::Result<String> {
+        self.get_string(position, |reader| reader.read_fixed_shift_jis(size))
     }
 
     /// Reads a null-terminated UTF-16 string in a fixed-size field from the specified offset
-    pub fn get_fix_str_w(&mut self, position: u64, size: usize) -> io::Result<String> {
-        self.get_string(position, |reader| reader.read_fix_str_w(size))
+    pub fn get_fixed_utf16(&mut self, position: u64, size: usize) -> io::Result<String> {
+        self.get_string(position, |reader| reader.read_fixed_utf16(size))
     }
 
     /// Reads ASCII bytes matching one of the supplied values

@@ -63,7 +63,7 @@ impl Bxf3 {
         R: Read + Seek,
     {
         bdt.assert_ascii(&["BDF3"])?;
-        bdt.read_fix_str(8)?;
+        bdt.read_fixed_shift_jis(8)?;
         bdt.assert_i32(&[0])?;
 
         Ok(())
@@ -74,7 +74,7 @@ impl Bxf3 {
         R: Read + Seek,
     {
         bhd.assert_ascii(&["BHF3"])?;
-        self.version = bhd.read_fix_str(8)?;
+        self.version = bhd.read_fixed_shift_jis(8)?;
 
         self.bit_endian = match bhd.get_bool(0xE)? {
             true => Endian::Big,

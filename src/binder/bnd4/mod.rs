@@ -87,7 +87,7 @@ impl Bnd4 {
 
         let file_count = br.read_i32()?;
         br.assert_i64(&[0x40])?; // Header size
-        self.version = br.read_fix_str(8)?;
+        self.version = br.read_fixed_shift_jis(8)?;
         let file_header_size = br.read_i64()?;
         br.read_i64()?; // Headers end (incl. hash table)
 

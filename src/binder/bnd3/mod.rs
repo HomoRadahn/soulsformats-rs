@@ -62,7 +62,7 @@ impl Bnd3 {
         R: Read + Seek,
     {
         br.assert_ascii(&["BND3"])?;
-        self.version = br.read_fix_str(8)?;
+        self.version = br.read_fixed_shift_jis(8)?;
 
         self.bit_endian = match br.get_bool(0xE)? {
             true => Endian::Big,

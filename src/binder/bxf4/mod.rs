@@ -86,7 +86,7 @@ impl Bxf4 {
         bdt.assert_u8(&[0])?;
         bdt.assert_i32(&[0])?;
         bdt.assert_i64(&[0x30, 0x40])?;
-        bdt.read_fix_str(8)?;
+        bdt.read_fixed_shift_jis(8)?;
         bdt.assert_i64(&[0])?;
         bdt.assert_i64(&[0])?;
         Ok(())
@@ -120,7 +120,7 @@ impl Bxf4 {
 
         let file_count = bhd.read_i32()?;
         bhd.assert_i64(&[0x40])?;
-        self.version = bhd.read_fix_str(8)?;
+        self.version = bhd.read_fixed_shift_jis(8)?;
         let file_header_size = bhd.read_i64()?;
         bhd.assert_i64(&[0])?;
 
