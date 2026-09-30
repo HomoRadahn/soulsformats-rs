@@ -1,10 +1,14 @@
 use std::io::{self, ErrorKind::InvalidData, Read, Seek, Write};
+use std::cmp;
 
+use crate::io::BinaryWriter;
 use crate::{
-    io::BinaryReader, param::{CellValue, self},
-    ParamDef, paramdef::{EditFlags, ParamDefType},
+    io::BinaryReader, param::{CellValue},
+    ParamDef, paramdef::{EditFlags, ParamDefType, self},
     util
 };
+
+use regex::Regex;
 
 #[derive(Debug, Clone, PartialEq)]
 /// Information about a field present in each row in a param
@@ -56,12 +60,12 @@ impl Field {
         Self {
             display_name: internal_name.clone(),
             display_type: display_type,
-            display_format: param::util::get_default_format(display_type),
-            default: param::util::get_default_value(display_type),
-            min: param::util::get_default_minimum(display_type),
-            max: param::util::get_default_maximum(display_type),
-            increment: param::util::get_default_increment(display_type),
-            edit_flags: param::util::get_default_edit_flags(display_type),
+            display_format: paramdef::util::get_default_format(display_type),
+            default: paramdef::util::get_default_value(display_type),
+            min: paramdef::util::get_default_minimum(display_type),
+            max: paramdef::util::get_default_maximum(display_type),
+            increment: paramdef::util::get_default_increment(display_type),
+            edit_flags: paramdef::util::get_default_edit_flags(display_type),
             array_length: Some(1),
             description: Default::default(),
             internal_type: Some(format!("{:?}", display_type)),
@@ -131,14 +135,14 @@ impl Field {
 
         let byte_count = br.read_i32()?;
         
-        if !param::util::is_array_type(out.display_type) && byte_count != param::util::get_value_size(out.display_type)
-        || param::util::is_array_type(out.display_type) && byte_count % param::util::get_value_size(out.display_type) != 0
+        if !paramdef::util::is_array_type(out.display_type) && byte_count != paramdef::util::get_value_size(out.display_type)
+        || paramdef::util::is_array_type(out.display_type) && byte_count % paramdef::util::get_value_size(out.display_type) != 0
         {
             return Err(io::Error::new(InvalidData, format!("Unexpected byte count {byte_count} for type: {:?}", out.display_type)));
         }
 
-        out.array_length = if param::util::is_array_type(out.display_type) {
-            Some(byte_count / param::util::get_value_size(out.display_type))
+        out.array_length = if paramdef::util::is_array_type(out.display_type) {
+            Some(byte_count / paramdef::util::get_value_size(out.display_type))
         }
         else {
             None
@@ -167,8 +171,7 @@ impl Field {
             None
         };
 
-        out.internal_type = if paramdef.format_version >= 202 
-        || paramdef.format_version >= 106 && paramdef.format_version < 200
+        out.internal_type = if paramdef.format_version >= 202 || (106..200).contains(&paramdef.format_version)
         {
             let pos = br.read_varint()?;
             Some(br.get_ascii(pos as u64)?.trim().into())
@@ -177,9 +180,278 @@ impl Field {
             Some(br.read_fixed_shift_jis(0x20)?.trim().into())
         };
 
+        if paramdef.format_version >= 102 {
+            out.internal_name = if paramdef.format_version >= 202 || (106..200).contains(&paramdef.format_version) {
+                let pos = br.read_varint()?;
+                Some(br.get_ascii(pos as u64)?.trim().into())
+            }
+            else {
+                Some(br.read_fixed_shift_jis(0x20)?.trim().into())
+            };
+
+            let re = Regex::new(r"^\s*(?<name>.+?)\s*\:\s*(?<size>\d+)\s*$").unwrap();
+            
+            // Call bare .unwrap(), because out.internal_name is set to contain a Some() (line 182)
+            if let Some(captures) = re.captures(out.internal_name.clone().unwrap().as_str()) {
+                out.internal_name = Some(captures["name"].into());
+                out.bit_size = Some(captures["size"].parse().map_err(|e| {io::Error::new(io::ErrorKind::InvalidData, e)})?);
+            }
+
+            if paramdef::util::is_array_type(out.display_type) {
+                let re = Regex::new(r"^\s*(?<name>.+?)\s*\[\s*(?<length>\d+)\s*\]\s*$").unwrap();
+
+                let length = if let Some(captures) = re.captures(out.internal_name.clone().unwrap().as_str()) {
+                    out.internal_name = Some(captures["name"].into());
+                    captures["length"].parse().map_err(|e| {io::Error::new(io::ErrorKind::InvalidData, e)})?
+                }
+                else {
+                    1
+                };
+
+                // out.array_length guaranteed to be Some() if is_array_type() returns true (line 142)
+                if length != out.array_length.unwrap() {
+                    if ![ParamDefType::U8, ParamDefType::ArrayU8].contains(&out.display_type) {
+                        return Err(io::Error::new(InvalidData, format!("Mismatched array length in {:?} with byte count {byte_count}", out.internal_name)))
+                    }
+
+                    out.array_length = Some(cmp::min(out.array_length.unwrap(), length))
+                }
+            }
+
+        }
+
+        if paramdef.format_version >= 104 {
+            out.sort_id = Some(br.read_i32()?);
+        }
+
+        if paramdef.format_version >= 200 {
+            br.assert_i32(&[0])?;
+            let unk_b8_offset = br.read_i64()?;
+            let unk_c0_offset = br.read_i64()?;
+            let unk_c8_offset = br.read_i64()?;
+
+            if unk_b8_offset != 0 {
+                out.unk_b8 = Some(br.get_ascii(unk_b8_offset as u64)?);
+            }
+
+            if unk_c0_offset != 0 {
+                out.unk_c0 = Some(br.get_ascii(unk_c0_offset as u64)?);
+            }
+
+            if unk_c8_offset != 0 {
+                out.unk_c8 = Some(br.get_ascii(unk_c8_offset as u64)?);
+            }
+        }
+        else if paramdef.format_version >= 106 {
+            br.assert_i32(&[0])?;
+            br.assert_i32(&[0])?;
+            br.assert_i32(&[0])?;
+        }
+
+        if paramdef.format_version >= 203 {
+            out.default = out.read_variable_type(br)?;
+            out.min = out.read_variable_type(br)?;
+            out.max = out.read_variable_type(br)?;
+            out.increment = out.read_variable_type(br)?;
+        }
+
+        Ok(out)
+    }
+
+    pub fn write<W>(&self, bw: &mut BinaryWriter<W>, paramdef: &ParamDef, index: i32) -> io::Result<()>
+    where 
+        W: Write + Seek
+    {
+        let padding = if paramdef.format_version >= 104 {
+            0x00
+        }
+        else {
+            0x20
+        };
+        if paramdef.format_version >= 202 || (106..200).contains(&paramdef.format_version) {
+            bw.reserve_varint(format!("display-name-offset-{index}"))?;
+        }
+        else if paramdef.unicode {
+            bw.write_fix_utf16(&self.display_name, 0x40, padding)?;
+        }
+        else {
+            bw.write_fix_shift_jis(&self.display_name, 0x40, padding)?;
+        }
+
+        let display_type_write = match self.display_type {
+            ParamDefType::I8 => "s8",
+            ParamDefType::U8 => "u8",
+            ParamDefType::I16 => "s16",
+            ParamDefType::U16 => "u16",
+            ParamDefType::I32 => "s32",
+            ParamDefType::U32 => "u32",
+            ParamDefType::Bool => "b32",
+            ParamDefType::F32 => "f32",
+            ParamDefType::Angle => "angle32",
+            ParamDefType::F64 => "f64",
+            ParamDefType::ArrayU8 => "dummy8",
+            ParamDefType::StringShiftJIS => "fixstr",
+            ParamDefType::StringUTF16 => "fixstrW",
+        };
+
+        bw.write_fix_utf16(display_type_write, 8, padding)?;
+        bw.write_fix_utf16(&self.display_format, 8, padding)?;
+
+        if paramdef.format_version >= 203 {
+            bw.write_pattern(0x10, 0x00)?;
+        }
+        else {
+            fn cell_value_to_f32(cell: &CellValue, value: &str, paramdef: &ParamDef) -> io::Result<f32> {
+                if let CellValue::F32(val) = cell {
+                    Ok(*val)
+                }
+                else {
+                    Err(io::Error::new(InvalidData, format!("Invalid type for {value} value CellValue in {} version paramdef", paramdef.format_version)))
+                }
+            }
+
+            bw.write_f32(cell_value_to_f32(&self.default, "default", paramdef)?)?;
+            bw.write_f32(cell_value_to_f32(&self.min, "minimum", paramdef)?)?;
+            bw.write_f32(cell_value_to_f32(&self.max, "maximum", paramdef)?)?;
+            bw.write_f32(cell_value_to_f32(&self.increment, "increment", paramdef)?)?;
+        }
+
+        bw.write_i32(self.edit_flags.bits() as i32)?;
+
+        let size = self.array_length.unwrap_or(1);
+        bw.write_i32(paramdef::util::get_value_size(self.display_type) * size)?;
+
+        if paramdef.basic_fields {
+            return Ok(());
+        }
+
+        bw.reserve_varint(format!("description-offset-{index}"))?;
+
+        if paramdef.format_version >= 202 || (106..200).contains(&paramdef.format_version) {
+            bw.reserve_varint(format!("internal-type-offset-{index}"))?;
+        }
+        else {
+            bw.write_fix_shift_jis(self.internal_type.clone().unwrap_or_default(), 0x20, padding)?;
+        }
+
+        if paramdef.format_version >= 202 || (106..200).contains(&paramdef.format_version) {
+            bw.reserve_varint(format!("internal-name-offset-{index}"))?;
+        }
+        else {
+            bw.write_fix_shift_jis(self.make_internal_name()?, 0x20, padding)?;
+        }
+
+        if paramdef.format_version >= 104 {
+            if self.sort_id.is_some() {
+                bw.write_i32(self.sort_id.unwrap())?;
+            }
+            else {
+                bw.write_i32(0)?;
+            }
+        }
+
+        if paramdef.format_version >= 200 {
+            bw.write_i32(0)?;
+            bw.reserve_i64(format!("unk-b8-offset-{index}"))?;
+            bw.reserve_i64(format!("unk-c0-offset-{index}"))?;
+            bw.reserve_i64(format!("unk-c8-offset-{index}"))?;
+        }
+        else if paramdef.format_version >= 106 {
+            bw.write_i32(0)?;
+            bw.write_i32(0)?;
+            bw.write_i32(0)?;
+        }
+
         
 
         todo!();
+
+        Ok(())
+    }
+
+    fn make_internal_name(&self) -> io::Result<String> {
+        if self.internal_name.is_none() {
+            return Err(io::Error::new(InvalidData, "ParamDef field didn't contain internal name, when it should"));
+        }
+
+        if self.bit_size.is_some() {
+            Ok(format!("{}:{}", self.internal_name.as_ref().unwrap(), self.bit_size.unwrap()))
+        }
+        else if paramdef::util::is_array_type(self.display_type) && self.array_length.is_some() {
+            Ok(format!("{}[{}]", self.internal_name.as_ref().unwrap(), self.array_length.unwrap()))
+        }
+        else {
+            Ok(self.internal_name.clone().unwrap())
+        }
+    }
+
+    fn read_variable_type<R>(&self, br: &mut BinaryReader<R>) -> io::Result<CellValue>
+    where 
+        R: Read + Seek
+    {
+        let out = match self.display_type {
+            ParamDefType::I8 => {
+                let raw = br.read_i32()?;
+                br.assert_i32(&[0])?;
+                CellValue::I8(util::convert_num(raw)?)
+            },
+            ParamDefType::U8 => {
+                let raw = br.read_i32()?;
+                br.assert_i32(&[0])?;
+                CellValue::U8(util::convert_num(raw)?)
+            },
+            ParamDefType::I16 => {
+                let raw = br.read_i32()?;
+                br.assert_i32(&[0])?;
+                CellValue::I16(util::convert_num(raw)?)
+            },
+            ParamDefType::U16 => {
+                let raw = br.read_i32()?;
+                br.assert_i32(&[0])?;
+                CellValue::U16(util::convert_num(raw)?)
+            },
+            ParamDefType::I32 => {
+                let raw = br.read_i32()?;
+                br.assert_i32(&[0])?;
+                CellValue::I32(util::convert_num(raw)?)
+            },
+            ParamDefType::U32 => {
+                let raw = br.read_i32()?;
+                br.assert_i32(&[0])?;
+                CellValue::U32(util::convert_num(raw)?)
+            },
+            ParamDefType::Bool => {
+                let raw = br.read_i32()?;
+                br.assert_i32(&[0])?;
+                CellValue::Bool(raw != 0)
+            },
+            ParamDefType::F32 => {
+                let raw = br.read_f32()?;
+                br.assert_i32(&[0])?;
+                CellValue::F32(raw)
+            },
+            ParamDefType::Angle => {
+                let raw = br.read_f32()?;
+                br.assert_i32(&[0])?;
+                CellValue::Angle(raw)
+            },
+            ParamDefType::F64 => {
+                let raw = br.read_f64()?;
+                CellValue::F64(raw)
+            },
+            ParamDefType::ArrayU8 => {
+                br.assert_i64(&[0])?;
+                CellValue::ArrayU8(Vec::new())
+            }
+            ParamDefType::StringShiftJIS => {
+                br.assert_i64(&[0])?;
+                CellValue::StringShiftJIS(String::new())
+            }
+            ParamDefType::StringUTF16 => {
+                br.assert_i64(&[0])?;
+                CellValue::StringUTF16(String::new())
+            }
+        };
 
         Ok(out)
     }

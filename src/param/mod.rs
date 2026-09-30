@@ -5,7 +5,6 @@ use crate::io::{BinaryReader, Endian};
 pub mod row;
 pub mod cell;
 pub mod format;
-pub(crate) mod util;
 
 pub use format::{FormatFlags1, FormatFlags2, CellValue};
 use crate::ParamDef;

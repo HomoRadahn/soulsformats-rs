@@ -7,6 +7,7 @@ use crate::{
 
 pub mod field;
 pub mod format;
+pub(crate) mod util;
 pub use field::Field;
 pub use format::{EditFlags, ParamDefType};
 

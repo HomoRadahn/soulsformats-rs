@@ -12,3 +12,4 @@ oodle = { version = "0.2.0", git = "https://github.com/meszmate/oodle-rs", tag =
 libloading = "0.8"
 md-5 = "0.10"
 chrono = "0.4"
+regex = "1.13.1"
