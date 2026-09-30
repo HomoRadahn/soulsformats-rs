@@ -257,7 +257,7 @@ impl Bxf4 {
         bdt.write_u8(0)?;
         bdt.write_i32(0)?;
         bdt.write_i64(0x30)?;
-        bdt.write_fix_str(&self.version, 8, 0)?;
+        bdt.write_fix_shift_jis(&self.version, 8, 0)?;
         bdt.write_i64(0)?;
         bdt.write_i64(0)
     }
@@ -286,7 +286,7 @@ impl Bxf4 {
 
         bhd.write_i32(util::convert_num(file_headers.len())?)?;
         bhd.write_i64(0x40)?;
-        bhd.write_fix_str(&self.version, 8, 0)?;
+        bhd.write_fix_shift_jis(&self.version, 8, 0)?;
         bhd.write_i64(format::get_bnd4_file_header_size(self.format))?;
         bhd.write_i64(0)?;
 

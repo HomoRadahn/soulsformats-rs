@@ -275,7 +275,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
     }
 
     /// Writes a null-terminated Shift-JIS string in a fixed-size field
-    pub fn write_fix_str(
+    pub fn write_fix_shift_jis(
         &mut self,
         text: impl Into<String>,
         size: usize,
@@ -291,7 +291,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
     }
 
     /// Writes a null-terminated UTF-16 string in a fixed-size field
-    pub fn write_fix_str_w(
+    pub fn write_fix_utf16(
         &mut self,
         text: impl Into<String>,
         size: usize,

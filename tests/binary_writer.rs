@@ -16,11 +16,11 @@ fn write_strings() {
     assert_eq!(utf16_writer.get_ref_bytes(), &[0x41, 0x00, 0x00, 0x00]);
 
     let mut fix_writer = BinaryWriter::to_bytes(Endian::Little, false);
-    fix_writer.write_fix_str("A", 4, 0xFF).unwrap();
+    fix_writer.write_fix_shift_jis("A", 4, 0xFF).unwrap();
     assert_eq!(fix_writer.get_ref_bytes(), &[b'A', 0, 0xFF, 0xFF]);
 
     let mut fixw_writer = BinaryWriter::to_bytes(Endian::Little, false);
-    fixw_writer.write_fix_str_w("A", 4, 0xFF).unwrap();
+    fixw_writer.write_fix_utf16("A", 4, 0xFF).unwrap();
     assert_eq!(fixw_writer.get_ref_bytes(), &[0x41, 0x00, 0x00, 0x00]);
 }
 
