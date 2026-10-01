@@ -511,7 +511,8 @@ impl fmt::Display for File {
         write!(
             f,
             "ID: {} | Name: {} | Length: {} | Flags: {}",
-            self.id.map_or_else(|| "<none>".to_string(), |id| id.to_string()),
+            self.id
+                .map_or_else(|| "<none>".to_string(), |id| id.to_string()),
             self.name.as_deref().unwrap_or("<none>"),
             self.bytes.len(),
             self.flags.bits()

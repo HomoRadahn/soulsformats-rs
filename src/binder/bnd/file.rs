@@ -14,7 +14,7 @@ impl File {
     pub fn new(id: Option<i32>, name: Option<impl Into<String>>, bytes: Vec<u8>) -> Self {
         let name = match name {
             Some(text) => Some(text.into()),
-            None => None
+            None => None,
         };
         Self {
             id,

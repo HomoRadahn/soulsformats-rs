@@ -102,8 +102,7 @@ impl StreamIO<Bnd> for Bnd {
         for (index, (header, file)) in file_headers.iter().zip(&self.files).enumerate() {
             if let Some(id) = header.id {
                 bw.write_i32(id)?;
-            }
-            else {
+            } else {
                 bw.write_i32(-1)?;
             }
 
@@ -126,8 +125,7 @@ impl StreamIO<Bnd> for Bnd {
                 let position = bw.position()?;
                 bw.fill_i32(format!("file-name-{index}"), util::convert_num(position)?)?;
                 bw.write_shift_jis(name, true)?;
-            }
-            else {
+            } else {
                 bw.fill_i32(format!("file-name-{index}"), 0)?;
             }
         }

@@ -1,5 +1,5 @@
 use crate::param::CellValue;
-use crate::paramdef::{ParamDefType, EditFlags};
+use crate::paramdef::{EditFlags, ParamDefType};
 
 pub(crate) fn get_default_format(param_def_type: ParamDefType) -> String {
     match param_def_type {
@@ -16,7 +16,8 @@ pub(crate) fn get_default_format(param_def_type: ParamDefType) -> String {
         ParamDefType::ArrayU8 => "",
         ParamDefType::StringShiftJIS => "%d",
         ParamDefType::StringUTF16 => "%d",
-    }.to_string()
+    }
+    .to_string()
 }
 
 pub(crate) fn get_default_value(param_def_type: ParamDefType) -> CellValue {
@@ -100,8 +101,24 @@ pub(crate) fn get_default_edit_flags(param_def_type: ParamDefType) -> EditFlags 
 
 pub(crate) fn is_array_type(param_def_type: ParamDefType) -> bool {
     match param_def_type {
-        ParamDefType::U8 | ParamDefType::ArrayU8 | ParamDefType::StringShiftJIS | ParamDefType::StringUTF16 => true,
-        _ => false
+        ParamDefType::U8
+        | ParamDefType::ArrayU8
+        | ParamDefType::StringShiftJIS
+        | ParamDefType::StringUTF16 => true,
+        _ => false,
+    }
+}
+
+pub(crate) fn is_bit_type(param_def_type: ParamDefType) -> bool {
+    match param_def_type {
+        ParamDefType::I8
+        | ParamDefType::U8
+        | ParamDefType::I16
+        | ParamDefType::U16
+        | ParamDefType::I32
+        | ParamDefType::U32
+        | ParamDefType::ArrayU8 => true,
+        _ => false,
     }
 }
 

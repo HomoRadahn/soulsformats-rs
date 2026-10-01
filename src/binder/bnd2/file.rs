@@ -23,7 +23,11 @@ pub struct File {
 impl File {
     /// Initializes a new `File` with specified parameters
     pub fn new(id: Option<i32>, name: impl Into<String>, bytes: Vec<u8>) -> Self {
-        Self { id, name: name.into(), bytes }
+        Self {
+            id,
+            name: name.into(),
+            bytes,
+        }
     }
 }
 

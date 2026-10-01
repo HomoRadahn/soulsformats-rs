@@ -16,8 +16,7 @@ fn decompress_write(path: String) -> Result<(), Box<dyn Error>> {
                 fs::create_dir_all(parent)?;
             }
             fs::write(output_path, file.bytes)?;
-        }
-        else {
+        } else {
             eprintln!("Nameless file skipped");
         }
     }

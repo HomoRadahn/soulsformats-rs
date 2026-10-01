@@ -84,7 +84,11 @@ fn bnd2_no_names() {
     let mut bnd = Bnd2::with_path_mode(bnd2::FilePathMode::Nameless);
     bnd.file_info_flags =
         bnd2::FileInfoFlags::ID | bnd2::FileInfoFlags::Offset | bnd2::FileInfoFlags::Size;
-    bnd.files = vec![bnd2::File::new(Some(9), "test.bin".to_string(), vec![1, 2, 3])];
+    bnd.files = vec![bnd2::File::new(
+        Some(9),
+        "test.bin".to_string(),
+        vec![1, 2, 3],
+    )];
 
     let round_trip = Bnd2::from_bytes(bnd.to_bytes().unwrap()).unwrap();
     assert_eq!(round_trip.files[0].id, Some(9));

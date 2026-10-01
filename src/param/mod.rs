@@ -2,14 +2,14 @@ use std::io::Cursor;
 
 use crate::io::{BinaryReader, Endian};
 
-pub mod row;
 pub mod cell;
 pub mod format;
+pub mod row;
 
-pub use format::{FormatFlags1, FormatFlags2, CellValue};
 use crate::ParamDef;
-pub use row::Row;
 pub use cell::Cell;
+pub use format::{CellValue, FormatFlags1, FormatFlags2};
+pub use row::Row;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Param {
