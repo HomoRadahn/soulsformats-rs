@@ -70,3 +70,82 @@ pub enum CellValue {
     /// Fixed-width UTF-16 string
     StringUTF16(String),
 }
+
+/// Assigns a value to the payload of a matching [`CellValue`] variant.
+pub trait CellValueExt {
+    /// Updates the payload, returning an error if the current variant is incompatible.
+    fn set_inner(self, target: &mut CellValue) -> io::Result<()>;
+}
+
+macro_rules! impl_cell_value_inner {
+    ($inner:ty, $variant:ident) => {
+        impl CellValueExt for $inner {
+            fn set_inner(self, target: &mut CellValue) -> io::Result<()> {
+                match target {
+                    CellValue::$variant(value) => {
+                        *value = self;
+                        Ok(())
+                    }
+                    _ => Err(io::Error::new(
+                        io::ErrorKind::InvalidInput,
+                        concat!("value does not match CellValue::", stringify!($variant)),
+                    )),
+                }
+            }
+        }
+    };
+}
+
+impl_cell_value_inner!(i8, I8);
+impl_cell_value_inner!(u8, U8);
+impl_cell_value_inner!(i16, I16);
+impl_cell_value_inner!(u16, U16);
+impl_cell_value_inner!(i32, I32);
+impl_cell_value_inner!(u32, U32);
+impl_cell_value_inner!(bool, Bool);
+impl_cell_value_inner!(Vec<u8>, ArrayU8);
+
+impl CellValueExt for f32 {
+    fn set_inner(self, target: &mut CellValue) -> io::Result<()> {
+        match target {
+            CellValue::F32(value) | CellValue::Angle(value) => {
+                *value = self;
+                Ok(())
+            }
+            _ => Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "value does not match CellValue::F32 or CellValue::Angle",
+            )),
+        }
+    }
+}
+
+impl CellValueExt for f64 {
+    fn set_inner(self, target: &mut CellValue) -> io::Result<()> {
+        match target {
+            CellValue::F64(value) => {
+                *value = self;
+                Ok(())
+            }
+            _ => Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "value does not match CellValue::F64",
+            )),
+        }
+    }
+}
+
+impl CellValueExt for String {
+    fn set_inner(self, target: &mut CellValue) -> io::Result<()> {
+        match target {
+            CellValue::StringShiftJIS(value) | CellValue::StringUTF16(value) => {
+                *value = self;
+                Ok(())
+            }
+            _ => Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "value does not match a CellValue string variant",
+            )),
+        }
+    }
+}

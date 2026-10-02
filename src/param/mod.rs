@@ -8,7 +8,7 @@ pub mod row;
 
 use crate::ParamDef;
 pub use cell::Cell;
-pub use format::{CellValue, FormatFlags1, FormatFlags2};
+pub use format::{CellValue, FormatFlags1, FormatFlags2, CellValueExt};
 pub use row::Row;
 
 #[derive(Debug, Clone, PartialEq)]
