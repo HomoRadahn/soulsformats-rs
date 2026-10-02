@@ -1,8 +1,7 @@
-use std::io::{self, ErrorKind::InvalidData, Read, Seek, Write};
+use std::{collections::HashMap, io::{self, ErrorKind::InvalidData, Read, Seek, Write}};
 
 use crate::{
-    ByteIO, FileIO,
-    io::{BinaryReader, BinaryWriter, Endian, StreamIO},
+    ByteIO, FileIO, io::{BinaryReader, BinaryWriter, DcxIO, Endian, StreamIO},
 };
 
 pub mod field;
@@ -155,9 +154,97 @@ impl StreamIO<ParamDef> for ParamDef {
     where
         W: Write + Seek,
     {
-        todo!()
+        if self.version_aware {
+            return Err(io::Error::new(InvalidData, "Version aware ParamDef cannot be written as binary"));
+        }
+
+        bw.endian = self.endian;
+        bw.varint_64bit = self.format_version >= 200;
+
+        bw.reserve_i32("file-size")?;
+        bw.write_i16(if self.format_version >= 200 {0xFF} else {0x30})?;
+        bw.write_i16(self.data_version)?;
+        bw.write_i16(crate::util::convert_num(self.fields.len())?)?;
+
+        bw.write_i16(match self.format_version {
+            0 if self.basic_fields => 0x68,
+            101 => 0x8C,
+            102 => 0xAC,
+            103 => 0x6C,
+            104 => 0xB0,
+            106 => 0x48,
+            201 => 0xD0,
+            202 => 0x68,
+            203 => 0x88,
+            _ => return Err(io::Error::new(
+                InvalidData,
+                format!("Unsupported ParamDef format version: {}", self.format_version)
+            ))
+        })?;
+
+        if self.format_version >= 202 {
+            bw.write_i32(0)?;
+            bw.reserve_varint("param-type-offset")?;
+            bw.write_i64(0)?;
+            bw.write_i64(0)?;
+            bw.write_i32(0)?;
+        }
+        else if (106..200).contains(&self.format_version) {
+            bw.reserve_varint("param-type-offset")?;
+            bw.write_i64(0)?;
+            bw.write_i64(0)?;
+            bw.write_i64(0)?;
+            bw.write_i32(0)?;
+        }
+        else {
+            bw.write_fix_shift_jis(self.param_type.clone(), 0x20, if self.format_version >= 200 {0x00} else {0x20})?;
+        }
+
+        bw.write_i8(if self.endian == Endian::Big {-1} else {0})?;
+        bw.write_bool(self.unicode)?;
+        bw.write_i16(self.format_version)?;
+        if self.format_version >= 200 {
+            bw.write_i64(0x38)?;
+        }
+
+        for (index, field) in self.fields.iter().enumerate() {
+            field.write(bw, &self, crate::util::convert_num(index)?)?;
+        }
+
+        if self.format_version >= 202 || (106..200).contains(&self.format_version) {
+            let pos = bw.position()?;
+            bw.fill_varint("param-type-offset", crate::util::convert_num(pos)?)?;
+            bw.write_shift_jis(self.param_type.clone(), true)?;
+        }
+
+        let field_strings_start = bw.position()?;
+        let mut shared_string_offsets = HashMap::new();
+
+        for (index, field) in self.fields.iter().enumerate() {
+            field.write_strings(bw, &self, crate::util::convert_num(index)?, &mut shared_string_offsets)?;
+        }
+
+        if [104, 201].contains(&self.format_version) {
+            let current = bw.position()? - field_strings_start;
+            if current % 0x10 != 0 {
+                bw.write_pattern((0x10 - current % 0x10) as usize, 0x00)?;
+            }
+        }
+        else {
+            if self.format_version >= 202 && bw.position()? % 0x10 == 0 {
+                bw.write_pattern(0x10, 0x00)?;
+            }
+            bw.pad_00(0x10)?;
+        }
+
+        let pos = bw.position()?;
+
+        bw.fill_i32("file-size", crate::util::convert_num(pos)?)?;
+
+        Ok(())
     }
 }
 
 impl ByteIO<ParamDef> for ParamDef {}
 impl FileIO<ParamDef> for ParamDef {}
+impl DcxIO<ParamDef> for ParamDef {}

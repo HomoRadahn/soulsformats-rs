@@ -349,8 +349,8 @@ impl Field {
             ParamDefType::StringUTF16 => "fixstrW",
         };
 
-        bw.write_fix_utf16(display_type_write, 8, padding)?;
-        bw.write_fix_utf16(&self.display_format, 8, padding)?;
+        bw.write_fix_shift_jis(display_type_write, 8, padding)?;
+        bw.write_fix_shift_jis(&self.display_format, 8, padding)?;
 
         if paramdef.format_version >= 203 {
             bw.write_pattern(0x10, 0x00)?;
