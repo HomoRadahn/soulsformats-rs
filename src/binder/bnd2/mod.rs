@@ -4,9 +4,7 @@ use std::{
 };
 
 use crate::{
-    ByteIO, FileIO,
-    io::{BinaryReader, BinaryWriter, Endian, StreamIO},
-    util,
+    ByteIO, FileIO, io::{BinaryReader, BinaryWriter, DcxIO, Endian, StreamIO}, util,
 };
 
 pub mod file;
@@ -288,3 +286,4 @@ impl StreamIO<Bnd2> for Bnd2 {
 
 impl ByteIO<Bnd2> for Bnd2 {}
 impl FileIO<Bnd2> for Bnd2 {}
+impl DcxIO<Bnd2> for Bnd2 {}

@@ -1,5 +1,5 @@
 use soulsformats_rs::{
-    ByteIO, Dcx, FileIO,
+    ByteIO, DcxIO, FileIO,
     binder::{Bnd, Bnd2, Bnd3, Bnd4, bnd, bnd2, bnd3, bnd4},
     dcx::compression_info::CompressionInfo,
 };
@@ -99,8 +99,7 @@ fn bnd2_no_names() {
 #[test]
 fn bnd3() {
     println!("Note this Bnd3 is Kraken compressed, Oodle required");
-    let dcx = Dcx::from_file("./tests/files/bnd/bnd3.dcx").unwrap();
-    let bnd = Bnd3::from_bytes(dcx.data).unwrap();
+    let (bnd, compression) = Bnd3::decompress_file("./tests/files/bnd/bnd3.dcx").unwrap();
     assert_eq!(
         bnd.files[0].bytes,
         vec![
@@ -117,7 +116,7 @@ fn bnd3() {
             0xBB, 0xBB, 0xBB, 0xBB
         ]
     );
-    let round_trip = Bnd3::from_bytes(bnd.to_bytes().unwrap()).unwrap();
+    let (round_trip, _) = Bnd3::decompress_bytes(bnd.compress_to_bytes(compression).unwrap()).unwrap();
 
     assert_eq!(bnd.version, round_trip.version);
     assert_eq!(bnd.format, round_trip.format);
@@ -134,13 +133,12 @@ fn bnd3() {
 
 #[test]
 fn bnd4() {
-    let dcx = Dcx::from_file("./tests/files/bnd/bnd4.dcx").unwrap();
-    let bnd = Bnd4::from_bytes(dcx.data).unwrap();
+    let (bnd, compression) = Bnd4::decompress_file("./tests/files/bnd/bnd4.dcx").unwrap();
     let text1 = String::from_utf8(bnd.files[0].bytes.clone()).unwrap();
     let text2 = String::from_utf8(bnd.files[1].bytes.clone()).unwrap();
     assert_eq!(text1, "BND4 Test");
     assert_eq!(text2, "BND4 Test 2");
-    let round_trip = Bnd4::from_bytes(bnd.to_bytes().unwrap()).unwrap();
+    let (round_trip, _) = Bnd4::decompress_bytes(bnd.compress_to_bytes(compression).unwrap()).unwrap();
 
     assert_eq!(bnd.version, round_trip.version);
     assert_eq!(bnd.format, round_trip.format);

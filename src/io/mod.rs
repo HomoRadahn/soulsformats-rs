@@ -3,7 +3,7 @@ mod reader;
 mod writer;
 
 pub use format::StreamIO;
-pub use format::{ByteIO, FileIO};
+pub use format::{ByteIO, FileIO, DcxIO};
 pub use reader::BinaryReader;
 pub use writer::BinaryWriter;
 

@@ -453,6 +453,7 @@ impl Dcx {
         W: Write + Seek,
     {
         match compression {
+            CompressionInfo::None => bw.write_bytes(data)?,
             CompressionInfo::Zlib => Dcx::compress_zlib(bw, data)?,
             CompressionInfo::DcpEdge => Dcx::compress_dcp_edge(bw, data)?,
             CompressionInfo::DcpDflt => Dcx::compress_dcp_dflt(bw, data)?,

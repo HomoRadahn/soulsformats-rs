@@ -1,4 +1,4 @@
-use crate::io::{BinaryReader, BinaryWriter, Endian};
+use crate::{CompressionInfo, Dcx, io::{BinaryReader, BinaryWriter, Endian}, util};
 use std::{
     fs,
     io::{self, Read, Seek, Write},
@@ -33,7 +33,6 @@ where
 }
 
 /// Trait allowing for reading and writing to files. Requires `StreamIO`
-#[allow(private_bounds)]
 pub trait FileIO<T>: StreamIO<T>
 where
     T: FileIO<T>,
@@ -63,7 +62,6 @@ where
 }
 
 /// Trait allowing for reading and writing to bytes. Requires `StreamIO`
-#[allow(private_bounds)]
 pub trait ByteIO<T>: StreamIO<T>
 where
     T: ByteIO<T>,
@@ -88,5 +86,45 @@ where
         let data = bw.close_bytes()?;
 
         Ok(data)
+    }
+}
+
+/// Trait for automatic `Dcx` compression handling when reading / writing formats
+pub trait DcxIO<T>: StreamIO<T>
+where 
+    T: DcxIO<T>
+{
+    /// Decompress bytes and read decompressed data as format
+    fn decompress_bytes(data: Vec<u8>) -> io::Result<(T, CompressionInfo)> {
+        let mut br = BinaryReader::from_bytes(data, Endian::Little, false);
+        let (mut br, compression) = util::get_decompressed_binary_reader(&mut br)?;
+
+        Ok((T::read(&mut br)?, compression))
+    }
+
+    /// Decompress file and read decompressed data as format
+    fn decompress_file(path: impl Into<String>) -> io::Result<(T, CompressionInfo)> {
+        let mut br = BinaryReader::from_file(path.into(), Endian::Little, false)?;
+        let (mut br, compression) = util::get_decompressed_binary_reader(&mut br)?;
+
+        Ok((T::read(&mut br)?, compression))
+    }
+
+    /// Write the format and compress it to bytes
+    fn compress_to_bytes(&self, compression: CompressionInfo) -> io::Result<Vec<u8>> {
+        let mut bw = BinaryWriter::to_bytes(Endian::Little, false);
+        self.write(&mut bw)?;
+        let data = bw.close_bytes()?;
+
+        Dcx::new(data, compression).to_bytes()
+    }
+
+    /// Write the format and compress it to file
+    fn compress_to_file(&self, path: impl Into<String>, compression: CompressionInfo) -> io::Result<()> {
+        let mut bw = BinaryWriter::to_bytes(Endian::Little, false);
+        self.write(&mut bw)?;
+        let data = bw.close_bytes()?;
+
+        Dcx::new(data, compression).to_file(path)
     }
 }

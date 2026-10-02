@@ -5,10 +5,7 @@ pub use crate::binder::{
     format::{FileFlags, Format},
 };
 use crate::{
-    ByteIO, FileIO,
-    binder::{file::BinderFileHeader, format, hashtable},
-    io::{BinaryReader, BinaryWriter, Endian, StreamIO},
-    util::{self, DateTimeExt},
+    ByteIO, FileIO, binder::{file::BinderFileHeader, format, hashtable}, io::{BinaryReader, BinaryWriter, DcxIO, Endian, StreamIO}, util::{self, DateTimeExt},
 };
 use std::io::{self, ErrorKind::InvalidData, Read, Seek, Write};
 
@@ -250,3 +247,4 @@ impl StreamIO<Bnd4> for Bnd4 {
 
 impl ByteIO<Bnd4> for Bnd4 {}
 impl FileIO<Bnd4> for Bnd4 {}
+impl DcxIO<Bnd4> for Bnd4 {}

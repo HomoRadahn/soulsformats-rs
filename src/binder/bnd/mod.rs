@@ -1,9 +1,7 @@
 use std::io::{self, Read, Seek, Write};
 
 use crate::{
-    ByteIO, FileIO,
-    io::{BinaryReader, BinaryWriter, StreamIO},
-    util,
+    ByteIO, FileIO, io::{BinaryReader, BinaryWriter, DcxIO, StreamIO}, util,
 };
 
 mod file;
@@ -158,3 +156,4 @@ impl StreamIO<Bnd> for Bnd {
 
 impl ByteIO<Bnd> for Bnd {}
 impl FileIO<Bnd> for Bnd {}
+impl DcxIO<Bnd> for Bnd {}

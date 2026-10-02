@@ -1,9 +1,7 @@
 use chrono::{DateTime, Local, TimeZone};
 
 use crate::{
-    binder::file::BinderFileHeader,
-    io::{BinaryReader, BinaryWriter, ByteIO, Endian, FileIO, StreamIO},
-    util::{self, DateTimeExt},
+    binder::file::BinderFileHeader, io::{BinaryReader, BinaryWriter, ByteIO, DcxIO, Endian, FileIO, StreamIO}, util::{self, DateTimeExt},
 };
 use std::io::{self, Read, Seek, Write};
 
@@ -214,3 +212,4 @@ impl StreamIO<Bnd3> for Bnd3 {
 
 impl ByteIO<Bnd3> for Bnd3 {}
 impl FileIO<Bnd3> for Bnd3 {}
+impl DcxIO<Bnd3> for Bnd3 {}

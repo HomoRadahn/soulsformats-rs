@@ -14,6 +14,6 @@ pub use dcx::{
     compression_info::{CompressionInfo, DcxDfltArgs, DcxDfltPreset, DcxKrakArgs},
 };
 pub use fmg::Fmg;
-pub use io::{ByteIO, FileIO};
+pub use io::{ByteIO, FileIO, DcxIO};
 pub use param::Param;
 pub use paramdef::ParamDef;

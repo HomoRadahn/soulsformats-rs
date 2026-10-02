@@ -1,8 +1,8 @@
-use soulsformats_rs::{FileIO, binder::Bnd4};
+use soulsformats_rs::{DcxIO, binder::Bnd4};
 use std::{env, error::Error, fs, path::Path, process};
 
 fn decompress_write(path: String) -> Result<(), Box<dyn Error>> {
-    let bnd = Bnd4::from_file(&path)?;
+    let (bnd, _) = Bnd4::decompress_file(&path)?;
     let input_path = Path::new(&path);
     let output_dir = input_path.with_extension("");
     fs::create_dir_all(&output_dir)?;
