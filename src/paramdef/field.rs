@@ -1,9 +1,9 @@
 use std::collections::HashMap;
+use std::borrow::Cow;
 use std::io::{self, ErrorKind::InvalidData, Read, Seek, Write};
 use std::{cmp, fmt};
 
 use crate::io::BinaryWriter;
-use crate::param::Cell;
 use crate::{
     ParamDef,
     io::BinaryReader,
@@ -48,7 +48,9 @@ pub struct Field {
     pub unk_b8: Option<String>,
     pub unk_c0: Option<String>,
     pub unk_c8: Option<String>,
+    /// Regulation version when the `Field` was introduced, set to `None` when it always existed
     pub first_regulation_version: Option<u64>,
+    /// Regulation version when the `Field` was removed, set to `None` when it was never removed
     pub removed_regulation_version: Option<u64>,
 }
 
@@ -109,6 +111,7 @@ impl Field {
         R: Read + Seek,
     {
         let mut out = Self::default();
+        out.internal_name = None;
 
         out.display_name =
             if paramdef.format_version >= 202 || (106..200).contains(&paramdef.format_version) {
@@ -205,43 +208,54 @@ impl Field {
             };
 
         if paramdef.format_version >= 102 {
-            out.internal_name = if paramdef.format_version >= 202
+            let mut internal_name = if paramdef.format_version >= 202
                 || (106..200).contains(&paramdef.format_version)
             {
                 let pos = br.read_varint()?;
-                Some(br.get_ascii(pos as u64)?.trim().into())
+                br.get_ascii(pos as u64)?.trim().to_owned()
             } else {
-                Some(br.read_fixed_shift_jis(0x20)?.trim().into())
+                br.read_fixed_shift_jis(0x20)?.trim().to_owned()
             };
 
-            let re = Regex::new(r"^\s*(?<name>.+?)\s*\:\s*(?<size>\d+)\s*$").unwrap();
+            let re = Regex::new(r"^\s*(?<name>.+?)\s*\:\s*(?<size>\d+)\s*$")
+                .map_err(|error| io::Error::new(InvalidData, error))?;
 
-            // Call bare .unwrap(), because out.internal_name is set to contain a Some() (line 182)
-            if let Some(captures) = re.captures(out.internal_name.clone().unwrap().as_str()) {
-                out.internal_name = Some(captures["name"].into());
-                out.bit_size = Some(
-                    captures["size"]
-                        .parse()
-                        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?,
-                );
+            if let Some(captures) = re.captures(&internal_name) {
+                let name = captures
+                    .name("name")
+                    .ok_or_else(|| io::Error::new(InvalidData, "missing bitfield name"))?;
+                let size = captures
+                    .name("size")
+                    .ok_or_else(|| io::Error::new(InvalidData, "missing bitfield size"))?
+                    .as_str()
+                    .parse()
+                    .map_err(|error| io::Error::new(InvalidData, error))?;
+                internal_name = name.as_str().to_owned();
+                out.bit_size = Some(size);
             }
 
             if paramdef::util::is_array_type(out.display_type) {
-                let re = Regex::new(r"^\s*(?<name>.+?)\s*\[\s*(?<length>\d+)\s*\]\s*$").unwrap();
+                let re = Regex::new(r"^\s*(?<name>.+?)\s*\[\s*(?<length>\d+)\s*\]\s*$")
+                    .map_err(|error| io::Error::new(InvalidData, error))?;
 
-                let length = if let Some(captures) =
-                    re.captures(out.internal_name.clone().unwrap().as_str())
-                {
-                    out.internal_name = Some(captures["name"].into());
-                    captures["length"]
+                let length = if let Some(captures) = re.captures(&internal_name) {
+                    let name = captures
+                        .name("name")
+                        .ok_or_else(|| io::Error::new(InvalidData, "missing array name"))?;
+                    let length = captures
+                        .name("length")
+                        .ok_or_else(|| io::Error::new(InvalidData, "missing array length"))?
+                        .as_str()
                         .parse()
-                        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?
+                        .map_err(|error| io::Error::new(InvalidData, error))?;
+                    internal_name = name.as_str().to_owned();
+                    length
                 } else {
                     1
                 };
 
-                // out.array_length guaranteed to be Some() if is_array_type() returns true (line 142)
-                if length != out.array_length.unwrap() {
+                if let Some(array_length) = out.array_length {
+                    if length != array_length {
                     if ![ParamDefType::U8, ParamDefType::ArrayU8].contains(&out.display_type) {
                         return Err(io::Error::new(
                             InvalidData,
@@ -252,9 +266,12 @@ impl Field {
                         ));
                     }
 
-                    out.array_length = Some(cmp::min(out.array_length.unwrap(), length))
+                        out.array_length = Some(cmp::min(array_length, length));
+                    }
                 }
             }
+
+            out.internal_name = Some(internal_name);
         }
 
         if paramdef.format_version >= 104 {
@@ -276,7 +293,7 @@ impl Field {
             }
 
             if unk_c8_offset != 0 {
-                out.unk_c8 = Some(br.get_ascii(unk_c8_offset as u64)?);
+                out.unk_c8 = Some(br.get_utf16(unk_c8_offset as u64)?);
             }
         } else if paramdef.format_version >= 106 {
             br.assert_i32(&[0])?;
@@ -376,11 +393,7 @@ impl Field {
         if paramdef.format_version >= 202 || (106..200).contains(&paramdef.format_version) {
             bw.reserve_varint(format!("internal-type-offset-{index}"))?;
         } else {
-            bw.write_fix_shift_jis(
-                self.internal_type.clone().unwrap_or_default(),
-                0x20,
-                padding,
-            )?;
+            bw.write_fix_shift_jis(self.internal_type.as_deref().unwrap_or_default(), 0x20, padding)?;
         }
 
         if paramdef.format_version >= 202 || (106..200).contains(&paramdef.format_version) {
@@ -390,11 +403,7 @@ impl Field {
         }
 
         if paramdef.format_version >= 104 {
-            if self.sort_id.is_some() {
-                bw.write_i32(self.sort_id.unwrap())?;
-            } else {
-                bw.write_i32(0)?;
-            }
+            bw.write_i32(self.sort_id.unwrap_or_default())?;
         }
 
         if paramdef.format_version >= 200 {
@@ -441,15 +450,17 @@ impl Field {
             return Ok(());
         }
 
-        let mut description_offset = 0;
-        if self.description.is_some() {
-            description_offset = bw.position()?;
+        let description_offset = if let Some(description) = self.description.as_deref() {
+            let description_offset = bw.position()?;
             if paramdef.unicode {
-                bw.write_utf16(self.description.as_ref().unwrap(), true)?;
+                bw.write_utf16(description, true)?;
             } else {
-                bw.write_shift_jis(self.description.as_ref().unwrap(), true)?;
+                bw.write_shift_jis(description, true)?;
             }
-        }
+            description_offset
+        } else {
+            0
+        };
         bw.fill_varint(
             format!("description-offset-{index}"),
             util::convert_num(description_offset)?,
@@ -492,45 +503,42 @@ impl Field {
     where
         W: Write + Seek,
     {
-        if text.is_none() {
+        let Some(text) = text.as_deref() else {
             return Ok(0);
+        };
+
+        if let Some(&offset) = shared_string_offsets.get(text) {
+            return Ok(offset);
         }
 
-        if !shared_string_offsets.contains_key(text.as_ref().unwrap().as_str()) {
-            shared_string_offsets.insert(text.clone().unwrap(), util::convert_num(bw.position()?)?);
-            if unicode {
-                bw.write_utf16(text.clone().unwrap(), true)?;
-            }
-            else {
-                bw.write_shift_jis(text.clone().unwrap(), true)?;
-            }
+        let offset = util::convert_num(bw.position()?)?;
+        shared_string_offsets.insert(text.to_owned(), offset);
+        if unicode {
+            bw.write_utf16(text, true)?;
+        } else {
+            bw.write_shift_jis(text, true)?;
         }
 
-        Ok(shared_string_offsets[text.as_ref().unwrap().as_str()])
+        Ok(offset)
     }
 
-    fn make_internal_name(&self) -> io::Result<String> {
-        if self.internal_name.is_none() {
-            return Err(io::Error::new(
+    fn make_internal_name(&self) -> io::Result<Cow<'_, str>> {
+        let internal_name = self.internal_name.as_deref().ok_or_else(|| {
+            io::Error::new(
                 InvalidData,
                 "ParamDef field didn't contain internal name, when it should",
-            ));
-        }
+            )
+        })?;
 
-        if self.bit_size.is_some() {
-            Ok(format!(
-                "{}:{}",
-                self.internal_name.as_ref().unwrap(),
-                self.bit_size.unwrap()
-            ))
-        } else if paramdef::util::is_array_type(self.display_type) && self.array_length.is_some() {
-            Ok(format!(
-                "{}[{}]",
-                self.internal_name.as_ref().unwrap(),
-                self.array_length.unwrap()
-            ))
+        if let Some(bit_size) = self.bit_size {
+            Ok(Cow::Owned(format!("{internal_name}:{bit_size}")))
+        } else if paramdef::util::is_array_type(self.display_type) {
+            if let Some(array_length) = self.array_length {
+                return Ok(Cow::Owned(format!("{internal_name}[{array_length}]")));
+            }
+            Ok(Cow::Borrowed(internal_name))
         } else {
-            Ok(self.internal_name.clone().unwrap())
+            Ok(Cow::Borrowed(internal_name))
         }
     }
 
@@ -662,22 +670,24 @@ impl Field {
 
 impl fmt::Display for Field {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let temp_internal_name = self.internal_name.clone().unwrap_or_default();
-        if paramdef::util::is_bit_type(self.display_type) && self.bit_size.is_some() {
+        let temp_internal_name = self.internal_name.as_deref().unwrap_or_default();
+        if paramdef::util::is_bit_type(self.display_type) && let Some(bit_size) = self.bit_size {
             write!(
                 f,
                 "{:?} {}: {}",
                 self.display_type,
                 &temp_internal_name,
-                self.bit_size.unwrap()
+                bit_size
             )
-        } else if paramdef::util::is_array_type(self.display_type) && self.array_length.is_some() {
+        } else if paramdef::util::is_array_type(self.display_type)
+            && let Some(array_length) = self.array_length
+        {
             write!(
                 f,
                 "{:?} {}[{}]",
                 self.display_type,
                 &temp_internal_name,
-                self.array_length.unwrap()
+                array_length
             )
         } else {
             write!(f, "{:?} {}", self.display_type, &temp_internal_name)
