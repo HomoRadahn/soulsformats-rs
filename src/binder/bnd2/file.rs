@@ -7,7 +7,7 @@ use crate::{
 };
 
 /// A file in `Bnd2`
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct File {
     /// ID of this `File`, or `None` if it has no ID
     pub id: Option<i32>,
@@ -27,16 +27,6 @@ impl File {
             id,
             name: name.into(),
             bytes,
-        }
-    }
-}
-
-impl Default for File {
-    fn default() -> Self {
-        Self {
-            id: None,
-            name: Default::default(),
-            bytes: Default::default(),
         }
     }
 }

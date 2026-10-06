@@ -10,7 +10,9 @@ pub use entry::Entry;
 pub use format::Version;
 
 use crate::{
-    ByteIO, FileIO, io::{BinaryReader, BinaryWriter, DcxIO, Endian, StreamIO}, util,
+    ByteIO, FileIO,
+    io::{BinaryReader, BinaryWriter, DcxIO, Endian, StreamIO},
+    util,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -46,18 +48,18 @@ impl Default for Fmg {
 impl Fmg {
     /// Initializes `FMG` with specified version
     pub fn with_version(version: Version) -> Self {
-        let mut out = Self::default();
-        out.version = version;
-        out
+        Self {
+            version,
+            ..Default::default()
+        }
     }
 
     /// Finds `Entry` text by ID
     pub fn find(&self, id: i32) -> Option<String> {
-        if let Some(entry) = self.entries.iter().find(|entry| entry.id == id) {
-            entry.text.clone()
-        } else {
-            None
-        }
+        self.entries
+            .iter()
+            .find(|entry| entry.id == id)
+            .and_then(|entry| entry.text.clone())
     }
 
     /// Adds a new `Entry` to `FMG` from specified parameters
@@ -262,7 +264,7 @@ impl StreamIO<Fmg> for Fmg {
 
         let mut group_count = 0;
         let mut entries = self.entries.clone();
-        entries.sort_by(|e1, e2| e1.id.cmp(&e2.id));
+        entries.sort_by_key(|entry| entry.id);
 
         let mut iter = 0;
         while iter < entries.len() {

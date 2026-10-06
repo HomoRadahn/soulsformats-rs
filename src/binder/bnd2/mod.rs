@@ -55,27 +55,27 @@ impl Default for Bnd2 {
 impl Bnd2 {
     /// Creates `Bnd2` with specified version
     pub fn with_version(version: i32) -> Self {
-        let mut out = Self::default();
-        out.file_version = version;
-
-        out
+        Self {
+            file_version: version,
+            ..Default::default()
+        }
     }
 
     /// Creates `Bnd2` with specified `FilePathMode`
     pub fn with_path_mode(file_path_mode: FilePathMode) -> Self {
-        let mut out = Self::default();
-        out.file_path_mode = file_path_mode;
-
-        out
+        Self {
+            file_path_mode,
+            ..Default::default()
+        }
     }
 
     /// Creates `Bnd2` with specified version and `FilePathMode`
     pub fn with_version_path_mode(version: i32, file_path_mode: FilePathMode) -> Self {
-        let mut out = Self::default();
-        out.file_version = version;
-        out.file_path_mode = file_path_mode;
-
-        out
+        Self {
+            file_version: version,
+            file_path_mode,
+            ..Default::default()
+        }
     }
 
     fn read_header<R>(&mut self, br: &mut BinaryReader<R>) -> io::Result<Vec<FileHeader>>

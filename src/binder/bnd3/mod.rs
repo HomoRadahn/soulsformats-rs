@@ -48,11 +48,11 @@ impl Bnd3 {
     where
         Tz: TimeZone,
     {
-        let mut out = Self::default();
-        out.version = date.to_bnd_timestamp();
-        out.files = files;
-
-        out
+        Self {
+            version: date.to_bnd_timestamp(),
+            files,
+            ..Default::default()
+        }
     }
 
     fn read_header<R>(&mut self, br: &mut BinaryReader<R>) -> io::Result<Vec<BinderFileHeader>>

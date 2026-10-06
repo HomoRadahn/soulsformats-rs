@@ -60,11 +60,11 @@ impl Bxf4 {
     where
         Tz: TimeZone,
     {
-        let mut out = Self::default();
-        out.version = date.to_bnd_timestamp();
-        out.files = files;
-
-        out
+        Self {
+            version: date.to_bnd_timestamp(),
+            files,
+            ..Default::default()
+        }
     }
 
     fn read_bdf_header<R>(bdt: &mut BinaryReader<R>) -> io::Result<()>
