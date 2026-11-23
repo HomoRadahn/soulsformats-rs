@@ -10,6 +10,7 @@ The library is under active development. Most formats aren't yet implemented. Do
 - Dcx compression
 - Btl (light sources in map)
 - Fmg (text data)
+- Param files with XML or binary ParamDef definitions
 
 ## Example
 For an example use, see `examples/decompress-bnd4.rs`. You can run it with:
@@ -18,6 +19,31 @@ cargo run --example decompress-bnd4
 ```
 
 For integration tests, which can serve as crude examples, see `tests` folder.
+
+To edit a PARAM, load its matching XML or binary PARAMDEF, apply it, then edit
+the decoded cells before writing:
+
+```rust,no_run
+use soulsformats_rs::{ByteIO, FileIO, Param, ParamDef};
+
+fn main() -> std::io::Result<()> {
+    let definition = ParamDef::from_xml("definition.xml", false)?;
+    let mut param = Param::from_file("data.param")?;
+    param.apply_paramdef(&definition)?;
+    if let Some(row) = param.find_row_mut(100) {
+        if let Some(cell) = row.get_cell_mut("someField") {
+            cell.set(42_i32)?;
+        }
+    }
+    let bytes = param.to_bytes()?;
+    Ok(())
+}
+```
+
+For version-aware definitions, use `apply_regulation_versioned_paramdef` when
+reading or `Param::new_for_version` when creating a PARAM. Rows and cells share
+their definitions through `Arc`, so cloning them does not duplicate field
+metadata for every cell.
 
 Generate API documentation, including examples, with `cargo doc --open`.
 
@@ -36,6 +62,6 @@ This will only ever support formats up to Armored Core VI / Elden Ring, unless a
 
 ## TODO for next pre-release
 - [x] Optimizations in format reading / writing
-- [ ] Param, Row, Cell
+- [x] Param, Row, Cell
 - [ ] MSB formats
 - [x] Improve documentation and add doc tests

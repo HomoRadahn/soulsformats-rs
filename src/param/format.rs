@@ -59,11 +59,13 @@ pub enum CellValue {
     U16(u16),
     I32(i32),
     U32(u32),
+    /// A canonical 32-bit boolean. Noncanonical `b32` values are preserved as `I32`.
     Bool(bool),
     F32(f32),
     Angle(f32),
     F64(f64),
-    /// Byte or array of bytes used for padding / placeholding.
+    /// A byte array, including multi-element `u8` fields and uncompressed padding.
+    /// Bitfield padding uses `U8` instead.
     ArrayU8(Vec<u8>),
     /// Fixed-width Shift-JIS string.
     StringShiftJIS(String),
