@@ -33,6 +33,7 @@ For integration tests, which can serve as crude examples, see `tests` folder.
 This will only ever support formats up to Armored Core VI / Elden Ring, unless a few other people will be willing to help out with this project. Right now this project is managed and maintained by only one person and I don't have the time, will or need to support later releases, like the upcoming Duskbloods.
 
 ## TODO for next pre-release
-- [ ] Optimizations in format reading / writing
+- [x] Optimizations in format reading / writing
 - [ ] Param, Row, Cell
 - [ ] MSB formats
+- [ ] Improve documentation, maybe add doc tests
