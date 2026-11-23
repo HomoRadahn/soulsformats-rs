@@ -135,7 +135,7 @@ impl<W: Write + Seek> BinaryWriter<W> {
 
         let position = self.position()?;
 
-        self.write_vec_u8(vec![0xFE; size])?;
+        self.write_pattern(size, 0xFE)?;
 
         self.reservations.insert(name, position);
         Ok(())
@@ -234,31 +234,31 @@ impl<W: Write + Seek> BinaryWriter<W> {
         Ok(())
     }
 
-    fn write_chars(&mut self, terminate: bool, bytes: Vec<u8>) -> io::Result<()> {
-        let mut out = bytes;
+    fn write_chars(&mut self, terminate: bool, bytes: &[u8]) -> io::Result<()> {
+        self.inner.write_all(bytes)?;
         if terminate {
-            out.push(0);
+            self.inner.write_all(&[0])?;
         }
-        self.inner.write_all(&out)
+        Ok(())
     }
 
     /// Writes an ASCII string, with a null terminator when requested
     pub fn write_ascii(&mut self, text: impl Into<String>, terminate: bool) -> io::Result<()> {
         let write_text = text.into();
-        self.write_chars(terminate, String::from(&write_text).into_bytes())
+        self.write_chars(terminate, write_text.as_bytes())
     }
 
     /// Writes a Shift-JIS string, with a null terminator when requested
     pub fn write_shift_jis(&mut self, text: impl Into<String>, terminate: bool) -> io::Result<()> {
         let write_text = text.into();
-        let bytes = encoding_rs::SHIFT_JIS.encode(&write_text).0.to_vec();
-        self.write_chars(terminate, bytes)
+        let bytes = encoding_rs::SHIFT_JIS.encode(&write_text).0;
+        self.write_chars(terminate, &bytes)
     }
 
     /// Writes a UTF-16 string, with a null terminator when requested
     pub fn write_utf16(&mut self, text: impl Into<String>, terminate: bool) -> io::Result<()> {
-        let mut bytes = Vec::new();
         let write_text = text.into();
+        let mut bytes = Vec::with_capacity(write_text.len().saturating_mul(2).saturating_add(2));
         for code_unit in write_text.encode_utf16() {
             match self.endian {
                 Endian::Little => bytes.extend_from_slice(&code_unit.to_le_bytes()),
@@ -282,12 +282,14 @@ impl<W: Write + Seek> BinaryWriter<W> {
         padding: u8,
     ) -> io::Result<()> {
         let mut fixstr = vec![padding; size];
-        let mut bytes = encoding_rs::SHIFT_JIS.encode(&text.into()).0.to_vec();
-        bytes.push(0);
-        for (index, byte) in bytes.iter().take(size).enumerate() {
-            fixstr[index] = *byte;
+        let text = text.into();
+        let bytes = encoding_rs::SHIFT_JIS.encode(&text).0;
+        let length = bytes.len().min(size);
+        fixstr[..length].copy_from_slice(&bytes[..length]);
+        if length < size {
+            fixstr[length] = 0;
         }
-        self.write_vec_u8(fixstr)
+        self.inner.write_all(&fixstr)
     }
 
     /// Writes a null-terminated UTF-16 string in a fixed-size field
@@ -393,7 +395,30 @@ impl<W: Write + Seek> BinaryWriter<W> {
         self.inner.write_all(bytes)
     }
 
-    impl_numeric_writer!(u8, 1, write_u8, write_vec_u8, reserve_u8, fill_u8);
+    /// Writes a `u8` value.
+    pub fn write_u8(&mut self, data: u8) -> io::Result<()> {
+        self.inner.write_all(&[data])
+    }
+
+    /// Writes a vector of `u8` values.
+    pub fn write_vec_u8(&mut self, data: Vec<u8>) -> io::Result<()> {
+        self.inner.write_all(&data)
+    }
+
+    /// Reserves space for a `u8` value.
+    pub fn reserve_u8(&mut self, name: impl Into<String>) -> io::Result<()> {
+        self.add_reservation(name, 1)
+    }
+
+    /// Fills a reservation with a `u8` value.
+    pub fn fill_u8(&mut self, name: impl Into<String>, value: u8) -> io::Result<()> {
+        let position = self.free_reservation(name)?;
+        let initial_position = self.position()?;
+        self.seek(position)?;
+        self.write_u8(value)?;
+        self.seek(initial_position)?;
+        Ok(())
+    }
     impl_numeric_writer!(u16, 2, write_u16, write_vec_u16, reserve_u16, fill_u16);
     impl_numeric_writer!(u32, 4, write_u32, write_vec_u32, reserve_u32, fill_u32);
     impl_numeric_writer!(u64, 8, write_u64, write_vec_u64, reserve_u64, fill_u64);
@@ -421,6 +446,12 @@ impl BinaryWriter<Cursor<Vec<u8>>> {
     pub fn close_bytes(&mut self) -> io::Result<Vec<u8>> {
         self.finalize()?;
         Ok(self.inner.get_ref().clone())
+    }
+
+    /// Finalizes the writer and returns its bytes without copying them.
+    pub fn into_bytes(mut self) -> io::Result<Vec<u8>> {
+        self.finalize()?;
+        Ok(self.inner.into_inner())
     }
 }
 

@@ -84,17 +84,24 @@ impl Fmg {
     where
         W: Write + Seek,
     {
-        let mut offset_dict: HashMap<String, i64> = HashMap::new();
+        self.write_strings_reuse_offsets_iter(bw, entries.iter())
+    }
+
+    fn write_strings_reuse_offsets_iter<'a, W: Write + Seek>(
+        &self,
+        bw: &mut BinaryWriter<W>,
+        entries: impl IntoIterator<Item = &'a Entry>,
+    ) -> io::Result<()> {
+        let mut offset_dict: HashMap<&str, i64> = HashMap::new();
         for (index, entry) in entries.into_iter().enumerate() {
             let reservation_name = format!("string-offset-{index}");
-            let text = entry.text;
 
-            if let Some(text) = text {
-                if let Some(&offset) = offset_dict.get(&text) {
-                    bw.fill_varint(format!("string-offset-{index}"), offset)?;
+            if let Some(text) = entry.text.as_deref() {
+                if let Some(&offset) = offset_dict.get(text) {
+                    bw.fill_varint(reservation_name, offset)?;
                 } else {
                     let offset = bw.position()?;
-                    offset_dict.insert(text.clone(), util::convert_num(offset)?);
+                    offset_dict.insert(text, util::convert_num(offset)?);
                     bw.fill_varint(reservation_name, util::convert_num(offset)?)?;
 
                     if self.unicode {
@@ -114,9 +121,17 @@ impl Fmg {
     where
         W: Write + Seek,
     {
+        self.write_strings_iter(bw, entries.iter())
+    }
+
+    fn write_strings_iter<'a, W: Write + Seek>(
+        &self,
+        bw: &mut BinaryWriter<W>,
+        entries: impl IntoIterator<Item = &'a Entry>,
+    ) -> io::Result<()> {
         for (index, entry) in entries.into_iter().enumerate() {
             let reservation_name = format!("string-offset-{index}");
-            if let Some(text) = entry.text {
+            if let Some(text) = entry.text.as_deref() {
                 let pos = bw.position()?;
                 bw.fill_varint(reservation_name, util::convert_num(pos)?)?;
 
@@ -263,7 +278,7 @@ impl StreamIO<Fmg> for Fmg {
         ref_bw.write_varint(0)?;
 
         let mut group_count = 0;
-        let mut entries = self.entries.clone();
+        let mut entries: Vec<_> = self.entries.iter().collect();
         entries.sort_by_key(|entry| entry.id);
 
         let mut iter = 0;
@@ -292,9 +307,9 @@ impl StreamIO<Fmg> for Fmg {
         }
 
         if self.reuse_offsets {
-            self.write_strings_reuse_offsets(&mut ref_bw, entries)?;
+            self.write_strings_reuse_offsets_iter(&mut ref_bw, entries)?;
         } else {
-            self.write_strings(&mut ref_bw, entries)?;
+            self.write_strings_iter(&mut ref_bw, entries)?;
         }
 
         let pos = ref_bw.position()?;
@@ -302,19 +317,19 @@ impl StreamIO<Fmg> for Fmg {
 
         if self.md5 {
             ref_bw.seek(0)?;
-            let final_data = ref_bw.close_bytes()?;
+            let final_data = ref_bw.into_bytes()?;
 
             let mut hasher = Md5::new();
             hasher.update(&final_data);
 
-            let hash = hasher.finalize().to_vec();
+            let hash = hasher.finalize();
 
             bw.seek(0)?;
-            bw.write_vec_u8(hash)?;
-            bw.write_vec_u8(final_data)?;
+            bw.write_bytes(&hash)?;
+            bw.write_bytes(&final_data)?;
         } else {
-            let final_data = ref_bw.close_bytes()?;
-            bw.write_vec_u8(final_data)?;
+            let final_data = ref_bw.into_bytes()?;
+            bw.write_bytes(&final_data)?;
         }
 
         Ok(())

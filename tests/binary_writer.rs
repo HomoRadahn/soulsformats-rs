@@ -2,6 +2,77 @@ use soulsformats_rs::io::{BinaryWriter, Endian};
 use std::fs;
 
 #[test]
+fn byte_vector_is_written_in_bulk() {
+    use std::{
+        cell::Cell,
+        io::{self, Cursor, Seek, SeekFrom, Write},
+        rc::Rc,
+    };
+
+    struct CountingWriter {
+        cursor: Cursor<Vec<u8>>,
+        calls: Rc<Cell<usize>>,
+    }
+
+    impl Write for CountingWriter {
+        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+            self.calls.set(self.calls.get() + 1);
+            self.cursor.write(buf)
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            self.cursor.flush()
+        }
+    }
+
+    impl Seek for CountingWriter {
+        fn seek(&mut self, pos: SeekFrom) -> io::Result<u64> {
+            self.cursor.seek(pos)
+        }
+    }
+
+    let calls = Rc::new(Cell::new(0));
+    let mut writer = BinaryWriter::new(
+        CountingWriter {
+            cursor: Cursor::new(Vec::new()),
+            calls: calls.clone(),
+        },
+        Endian::Little,
+        false,
+    );
+    writer.write_vec_u8(vec![1; 20_000]).unwrap();
+    assert_eq!(calls.get(), 1);
+}
+
+#[test]
+fn consuming_writer_checks_reservations_and_returns_bytes() {
+    let mut writer = BinaryWriter::to_bytes(Endian::Little, false);
+    writer.write_vec_u8(vec![1, 2, 3]).unwrap();
+    assert_eq!(writer.into_bytes().unwrap(), [1, 2, 3]);
+
+    let mut writer = BinaryWriter::to_bytes(Endian::Little, false);
+    writer.reserve_u8("pending").unwrap();
+    assert_eq!(
+        writer.into_bytes().unwrap_err().kind(),
+        std::io::ErrorKind::InvalidData
+    );
+}
+
+#[test]
+fn fixed_shift_jis_truncation_and_padding() {
+    for (size, expected) in [
+        (0, vec![]),
+        (1, vec![0x82]),
+        (2, vec![0x82, 0xa0]),
+        (4, vec![0x82, 0xa0, 0, 0xff]),
+    ] {
+        let mut writer = BinaryWriter::to_bytes(Endian::Little, false);
+        writer.write_fix_shift_jis("あ", size, 0xff).unwrap();
+        assert_eq!(writer.into_bytes().unwrap(), expected);
+    }
+}
+
+#[test]
 fn write_strings() {
     let mut ascii_writer = BinaryWriter::to_bytes(Endian::Little, false);
     ascii_writer.write_ascii("AB", true).unwrap();

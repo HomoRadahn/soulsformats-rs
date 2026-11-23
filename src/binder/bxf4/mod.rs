@@ -325,7 +325,7 @@ impl Bxf4 {
         let mut bdt = BinaryWriter::to_bytes(Endian::Little, false);
         self.write(&mut bhd, &mut bdt)?;
 
-        Ok((bhd.close_bytes()?, bdt.close_bytes()?))
+        Ok((bhd.into_bytes()?, bdt.into_bytes()?))
     }
 
     /// Writes `Bxf4` to two files, compressing as necessary

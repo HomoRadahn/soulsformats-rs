@@ -93,7 +93,7 @@ impl ParamDef {
             endian,
             unicode,
             format_version,
-            fields: Vec::new(),
+            fields: Vec::with_capacity(fields_node.children.len()),
             version_aware,
             basic_fields: format_version == 0,
         };

@@ -54,7 +54,7 @@ where
     fn to_file(&self, path: impl Into<String>) -> io::Result<()> {
         let mut bw = BinaryWriter::to_bytes(Endian::Little, false);
         self.write(&mut bw)?;
-        let data = bw.close_bytes()?;
+        let data = bw.into_bytes()?;
 
         fs::write(path.into(), data)?;
         Ok(())
@@ -83,7 +83,7 @@ where
     fn to_bytes(&self) -> io::Result<Vec<u8>> {
         let mut bw = BinaryWriter::to_bytes(Endian::Little, false);
         self.write(&mut bw)?;
-        let data = bw.close_bytes()?;
+        let data = bw.into_bytes()?;
 
         Ok(data)
     }
@@ -114,7 +114,7 @@ where
     fn compress_to_bytes(&self, compression: CompressionInfo) -> io::Result<Vec<u8>> {
         let mut bw = BinaryWriter::to_bytes(Endian::Little, false);
         self.write(&mut bw)?;
-        let data = bw.close_bytes()?;
+        let data = bw.into_bytes()?;
 
         Dcx::new(data, compression).to_bytes()
     }
@@ -123,7 +123,7 @@ where
     fn compress_to_file(&self, path: impl Into<String>, compression: CompressionInfo) -> io::Result<()> {
         let mut bw = BinaryWriter::to_bytes(Endian::Little, false);
         self.write(&mut bw)?;
-        let data = bw.close_bytes()?;
+        let data = bw.into_bytes()?;
 
         Dcx::new(data, compression).to_file(path)
     }

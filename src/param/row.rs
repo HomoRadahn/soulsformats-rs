@@ -18,10 +18,9 @@ pub struct Row {
 impl Row {
     /// Creates a new [`Row`], with cells having default values set from [`ParamDef`]
     pub fn new(id: i32, name: Option<String>, paramdef: &ParamDef) -> Self {
-        let mut cells = Vec::new();
-        for field in paramdef.fields.iter() {
-            cells.push(Cell::new(field.to_owned(), field.default.to_owned()));
-        }
+        let cells = paramdef.fields.iter()
+            .map(|field| Cell::new(field.clone(), field.default.clone()))
+            .collect();
 
         Self { id, name, cells, paramdef: paramdef.to_owned(), data_offset: 0 }
     }

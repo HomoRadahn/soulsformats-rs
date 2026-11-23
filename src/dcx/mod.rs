@@ -79,7 +79,7 @@ impl Dcx {
         let mut bw = BinaryWriter::to_bytes(Endian::Big, false);
         let data = &self.data;
         Dcx::compress(&mut bw, data, self.compression)?;
-        bw.close_bytes()
+        bw.into_bytes()
     }
 }
 
@@ -606,7 +606,7 @@ impl Dcx {
         bw.write_i32(0)?;
 
         let data_start = bw.position()?;
-        let mut chunk_headers: Vec<EdgeChunk> = Vec::new();
+        let mut chunk_headers: Vec<EdgeChunk> = Vec::with_capacity(chunk_count);
         for index in 0..chunk_count {
             let (chunk, is_compressed) = util::compress_edge_chunk(data, index)?;
 

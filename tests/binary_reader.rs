@@ -1,6 +1,68 @@
 use soulsformats_rs::io::{BinaryReader, Endian};
 use std::{fs, io, vec};
 
+#[test]
+fn bulk_byte_reads_and_truncated_get_restore_position() {
+    use std::{
+        cell::Cell,
+        io::{Cursor, Read, Seek, SeekFrom},
+        rc::Rc,
+    };
+
+    struct CountingReader {
+        cursor: Cursor<Vec<u8>>,
+        calls: Rc<Cell<usize>>,
+    }
+
+    impl Read for CountingReader {
+        fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+            self.calls.set(self.calls.get() + 1);
+            self.cursor.read(buf)
+        }
+    }
+
+    impl Seek for CountingReader {
+        fn seek(&mut self, pos: SeekFrom) -> io::Result<u64> {
+            self.cursor.seek(pos)
+        }
+    }
+
+    let data: Vec<u8> = (0..20_000).map(|i| i as u8).collect();
+    let calls = Rc::new(Cell::new(0));
+    let mut reader = BinaryReader::new(
+        CountingReader {
+            cursor: Cursor::new(data.clone()),
+            calls: calls.clone(),
+        },
+        Endian::Little,
+        false,
+    );
+    assert_eq!(reader.read_vec_u8(data.len() as u64).unwrap(), data);
+    assert!(calls.get() <= 3);
+    reader.seek(7).unwrap();
+    assert_eq!(
+        reader.get_vec_u8(19_999, u64::MAX).unwrap_err().kind(),
+        io::ErrorKind::UnexpectedEof
+    );
+    assert_eq!(reader.position().unwrap(), 7);
+}
+
+#[test]
+fn terminated_utf16_handles_surrogates_and_invalid_data() {
+    for (endian, bytes) in [
+        (Endian::Little, vec![0x3d, 0xd8, 0x00, 0xde, 0, 0]),
+        (Endian::Big, vec![0xd8, 0x3d, 0xde, 0x00, 0, 0]),
+    ] {
+        let mut reader = BinaryReader::from_bytes(bytes, endian, false);
+        assert_eq!(reader.read_utf16().unwrap(), "\u{1f600}");
+    }
+    let mut reader = BinaryReader::from_bytes(vec![0x00, 0xd8, 0, 0], Endian::Little, false);
+    assert_eq!(
+        reader.read_utf16().unwrap_err().kind(),
+        io::ErrorKind::InvalidData
+    );
+}
+
 macro_rules! define_enum_fixture {
     ($name:ident, $type:ty) => {
         #[repr($type)]

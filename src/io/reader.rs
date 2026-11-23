@@ -306,16 +306,17 @@ impl<R: Read + Seek> BinaryReader<R> {
 
     /// Reads a null-terminated UTF-16 string
     pub fn read_utf16(&mut self) -> io::Result<String> {
-        let mut bytes = Vec::new();
+        let mut code_units = Vec::new();
         loop {
-            let pair = self.read_bytes(2)?;
-            if pair == [0, 0] {
+            let code_unit = self.read_u16()?;
+            if code_unit == 0 {
                 break;
             }
-            bytes.extend_from_slice(&pair);
+            code_units.push(code_unit);
         }
 
-        self.decode_utf16(&bytes)
+        String::from_utf16(&code_units)
+            .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))
     }
 
     /// Reads a null-terminated UTF-16 string from the specified offset
@@ -364,7 +365,49 @@ impl<R: Read + Seek> BinaryReader<R> {
         }
     }
 
-    impl_numeric_reader!(u8, 1, read_u8, read_vec_u8, get_u8, get_vec_u8, assert_u8);
+    /// Reads a `u8` value.
+    pub fn read_u8(&mut self) -> io::Result<u8> {
+        let mut byte = [0];
+        self.inner.read_exact(&mut byte)?;
+        Ok(byte[0])
+    }
+
+    /// Reads a vector of `u8` values.
+    pub fn read_vec_u8(&mut self, count: u64) -> io::Result<Vec<u8>> {
+        let mut bytes = Vec::new();
+        let mut remaining = count;
+        let mut buffer = [0; 8192];
+        while remaining != 0 {
+            let length = remaining.min(buffer.len() as u64) as usize;
+            self.inner.read_exact(&mut buffer[..length])?;
+            bytes.extend_from_slice(&buffer[..length]);
+            remaining -= length as u64;
+        }
+        Ok(bytes)
+    }
+
+    /// Reads a `u8` without advancing the stream.
+    pub fn get_u8(&mut self, position: u64) -> io::Result<u8> {
+        let initial = self.position()?;
+        self.seek(position)?;
+        let result = self.read_u8();
+        let restore = self.seek(initial);
+        result.and_then(|value| restore.map(|_| value))
+    }
+
+    /// Reads a vector of `u8` values without advancing the stream.
+    pub fn get_vec_u8(&mut self, position: u64, count: u64) -> io::Result<Vec<u8>> {
+        let initial = self.position()?;
+        self.seek(position)?;
+        let result = self.read_vec_u8(count);
+        let restore = self.seek(initial);
+        result.and_then(|values| restore.map(|_| values))
+    }
+
+    /// Reads and validates a `u8`.
+    pub fn assert_u8(&mut self, expected: &[u8]) -> io::Result<u8> {
+        Self::assert_value(self.read_u8()?, expected, "u8")
+    }
     impl_numeric_reader!(
         u16,
         2,
@@ -525,7 +568,8 @@ impl<R: Read + Seek> BinaryReader<R> {
 
     /// Reads a `ByteVector4` - used to represent color
     pub fn read_byte_vector_4_argb(&mut self) -> io::Result<ByteVector4> {
-        let bytes = self.read_vec_u8(4)?;
+        let mut bytes = [0; 4];
+        self.inner.read_exact(&mut bytes)?;
         Ok(ByteVector4 {
             x: bytes[1],
             y: bytes[2],
@@ -536,7 +580,8 @@ impl<R: Read + Seek> BinaryReader<R> {
 
     /// Reads a `ByteVector4` - used to represent color
     pub fn read_byte_vector_4_abgr(&mut self) -> io::Result<ByteVector4> {
-        let bytes = self.read_vec_u8(4)?;
+        let mut bytes = [0; 4];
+        self.inner.read_exact(&mut bytes)?;
         Ok(ByteVector4 {
             x: bytes[3],
             y: bytes[2],
@@ -547,7 +592,8 @@ impl<R: Read + Seek> BinaryReader<R> {
 
     /// Reads a `ByteVector4` - used to represent color
     pub fn read_byte_vector_4_rgba(&mut self) -> io::Result<ByteVector4> {
-        let bytes = self.read_vec_u8(4)?;
+        let mut bytes = [0; 4];
+        self.inner.read_exact(&mut bytes)?;
         Ok(ByteVector4 {
             x: bytes[0],
             y: bytes[1],
@@ -558,7 +604,8 @@ impl<R: Read + Seek> BinaryReader<R> {
 
     /// Reads a `ByteVector4` - used to represent color
     pub fn read_byte_vector_4_bgra(&mut self) -> io::Result<ByteVector4> {
-        let bytes = self.read_vec_u8(4)?;
+        let mut bytes = [0; 4];
+        self.inner.read_exact(&mut bytes)?;
         Ok(ByteVector4 {
             x: bytes[2],
             y: bytes[1],

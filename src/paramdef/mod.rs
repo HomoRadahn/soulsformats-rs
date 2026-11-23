@@ -144,6 +144,7 @@ impl StreamIO<ParamDef> for ParamDef {
             ));
         }
 
+        out.fields.reserve(field_count.max(0) as usize);
         for _ in 0..field_count {
             out.fields.push(Field::read(br, &out)?);
         }

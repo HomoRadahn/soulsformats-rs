@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::borrow::Cow;
 use std::io::{self, ErrorKind::InvalidData, Read, Seek, Write};
+use std::sync::LazyLock;
 use std::{cmp, fmt};
 
 use crate::io::BinaryWriter;
@@ -13,6 +14,17 @@ use crate::{
 };
 
 use regex::Regex;
+
+static BITFIELD_NAME: LazyLock<Regex> =
+    LazyLock::new(|| {
+        Regex::new(r"^\s*(?<name>.+?)\s*\:\s*(?<size>\d+)\s*$")
+            .expect("valid bitfield regex")
+    });
+static ARRAY_NAME: LazyLock<Regex> =
+    LazyLock::new(|| {
+        Regex::new(r"^\s*(?<name>.+?)\s*\[\s*(?<length>\d+)\s*\]\s*$")
+            .expect("valid array regex")
+    });
 
 #[derive(Debug, Clone, PartialEq)]
 /// Information about a field present in each row in a param
@@ -217,10 +229,7 @@ impl Field {
                 br.read_fixed_shift_jis(0x20)?.trim().to_owned()
             };
 
-            let re = Regex::new(r"^\s*(?<name>.+?)\s*\:\s*(?<size>\d+)\s*$")
-                .map_err(|error| io::Error::new(InvalidData, error))?;
-
-            if let Some(captures) = re.captures(&internal_name) {
+            if let Some(captures) = BITFIELD_NAME.captures(&internal_name) {
                 let name = captures
                     .name("name")
                     .ok_or_else(|| io::Error::new(InvalidData, "missing bitfield name"))?;
@@ -235,10 +244,7 @@ impl Field {
             }
 
             if paramdef::util::is_array_type(out.display_type) {
-                let re = Regex::new(r"^\s*(?<name>.+?)\s*\[\s*(?<length>\d+)\s*\]\s*$")
-                    .map_err(|error| io::Error::new(InvalidData, error))?;
-
-                let length = if let Some(captures) = re.captures(&internal_name) {
+                let length = if let Some(captures) = ARRAY_NAME.captures(&internal_name) {
                     let name = captures
                         .name("name")
                         .ok_or_else(|| io::Error::new(InvalidData, "missing array name"))?;

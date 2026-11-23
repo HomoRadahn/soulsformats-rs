@@ -259,10 +259,10 @@ impl Light {
     where
         W: Write + Seek,
     {
-        let out = self.clone();
-        bw.write_vec_u8(out.unk_00)?;
+        let out = self;
+        bw.write_bytes(&out.unk_00)?;
         bw.write_varint(name_offset)?;
-        bw.write_u32(out.light_type as u32)?;
+        bw.write_u32(out.light_type.clone() as u32)?;
         bw.write_bool(out.unk_1c)?;
         bw.write_byte_vector3(out.diffuse_color)?;
         bw.write_f32(out.diffuse_power)?;
@@ -279,7 +279,7 @@ impl Light {
         bw.write_f32(out.radius)?;
         bw.write_i32(out.unk_5c)?;
         bw.write_i32(0)?;
-        bw.write_vec_u8(out.unk_64)?;
+        bw.write_bytes(&out.unk_64)?;
         bw.write_f32(out.unk_68)?;
         bw.write_byte_vector4_rgba(out.shadow_color)?;
         bw.write_f32(out.unk_70)?;
@@ -287,21 +287,21 @@ impl Light {
         bw.write_f32(out.flicker_interval_max)?;
         bw.write_f32(out.flicker_brightness_multiplier)?;
         bw.write_i32(out.unk_80)?;
-        bw.write_vec_u8(out.unk_84)?;
+        bw.write_bytes(&out.unk_84)?;
         bw.write_f32(out.unk_88)?;
         bw.write_i32(0)?;
         bw.write_f32(out.unk_90)?;
         bw.write_i32(0)?;
         bw.write_f32(out.unk_98)?;
         bw.write_f32(out.near_clip)?;
-        bw.write_vec_u8(out.unk_a0)?;
+        bw.write_bytes(&out.unk_a0)?;
         bw.write_f32(out.sharpness)?;
         bw.write_i32(0)?;
         bw.write_f32(out.unk_ac)?;
         bw.write_varint(0)?;
         bw.write_f32(out.width)?;
         bw.write_f32(out.unk_bc)?;
-        bw.write_vec_u8(out.unk_c0)?;
+        bw.write_bytes(&out.unk_c0)?;
         bw.write_f32(out.unk_c4)?;
 
         if let Some(value) = out.unk_c8 {

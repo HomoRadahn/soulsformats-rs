@@ -60,18 +60,22 @@ pub(crate) fn is_prime(n: u32) -> bool {
         return false;
     }
 
-    if n == 2 {
+    if n == 2 || n == 3 {
         return true;
     }
 
-    if n.is_multiple_of(2) {
+    if n.is_multiple_of(2) || n.is_multiple_of(3) {
         return false;
     }
 
-    for index in 2..=(n as f64).sqrt() as u32 {
-        if n.is_multiple_of(index) {
+    let mut next = 5;
+
+    while next * next <= n {
+        if n.is_multiple_of(next) || n.is_multiple_of(next + 2) {
             return false;
         }
+
+        next += 6;
     }
 
     true

@@ -133,7 +133,7 @@ impl FileHeader {
         bw.pad_00(alignment_size as u64)?;
         let offset: i32 = util::convert_num(bw.position()?)?;
         let size: i32 = util::convert_num(bytes.len())?;
-        bw.write_vec_u8(bytes.to_vec())?;
+        bw.write_bytes(bytes)?;
         bw.fill_i32(format!("file-offset-{index}"), offset)?;
         bw.fill_i32(format!("file-size-{index}"), size)?;
 
