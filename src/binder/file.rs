@@ -9,23 +9,23 @@ use crate::{
     util,
 };
 
-/// A generic file in `Bnd3`, `Bnd4`, `Bxf3`, `Bxf4` containers
+/// A generic file in `Bnd3`, `Bnd4`, `Bxf3`, `Bxf4` containers.
 #[derive(Debug, Clone, PartialEq)]
 pub struct File {
-    /// Flags of this `File`
+    /// Flags of this `File`.
     pub flags: FileFlags,
-    /// ID of this `File`, or `None` if the format or file has no ID
+    /// ID of this `File`, or `None` if the format or file has no ID.
     pub id: Option<i32>,
-    /// Name of this `File`, or `None` if the format or file has no name
+    /// Name of this `File`, or `None` if the format or file has no name.
     pub name: Option<String>,
-    /// Bytes contained in this `File`
+    /// Bytes contained in this `File`.
     pub bytes: Vec<u8>,
-    /// Compression of this `File`, different from Dcx compression
+    /// Compression used for this file's data, independently of any outer DCX wrapper.
     pub compression: CompressionInfo,
 }
 
 impl File {
-    /// Creates a new `File`, with zlib compression
+    /// Creates a file with the specified flags, metadata, data, and compression.
     pub fn new(
         flags: FileFlags,
         id: Option<i32>,

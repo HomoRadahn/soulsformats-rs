@@ -4,9 +4,9 @@ use crate::{param::{CellValue, CellValueExt}, paramdef::Field};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Cell {
-    /// The [`Field`] describing this cell
+    /// The [`Field`] describing this cell.
     pub paramdef_field: Field,
-    /// The value held by of this cell
+    /// The value held by this cell.
     pub value: CellValue,
 }
 
@@ -16,7 +16,7 @@ impl Cell {
         Self { paramdef_field, value }
     }
 
-    /// Sets payload carried by value of the cell
+    /// Updates the value's payload, returning an error if its variant is incompatible.
     pub fn set<T: CellValueExt>(&mut self, value: T) -> io::Result<()> {
         value.set_inner(&mut self.value)
     }

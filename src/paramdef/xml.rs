@@ -50,8 +50,6 @@ impl XmlNode {
 impl ParamDef {
     /// Deserializes a ParamDef from a file containing XML data.
     ///
-    /// `version_aware` set to false by default
-    /// 
     /// When `version_aware` is false, fields with a non-zero `RemovedVersion`
     /// are omitted, matching the latest-version view of a ParamDef.
     pub fn from_xml(path: impl Into<String>, version_aware: bool) -> io::Result<Self> {
@@ -110,8 +108,6 @@ impl ParamDef {
 
     /// Serializes this ParamDef to file containing XML data.
     /// 
-    /// `include_offsets` set to false by default
-    ///
     /// `xml_version` controls the legacy element names used by version 0;
     /// `include_offsets` adds field-layout offset comments.
     pub fn to_xml(&self, path: impl Into<String>, xml_version: u8, include_offsets: bool) -> io::Result<()> {

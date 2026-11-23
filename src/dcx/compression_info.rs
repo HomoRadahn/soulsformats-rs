@@ -1,21 +1,25 @@
 use oodle::OodleCompressor;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-/// Compression info of `Dcx`
+/// Compression format and parameters for DCP, DCX, or unwrapped data.
 pub enum CompressionInfo {
+    /// An unrecognized format; cannot be used for compression.
     Unknown,
+    /// No compression or outer wrapper.
     None,
+    /// A bare zlib stream.
     Zlib,
     DcpEdge,
     DcpDflt,
     DcxEdge,
     DcxDflt(DcxDfltArgs),
     DcxKrak(DcxKrakArgs),
+    /// DCX with Zstd compression and the given compression level.
     DcxZstd(u8),
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Eq)]
-/// Presets for `Dcx DFLT` compression
+/// Presets for `Dcx DFLT` compression.
 pub enum DcxDfltPreset {
     DcxDflt10000_24_9,
     DcxDflt10000_44_9,
@@ -25,7 +29,7 @@ pub enum DcxDfltPreset {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-/// Arguments for `Dcx DFLT` compression
+/// Arguments for `Dcx DFLT` compression.
 pub struct DcxDfltArgs {
     pub unk_04: i32,
     pub unk_10: i32,
@@ -35,7 +39,7 @@ pub struct DcxDfltArgs {
 }
 
 impl DcxDfltArgs {
-    /// Initializes `DcxDfltArgs` from provided values
+    /// Initializes `DcxDfltArgs` from provided values.
     pub fn new(unk_04: i32, unk_10: i32, unk_14: i32, unk_30: i32, unk_38: i32) -> Self {
         Self {
             unk_04,
@@ -46,7 +50,7 @@ impl DcxDfltArgs {
         }
     }
 
-    /// Initializes `DcxDfltArgs` from preset
+    /// Initializes `DcxDfltArgs` from preset.
     pub fn from_preset(preset: DcxDfltPreset) -> Self {
         match preset {
             DcxDfltPreset::DcxDflt10000_24_9 => Self {
@@ -89,19 +93,19 @@ impl DcxDfltArgs {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-/// Arguments for `Dcx` Kraken compression
+/// Arguments for `Dcx` Kraken compression.
 pub struct DcxKrakArgs {
     pub compression_level: u8,
     pub(crate) oodle_compressor: OodleCompressor,
 }
 
 impl DcxKrakArgs {
-    /// Initializes `DcxKrakArgs` for Elden Ring
+    /// Initializes `DcxKrakArgs` for Elden Ring.
     pub fn new() -> Self {
         Self::from_preset(KrakCompressionPreset::EldenRing)
     }
 
-    /// Initializes `DcxKrakArgs` from the provided `KrakCompressionPreset`
+    /// Initializes `DcxKrakArgs` from the provided `KrakCompressionPreset`.
     pub fn from_preset(preset: KrakCompressionPreset) -> Self {
         match preset {
             KrakCompressionPreset::EldenRing => Self {
@@ -123,7 +127,7 @@ impl Default for DcxKrakArgs {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-/// Presets for `Dcx` Kraken compression
+/// Presets for `Dcx` Kraken compression.
 pub enum KrakCompressionPreset {
     EldenRing,
     ArmoredCore6,

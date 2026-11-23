@@ -2,14 +2,14 @@ use core::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Entry {
-    /// The ID of this `Entry`
+    /// The ID of this `Entry`.
     pub id: i32,
-    /// The text data of this `Entry`
+    /// The text data of this `Entry`.
     pub text: Option<String>,
 }
 
 impl Entry {
-    /// Creates `Entry` with specified parameters
+    /// Creates `Entry` with specified parameters.
     pub fn new(id: i32, text: Option<impl Into<String>>) -> Self {
         Self {
             id,

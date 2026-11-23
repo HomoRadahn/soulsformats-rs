@@ -51,7 +51,7 @@ impl TryFrom<u8> for FormatFlags2 {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-/// Values each cell can take, each holding the value itself within
+/// A typed value stored in a parameter cell.
 pub enum CellValue {
     I8(i8),
     U8(u8),
@@ -63,11 +63,11 @@ pub enum CellValue {
     F32(f32),
     Angle(f32),
     F64(f64),
-    /// Byte or array of bytes used for padding / placeholding
+    /// Byte or array of bytes used for padding / placeholding.
     ArrayU8(Vec<u8>),
-    /// Fixed-width Shift-JIS string
+    /// Fixed-width Shift-JIS string.
     StringShiftJIS(String),
-    /// Fixed-width UTF-16 string
+    /// Fixed-width UTF-16 string.
     StringUTF16(String),
 }
 

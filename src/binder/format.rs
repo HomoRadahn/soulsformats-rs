@@ -8,19 +8,19 @@ use chrono::{DateTime, Datelike, TimeZone, Timelike};
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct Format: u8 {
-        /// Minimal file information
+        /// Minimal file information.
         const None = 0;
-        /// File is big-endian regardless of the big-endian byte
+        /// File is big-endian regardless of the big-endian byte.
         const BigEndian = 0b0000_0001;
-        /// Files have ID numbers
+        /// Files have ID numbers.
         const IDs = 0b0000_0010;
-        /// Files have name strings; Names2 may or may not be set
+        /// Files have name strings; Names2 may or may not be set.
         const Names1 = 0b0000_0100;
-        /// Files have name strings; Names1 may or may not be set
+        /// Files have name strings; Names1 may or may not be set.
         const Names2 = 0b0000_1000;
-        /// File data offsets are 64-bit
+        /// File data offsets are 64-bit.
         const LongOffsets = 0b0001_0000;
-        /// Files may be compressed
+        /// Files may be compressed.
         const Compression = 0b0010_0000;
         const Flag6 = 0b0100_0000;
         const Flag7 = 0b1000_0000;
@@ -37,7 +37,7 @@ impl TryFrom<u8> for Format {
 }
 
 impl Format {
-    /// Reads `Format` from `BinaryReader`
+    /// Reads `Format` from `BinaryReader`.
     pub(crate) fn read<R>(br: &mut BinaryReader<R>, bit_endian: Endian) -> io::Result<Self>
     where
         R: Read + Seek,
@@ -55,7 +55,7 @@ impl Format {
         }
     }
 
-    /// Writes `Format` to `BinaryWriter`
+    /// Writes `Format` to `BinaryWriter`.
     pub(crate) fn write<W>(&self, bw: &mut BinaryWriter<W>, bit_endian: Endian) -> io::Result<()>
     where
         W: Write + Seek,
@@ -74,7 +74,7 @@ impl Format {
     }
 }
 
-/// Calculates the size of each file header for `Bnd4` / `Bxf4`
+/// Calculates the size of each file header for `Bnd4` / `Bxf4`.
 pub(crate) fn get_bnd4_file_header_size(format: Format) -> i64 {
     0x10 + match format.contains(Format::LongOffsets) {
         true => 8,
@@ -97,11 +97,11 @@ pub(crate) fn get_bnd4_file_header_size(format: Format) -> i64 {
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct FileFlags: u8 {
-        /// No flags set
+        /// No flags set.
         const None = 0;
-        /// File is compressed
+        /// File is compressed.
         const Compressed = 0b0000_0001;
-        /// Files have ID numbers
+        /// An unknown flag.
         const Flag1 = 0b0000_0010;
         const Flag2 = 0b0000_0100;
         const Flag3 = 0b0000_1000;
@@ -122,7 +122,7 @@ impl TryFrom<u8> for FileFlags {
 }
 
 impl FileFlags {
-    /// Reads `FileFlags` from `BinaryReader`
+    /// Reads `FileFlags` from `BinaryReader`.
     pub(crate) fn read<R>(br: &mut BinaryReader<R>, bit_endian: Endian) -> io::Result<Self>
     where
         R: Read + Seek,
@@ -134,7 +134,7 @@ impl FileFlags {
         }
     }
 
-    /// Writes `FileFlags` to `BinaryWriter`
+    /// Writes `FileFlags` to `BinaryWriter`.
     pub(crate) fn write<W>(&self, bw: &mut BinaryWriter<W>, bit_endian: Endian) -> io::Result<()>
     where
         W: Write + Seek,

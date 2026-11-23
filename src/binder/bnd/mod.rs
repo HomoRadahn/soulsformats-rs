@@ -8,20 +8,20 @@ mod file;
 pub use file::File;
 use file::FileHeader;
 
-/// Bnd file, used in old titles
+/// Bnd file, used in old titles.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Bnd {
-    /// `Bnd` version
+    /// `Bnd` version.
     pub internal_version: i32,
-    /// First `Bnd` format definition
+    /// First `Bnd` format definition.
     pub format0: u16,
     /// The second Bnd format definition.
     /// Bit 0 determines if filenames exist.
-    /// Bit 1 determines if `root_file_path` exists
+    /// Bit 1 determines if `root_file_path` exists.
     pub format1: u16,
-    /// Files in the `Bnd`
+    /// Files in the `Bnd`.
     pub files: Vec<File>,
-    /// Root file path. Not all `Bnd` have this
+    /// Root file path. Not all `Bnd` have this.
     pub root_file_path: Option<String>,
 }
 

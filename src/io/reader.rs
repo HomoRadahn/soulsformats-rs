@@ -5,7 +5,7 @@ use std::path::Path;
 
 macro_rules! impl_generic_enum_reader {
     ($type:ty, $read_value:ident, $get_value:ident, $read:ident, $get:ident) => {
-        #[doc = concat!("Reads `", stringify!($type) , "` as the specified enum, throwing an exception if not present")]
+        #[doc = concat!("Reads a `", stringify!($type), "` and converts it using `TryFrom`, returning any conversion error.")]
         pub fn $read<T>(&mut self) -> io::Result<T>
         where
         T: TryFrom<$type, Error = io::Error>,
@@ -13,7 +13,7 @@ macro_rules! impl_generic_enum_reader {
             T::try_from(self.$read_value()?)
         }
 
-        #[doc = concat!("Reads `", stringify!($type) , "` as the specified enum from the specified position without advancing the stream")]
+        #[doc = concat!("Reads a `", stringify!($type), "` at the specified offset and converts it using `TryFrom`.")]
         pub fn $get<T>(&mut self, position: u64) -> io::Result<T>
         where
             T: TryFrom<$type, Error = io::Error>,
@@ -25,7 +25,7 @@ macro_rules! impl_generic_enum_reader {
 
 macro_rules! impl_numeric_reader {
     ($type:ty, $size:expr, $read:ident, $read_vec:ident, $get:ident, $get_vec:ident, $assert:ident) => {
-        #[doc = concat!("Reads `", stringify!($type) , "` value")]
+        #[doc = concat!("Reads a `", stringify!($type), "` value.")]
         pub fn $read(&mut self) -> io::Result<$type> {
             let mut buf = [0u8; $size];
             self.inner.read_exact(&mut buf)?;
@@ -36,12 +36,12 @@ macro_rules! impl_numeric_reader {
             })
         }
 
-        #[doc = concat!("Reads vector of `", stringify!($type) , "` values")]
+        #[doc = concat!("Reads a vector of `", stringify!($type), "` values.")]
         pub fn $read_vec(&mut self, count: u64) -> io::Result<Vec<$type>> {
             (0..count).map(|_| self.$read()).collect()
         }
 
-        #[doc = concat!("Reads `", stringify!($type), "` value from the specified offset without advancing the stream")]
+        #[doc = concat!("Reads a `", stringify!($type), "` value at the specified offset without advancing the stream on success.")]
         pub fn $get(&mut self, position: u64) -> io::Result<$type> {
             let initial = self.position()?;
             self.seek(position)?;
@@ -52,7 +52,7 @@ macro_rules! impl_numeric_reader {
             result.and_then(|value| restore.map(|_| value))
         }
 
-        #[doc = concat!("Reads a vector of `", stringify!($type), "` values from the specified offset without advancing the stream")]
+        #[doc = concat!("Reads a vector of `", stringify!($type), "` values at the specified offset without advancing the stream on success.")]
         pub fn $get_vec(&mut self, position: u64, count: u64) -> io::Result<Vec<$type>> {
             let initial = self.position()?;
             self.seek(position)?;
@@ -64,7 +64,7 @@ macro_rules! impl_numeric_reader {
                 result.and_then(|values| restore.map(|_| values))
         }
 
-        #[doc = concat!("Reads `", stringify!($type), "` value and validates it against the supplied values")]
+        #[doc = concat!("Reads a `", stringify!($type), "` value and validates it against the supplied values.")]
         pub fn $assert(&mut self, expected: &[$type]) -> io::Result<$type>
         where
             $type: PartialEq + std::fmt::Debug,
@@ -75,15 +75,31 @@ macro_rules! impl_numeric_reader {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// A seekable binary reader with configurable endianness and integer width.
+///
+/// `get_*` methods read at an absolute offset and restore the position on success.
+/// Some methods may leave the stream at a different position if reading fails.
+///
+/// ```
+/// use soulsformats_rs::io::{BinaryReader, Endian};
+///
+/// let mut reader = BinaryReader::from_bytes(vec![0x34, 0x12, 0xff], Endian::Little, false);
+/// assert_eq!(reader.read_u16()?, 0x1234);
+/// assert_eq!(reader.get_u8(0)?, 0x34);
+/// assert_eq!(reader.position()?, 2);
+/// # Ok::<(), std::io::Error>(())
+/// ```
 pub struct BinaryReader<R> {
     inner: R,
+    /// Byte order used for multibyte values.
     pub endian: Endian,
+    /// Whether varints are stored as 64-bit rather than 32-bit signed integers.
     pub varint_64bit: bool,
 }
 
 #[allow(unused)]
 impl<R: Read + Seek> BinaryReader<R> {
-    /// Initializes the `BinaryReader` from a generic implementing `Read + Seek`
+    /// Initializes the `BinaryReader` from a generic implementing `Read + Seek`.
     pub fn new(inner: R, endian: Endian, varint_64bit: bool) -> Self {
         Self {
             inner,
@@ -106,12 +122,12 @@ impl<R: Read + Seek> BinaryReader<R> {
         }
     }
 
-    /// Returns current stream position
+    /// Returns current stream position.
     pub fn position(&mut self) -> io::Result<u64> {
         self.inner.stream_position()
     }
 
-    /// Returns total stream length
+    /// Returns total stream length.
     pub fn length(&mut self) -> io::Result<u64> {
         let initial = self.position()?;
         let length = self.inner.seek(SeekFrom::End(0))?;
@@ -119,21 +135,24 @@ impl<R: Read + Seek> BinaryReader<R> {
         Ok(length)
     }
 
+    /// Returns the number of bytes between the current position and the stream's end.
+    ///
+    /// The current position must not be beyond the end of the stream.
     pub fn remaining(&mut self) -> io::Result<u64> {
         Ok(self.length()? - self.position()?)
     }
 
-    /// Moves stream position to the target
+    /// Moves stream position to the target.
     pub fn seek(&mut self, position: u64) -> io::Result<u64> {
         self.inner.seek(SeekFrom::Start(position))
     }
 
-    /// Moves stream position relative to current position
+    /// Moves stream position relative to current position.
     pub fn skip(&mut self, amount: i64) -> io::Result<u64> {
         self.inner.seek(SeekFrom::Current(amount))
     }
 
-    /// Advances the stream position until it meets the specified alignment
+    /// Advances the stream position until it meets the specified alignment.
     pub fn pad(&mut self, align: u64) -> io::Result<u64> {
         if align == 0 {
             return Err(io::Error::new(io::ErrorKind::InvalidData, "padding was 0"));
@@ -146,7 +165,7 @@ impl<R: Read + Seek> BinaryReader<R> {
         self.position()
     }
 
-    /// Advances the stream position until it meets the specified alignment relative to the given starting position
+    /// Advances the stream position until it meets the specified alignment relative to the given starting position.
     pub fn pad_relative(&mut self, start: u64, align: u64) -> io::Result<u64> {
         if align == 0 {
             return Err(io::Error::new(io::ErrorKind::InvalidData, "padding was 0"));
@@ -161,7 +180,7 @@ impl<R: Read + Seek> BinaryReader<R> {
         self.position()
     }
 
-    /// Reads `bool` value
+    /// Reads `bool` value.
     pub fn read_bool(&mut self) -> io::Result<bool> {
         let mut buf = [0u8; 1];
         self.inner.read_exact(&mut buf)?;
@@ -173,17 +192,17 @@ impl<R: Read + Seek> BinaryReader<R> {
         }
     }
 
-    /// Reads a vector of `bool` values
+    /// Reads a vector of `bool` values.
     pub fn read_vec_bool(&mut self, count: u64) -> io::Result<Vec<bool>> {
         (0..count).map(|_| self.read_bool()).collect()
     }
 
-    /// Reads `bool` value and validates it against the supplied values
+    /// Reads `bool` value and validates it against the supplied values.
     pub fn assert_bool(&mut self, expected: &[bool]) -> io::Result<bool> {
         Self::assert_value(self.read_bool()?, expected, "bool")
     }
 
-    /// Reads `bool` value from the specified offset without advancing the stream
+    /// Reads `bool` value from the specified offset without advancing the stream.
     pub fn get_bool(&mut self, position: u64) -> io::Result<bool> {
         let initial = self.position()?;
         self.seek(position)?;
@@ -195,7 +214,11 @@ impl<R: Read + Seek> BinaryReader<R> {
         Ok(result)
     }
 
-    /// Reads a vector of `bool` values from the specified offset without advancing the stream
+    /// Reads a vector of `bool` values from the specified offset without advancing the stream.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a boolean cannot be read or is not encoded as `0` or `1`.
     pub fn get_vec_bool(&mut self, position: u64, count: u64) -> io::Result<Vec<bool>> {
         let initial = self.position()?;
         self.seek(position)?;
@@ -247,7 +270,9 @@ impl<R: Read + Seek> BinaryReader<R> {
             .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))
     }
 
-    /// Reads a null-terminated ASCII string
+    /// Reads a null-terminated ASCII string.
+    ///
+    /// The bytes are decoded as UTF-8 with replacement for invalid sequences.
     pub fn read_ascii(&mut self) -> io::Result<String> {
         let mut bytes = Vec::new();
         loop {
@@ -260,23 +285,25 @@ impl<R: Read + Seek> BinaryReader<R> {
         Ok(String::from_utf8_lossy(&bytes).into_owned())
     }
 
-    /// Reads an ASCII string with the specified byte length
+    /// Reads an ASCII string with the specified byte length.
+    ///
+    /// The bytes are decoded as UTF-8 with replacement for invalid sequences.
     pub fn read_ascii_len(&mut self, length: usize) -> io::Result<String> {
         let bytes = self.read_bytes(length)?;
         Ok(String::from_utf8_lossy(&bytes).into_owned())
     }
 
-    /// Reads a null-terminated ASCII string from the specified offset
+    /// Reads a null-terminated ASCII string from the specified offset.
     pub fn get_ascii(&mut self, position: u64) -> io::Result<String> {
         self.get_string(position, Self::read_ascii)
     }
 
-    /// Reads an ASCII string with the specified byte length from the specified offset
+    /// Reads an ASCII string with the specified byte length from the specified offset.
     pub fn get_ascii_len(&mut self, position: u64, length: usize) -> io::Result<String> {
         self.get_string(position, |reader| reader.read_ascii_len(length))
     }
 
-    /// Reads a null-terminated Shift-JIS string
+    /// Reads a null-terminated Shift-JIS string.
     pub fn read_shift_jis(&mut self) -> io::Result<String> {
         let mut bytes = Vec::new();
         loop {
@@ -289,22 +316,22 @@ impl<R: Read + Seek> BinaryReader<R> {
         Ok(Self::decode_shift_jis(&bytes))
     }
 
-    /// Reads a Shift-JIS string with the specified byte length
+    /// Reads a Shift-JIS string with the specified byte length.
     pub fn read_shift_jis_len(&mut self, length: usize) -> io::Result<String> {
         Ok(Self::decode_shift_jis(&self.read_bytes(length)?))
     }
 
-    /// Reads a null-terminated Shift-JIS string from the specified offset
+    /// Reads a null-terminated Shift-JIS string from the specified offset.
     pub fn get_shift_jis(&mut self, position: u64) -> io::Result<String> {
         self.get_string(position, Self::read_shift_jis)
     }
 
-    /// Reads a Shift-JIS string with the specified byte length from the specified offset
+    /// Reads a Shift-JIS string with the specified byte length from the specified offset.
     pub fn get_shift_jis_len(&mut self, position: u64, length: usize) -> io::Result<String> {
         self.get_string(position, |reader| reader.read_shift_jis_len(length))
     }
 
-    /// Reads a null-terminated UTF-16 string
+    /// Reads a null-terminated UTF-16 string.
     pub fn read_utf16(&mut self) -> io::Result<String> {
         let mut code_units = Vec::new();
         loop {
@@ -319,19 +346,21 @@ impl<R: Read + Seek> BinaryReader<R> {
             .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))
     }
 
-    /// Reads a null-terminated UTF-16 string from the specified offset
+    /// Reads a null-terminated UTF-16 string from the specified offset.
     pub fn get_utf16(&mut self, position: u64) -> io::Result<String> {
         self.get_string(position, Self::read_utf16)
     }
 
-    /// Reads a null-terminated Shift-JIS string in a fixed-size field
+    /// Reads a fixed-size Shift-JIS field up to its first null byte, if present.
     pub fn read_fixed_shift_jis(&mut self, size: usize) -> io::Result<String> {
         let bytes = self.read_bytes(size)?;
         let end = bytes.iter().position(|&byte| byte == 0).unwrap_or(size);
         Ok(Self::decode_shift_jis(&bytes[..end]))
     }
 
-    /// Reads a null-terminated UTF-16 string in a fixed-size field
+    /// Reads a fixed-size UTF-16 field up to its first null code unit, if present.
+    ///
+    /// An incomplete trailing byte is ignored.
     pub fn read_fixed_utf16(&mut self, size: usize) -> io::Result<String> {
         let bytes = self.read_bytes(size)?;
         let end = bytes
@@ -341,17 +370,17 @@ impl<R: Read + Seek> BinaryReader<R> {
         self.decode_utf16(&bytes[..end])
     }
 
-    /// Reads a null-terminated Shift-JIS string in a fixed-size field from the specified offset
+    /// Reads a fixed-size Shift-JIS field at the specified offset.
     pub fn get_fixed_shift_jis(&mut self, position: u64, size: usize) -> io::Result<String> {
         self.get_string(position, |reader| reader.read_fixed_shift_jis(size))
     }
 
-    /// Reads a null-terminated UTF-16 string in a fixed-size field from the specified offset
+    /// Reads a fixed-size UTF-16 field at the specified offset.
     pub fn get_fixed_utf16(&mut self, position: u64, size: usize) -> io::Result<String> {
         self.get_string(position, |reader| reader.read_fixed_utf16(size))
     }
 
-    /// Reads ASCII bytes matching one of the supplied values
+    /// Reads the byte length of the first supplied value and checks for a match.
     pub fn assert_ascii(&mut self, values: &[&str]) -> io::Result<String> {
         let expected_length = values.first().map_or(0, |value| value.len());
         let value = self.read_ascii_len(expected_length)?;
@@ -490,7 +519,7 @@ impl<R: Read + Seek> BinaryReader<R> {
     impl_generic_enum_reader!(i32, read_i32, get_i32, read_enum_i32, get_enum_i32);
     impl_generic_enum_reader!(i64, read_i64, get_i64, read_enum_i64, get_enum_i64);
 
-    /// Reads either `i32` or `i64` depending on `varint_64bit`
+    /// Reads either `i32` or `i64` depending on `varint_64bit`.
     pub fn read_varint(&mut self) -> io::Result<i64> {
         if self.varint_64bit {
             self.read_i64()
@@ -499,17 +528,17 @@ impl<R: Read + Seek> BinaryReader<R> {
         }
     }
 
-    /// Reads a vector of either `i32` or `i64` depending on `varint_64bit`
+    /// Reads a vector of either `i32` or `i64` depending on `varint_64bit`.
     pub fn read_vec_varint(&mut self, count: u64) -> io::Result<Vec<i64>> {
         (0..count).map(|_| self.read_varint()).collect()
     }
 
-    /// Reads a `varint` value and validates it against the supplied values
+    /// Reads a `varint` value and validates it against the supplied values.
     pub fn assert_varint(&mut self, expected: &[i64]) -> io::Result<i64> {
         Self::assert_value(self.read_varint()?, expected, "varint")
     }
 
-    /// Reads either `i32` or `i64` depending on `varint_64bit` from the specified position without advancing the stream
+    /// Reads either `i32` or `i64` depending on `varint_64bit` from the specified position without advancing the stream.
     pub fn get_varint(&mut self, position: u64) -> io::Result<i64> {
         if self.varint_64bit {
             self.get_i64(position)
@@ -518,7 +547,7 @@ impl<R: Read + Seek> BinaryReader<R> {
         }
     }
 
-    /// Reads a vector of either `i32` or `i64` depending on `varint_64bit` from the specified position without advancing the stream
+    /// Reads a vector of either `i32` or `i64` depending on `varint_64bit` from the specified position without advancing the stream.
     pub fn get_vec_varint(&mut self, position: u64, count: u64) -> io::Result<Vec<i64>> {
         let initial = self.position()?;
         self.seek(position)?;
@@ -529,7 +558,7 @@ impl<R: Read + Seek> BinaryReader<R> {
         result.and_then(|values| restore.map(|_| values))
     }
 
-    /// Reads a `Vector2` value from two consecutive `f32` values
+    /// Reads a `Vector2` value from two consecutive `f32` values.
     pub fn read_vector_2(&mut self) -> io::Result<Vector2> {
         Ok(Vector2 {
             x: self.read_f32()?,
@@ -537,7 +566,7 @@ impl<R: Read + Seek> BinaryReader<R> {
         })
     }
 
-    /// Reads a `Vector3` value from three consecutive `f32` values
+    /// Reads a `Vector3` value from three consecutive `f32` values.
     pub fn read_vector_3(&mut self) -> io::Result<Vector3> {
         Ok(Vector3 {
             x: self.read_f32()?,
@@ -546,7 +575,7 @@ impl<R: Read + Seek> BinaryReader<R> {
         })
     }
 
-    /// Reads a `Vector4` value from four consecutive `f32` values
+    /// Reads a `Vector4` value from four consecutive `f32` values.
     pub fn read_vector_4(&mut self) -> io::Result<Vector4> {
         Ok(Vector4 {
             x: self.read_f32()?,
@@ -556,7 +585,7 @@ impl<R: Read + Seek> BinaryReader<R> {
         })
     }
 
-    /// Reads a `ByteVector4` value from four consecutive `u8` values
+    /// Reads a `ByteVector4` value from four consecutive `u8` values.
     pub fn read_byte_vector_4(&mut self) -> io::Result<ByteVector4> {
         Ok(ByteVector4 {
             x: self.read_u8()?,
@@ -566,7 +595,7 @@ impl<R: Read + Seek> BinaryReader<R> {
         })
     }
 
-    /// Reads a `ByteVector4` - used to represent color
+    /// Reads an ARGB color into a `ByteVector4` in RGBA component order.
     pub fn read_byte_vector_4_argb(&mut self) -> io::Result<ByteVector4> {
         let mut bytes = [0; 4];
         self.inner.read_exact(&mut bytes)?;
@@ -578,7 +607,7 @@ impl<R: Read + Seek> BinaryReader<R> {
         })
     }
 
-    /// Reads a `ByteVector4` - used to represent color
+    /// Reads an ABGR color into a `ByteVector4` in RGBA component order.
     pub fn read_byte_vector_4_abgr(&mut self) -> io::Result<ByteVector4> {
         let mut bytes = [0; 4];
         self.inner.read_exact(&mut bytes)?;
@@ -590,7 +619,7 @@ impl<R: Read + Seek> BinaryReader<R> {
         })
     }
 
-    /// Reads a `ByteVector4` - used to represent color
+    /// Reads an RGBA color into a `ByteVector4` in RGBA component order.
     pub fn read_byte_vector_4_rgba(&mut self) -> io::Result<ByteVector4> {
         let mut bytes = [0; 4];
         self.inner.read_exact(&mut bytes)?;
@@ -602,7 +631,7 @@ impl<R: Read + Seek> BinaryReader<R> {
         })
     }
 
-    /// Reads a `ByteVector4` - used to represent color
+    /// Reads a BGRA color into a `ByteVector4` in RGBA component order.
     pub fn read_byte_vector_4_bgra(&mut self) -> io::Result<ByteVector4> {
         let mut bytes = [0; 4];
         self.inner.read_exact(&mut bytes)?;
@@ -614,7 +643,7 @@ impl<R: Read + Seek> BinaryReader<R> {
         })
     }
 
-    /// Reads a `ByteVector3` value from three consecutive `u8` values
+    /// Reads a `ByteVector3` value from three consecutive `u8` values.
     pub fn read_byte_vector_3(&mut self) -> io::Result<ByteVector3> {
         Ok(ByteVector3 {
             x: self.read_u8()?,
@@ -623,7 +652,7 @@ impl<R: Read + Seek> BinaryReader<R> {
         })
     }
 
-    /// Read specified a `length` of bytes against a specified `pattern` - all bytes must match the `pattern`
+    /// Reads `length` bytes and returns an error if any byte differs from `pattern`.
     pub fn assert_pattern(&mut self, length: u64, pattern: u8) -> io::Result<()> {
         let bytes = self.read_vec_u8(length)?;
 
@@ -639,14 +668,14 @@ impl<R: Read + Seek> BinaryReader<R> {
 }
 
 impl BinaryReader<Cursor<Vec<u8>>> {
-    /// Initializes the `BinaryReader` from a vector of bytes
+    /// Initializes the `BinaryReader` from a vector of bytes.
     pub fn from_bytes(bytes: Vec<u8>, endian: Endian, varint_64bit: bool) -> Self {
         BinaryReader::new(Cursor::new(bytes), endian, varint_64bit)
     }
 }
 
 impl BinaryReader<File> {
-    /// Initializes the `BinaryReader` from a file
+    /// Initializes the `BinaryReader` from a file.
     pub fn from_file<P: AsRef<Path>>(
         path: P,
         endian: Endian,

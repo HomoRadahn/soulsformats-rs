@@ -20,21 +20,21 @@ pub use crate::binder::{
 /// Header `.bhd`; data `.bdt`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Bxf4 {
-    /// Files contained within this `Bxf4`
+    /// Files contained within this `Bxf4`.
     pub files: Vec<File>,
-    /// A timestamp or version number, 8 characters maximum
+    /// A timestamp or version number, 8 characters maximum.
     pub version: String,
-    /// Format of this `Bxf4`
+    /// Format of this `Bxf4`.
     pub format: Format,
     pub unk_04: bool,
     pub unk_05: bool,
-    /// Endianness of the data
+    /// Endianness of the data.
     pub endian: Endian,
-    /// Ordering of flag bits
+    /// Ordering of flag bits.
     pub bit_endian: Endian,
-    /// Whether to write strings in UTF-16
+    /// Whether to write strings in UTF-16.
     pub unicode: bool,
-    /// Indicates the presence of a filename hash table
+    /// Indicates the presence of a filename hash table.
     pub extended: u8,
 }
 
@@ -55,7 +55,7 @@ impl Default for Bxf4 {
 }
 
 impl Bxf4 {
-    /// Initializes `Bxf3` with specifies parameters, and rest of parameters set to most common values
+    /// Creates a binder with the given timestamp and files, using defaults for other settings.
     pub fn new<Tz>(date: DateTime<Tz>, files: Vec<File>) -> Self
     where
         Tz: TimeZone,
@@ -158,7 +158,9 @@ impl Bxf4 {
         Ok(file_headers)
     }
 
-    /// Read `Bxf4` from two given `BinaryReaders`. Only accepts decompressed data
+    /// Reads a binder from separate, externally decompressed header and data streams.
+    ///
+    /// Individual compressed files in the binder are decompressed as needed.
     pub fn read<RH, RD>(bhd: &mut BinaryReader<RH>, bdt: &mut BinaryReader<RD>) -> io::Result<Self>
     where
         RH: Read + Seek,
@@ -173,7 +175,7 @@ impl Bxf4 {
         Ok(out)
     }
 
-    /// Reads `Bxf3` from two files, decompressing as necessary
+    /// Reads a binder from separate, externally decompressed header and data files.
     pub fn from_files(
         bhd_path: impl Into<String>,
         bdt_path: impl Into<String>,
@@ -183,7 +185,7 @@ impl Bxf4 {
         Self::read(&mut bhd, &mut bdt)
     }
 
-    /// Reads `Bxf3` from a `bhd` file and `bdt` bytes, decompressing as necessary
+    /// Reads a binder from a decompressed header file and decompressed data bytes.
     pub fn from_bhd_file_bdt_bytes(
         bhd_path: impl Into<String>,
         bdt_bytes: Vec<u8>,
@@ -193,7 +195,7 @@ impl Bxf4 {
         Self::read(&mut bhd, &mut bdt)
     }
 
-    /// Reads `Bxf3` from `bhd` bytes and `bdt` file, decompressing as necessary
+    /// Reads a binder from decompressed header bytes and a decompressed data file.
     pub fn from_bhd_bytes_bdt_file(
         bhd_bytes: Vec<u8>,
         bdt_path: impl Into<String>,
@@ -204,7 +206,7 @@ impl Bxf4 {
         Self::read(&mut bhd, &mut bdt)
     }
 
-    /// Reads `Bxf3` from two `Vec<u8>`, decompressing as necessary
+    /// Reads a binder from decompressed header and data bytes.
     pub fn from_bytes(bhd_bytes: Vec<u8>, bdt_bytes: Vec<u8>) -> io::Result<Self> {
         let mut bhd = BinaryReader::from_bytes(bhd_bytes, Endian::Little, false);
         let mut bdt = BinaryReader::from_bytes(bdt_bytes, Endian::Little, false);
@@ -212,7 +214,9 @@ impl Bxf4 {
         Self::read(&mut bhd, &mut bdt)
     }
 
-    /// Writes `Bxf4` to two `BinaryWriters`. Doesn't compress data
+    /// Writes a binder to separate header and data streams without outer DCX compression.
+    ///
+    /// Individual files marked as compressed are compressed using their configured format.
     pub fn write<WH, WD>(
         &self,
         bhd: &mut BinaryWriter<WH>,
@@ -328,7 +332,7 @@ impl Bxf4 {
         Ok((bhd.into_bytes()?, bdt.into_bytes()?))
     }
 
-    /// Writes `Bxf4` to two files, compressing as necessary
+    /// Writes unwrapped header and data files.
     pub fn to_files(
         &self,
         bhd_path: impl Into<String>,
@@ -342,7 +346,7 @@ impl Bxf4 {
         Ok(())
     }
 
-    /// Writes `Bxf4` - `bhd` to file and `bdt` to bytes
+    /// Writes the unwrapped header to a file and returns the unwrapped data bytes.
     pub fn to_bhd_file_bdt_bytes(&self, bhd_path: impl Into<String>) -> io::Result<Vec<u8>> {
         let (bhd, bdt) = self.preprocess_to_dcx()?;
         fs::write(bhd_path.into(), bhd)?;
@@ -350,7 +354,7 @@ impl Bxf4 {
         Ok(bdt)
     }
 
-    /// Writes `Bxf4` - `bhd` to file and `bdt` to bytes
+    /// Writes the unwrapped data to a file and returns the unwrapped header bytes.
     pub fn to_bhd_bytes_bdt_file(&self, bdt_path: impl Into<String>) -> io::Result<Vec<u8>> {
         let (bhd, bdt) = self.preprocess_to_dcx()?;
         fs::write(bdt_path.into(), bdt)?;
@@ -358,14 +362,14 @@ impl Bxf4 {
         Ok(bhd)
     }
 
-    /// Writes `Bxf4` to two `Vec<u8>`, compressing as necessary
+    /// Returns the unwrapped header and data bytes, in that order.
     pub fn to_bytes(&self) -> io::Result<(Vec<u8>, Vec<u8>)> {
         let (bhd, bdt) = self.preprocess_to_dcx()?;
 
         Ok((bhd, bdt))
     }
 
-    /// Checks if the provided `BinaryReader` appears to contain a valid header
+    /// Checks if the provided `BinaryReader` appears to contain a valid header.
     pub fn is_header<R>(br: &mut BinaryReader<R>) -> io::Result<bool>
     where
         R: Read + Seek,
@@ -374,19 +378,19 @@ impl Bxf4 {
         Ok(decompressed.remaining()? >= 4 && decompressed.get_ascii_len(0, 4)? == "BHF4")
     }
 
-    /// Checks if the given bytes appear to contain a valid header
+    /// Checks if the given bytes appear to contain a valid header.
     pub fn is_header_bytes(data: Vec<u8>) -> io::Result<bool> {
         let mut br = BinaryReader::from_bytes(data, Endian::Little, false);
         Self::is_header(&mut br)
     }
 
-    /// Checks if the given bytes appear to contain a valid header
+    /// Checks whether the file appears to contain a valid header.
     pub fn is_header_file(path: impl Into<String>) -> io::Result<bool> {
         let mut br = BinaryReader::from_file(path.into(), Endian::Little, false)?;
         Self::is_header(&mut br)
     }
 
-    /// Checks if the provided `BinaryReader` appears to contain valid data
+    /// Checks if the provided `BinaryReader` appears to contain valid data.
     pub fn is_data<R>(br: &mut BinaryReader<R>) -> io::Result<bool>
     where
         R: Read + Seek,
@@ -395,13 +399,13 @@ impl Bxf4 {
         Ok(decompressed.remaining()? >= 4 && decompressed.get_ascii_len(0, 4)? == "BDF4")
     }
 
-    /// Checks if the given bytes appear to contain valid data
+    /// Checks if the given bytes appear to contain valid data.
     pub fn is_data_bytes(data: Vec<u8>) -> io::Result<bool> {
         let mut br = BinaryReader::from_bytes(data, Endian::Little, false);
         Self::is_data(&mut br)
     }
 
-    /// Checks if the given bytes appear to contain valid data
+    /// Checks whether the file appears to contain valid data.
     pub fn is_data_file(path: impl Into<String>) -> io::Result<bool> {
         let mut br = BinaryReader::from_file(path.into(), Endian::Little, false)?;
         Self::is_data(&mut br)

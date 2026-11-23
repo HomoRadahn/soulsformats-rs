@@ -4,19 +4,30 @@ use crate::{Param, ParamDef, io::BinaryReader, param::{Cell, CellValue}};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Row {
-    /// [`ParamDef`] that describes this row
+    /// [`ParamDef`] that describes this row.
     pub paramdef: ParamDef,
-    /// ID of this row
+    /// ID of this row.
     pub id: i32,
-    /// Name given to this row; no functional significance
+    /// Name given to this row; no functional significance.
     pub name: Option<String>,
-    /// Cells contained in this row. Must be loaded with [`ParamDef`] before use
+    /// Cells in this row, described by `paramdef`.
     pub cells: Vec<Cell>,
     pub(crate) data_offset: u64
 }
 
 impl Row {
-    /// Creates a new [`Row`], with cells having default values set from [`ParamDef`]
+    /// Creates a row with one default-valued cell per field in `paramdef`.
+    ///
+    /// ```
+    /// use soulsformats_rs::{ParamDef, param::{CellValue, Row}, paramdef::{Field, ParamDefType}};
+    ///
+    /// let mut definition = ParamDef::default();
+    /// definition.fields.push(Field::new(ParamDefType::I32, "health"));
+    /// let mut row = Row::new(1, None, &definition);
+    /// row.cells[0].set(100_i32)?;
+    /// assert_eq!(row.get_value_by_internal_name("health"), Some(&CellValue::I32(100)));
+    /// # Ok::<(), std::io::Error>(())
+    /// ```
     pub fn new(id: i32, name: Option<String>, paramdef: &ParamDef) -> Self {
         let cells = paramdef.fields.iter()
             .map(|field| Cell::new(field.clone(), field.default.clone()))
@@ -25,7 +36,7 @@ impl Row {
         Self { id, name, cells, paramdef: paramdef.to_owned(), data_offset: 0 }
     }
 
-    /// Gets the [`CellValue`] of a [`Cell`] with the corresponding `internal_name`
+    /// Returns the value of the first cell with the given internal name, if present.
     pub fn get_value_by_internal_name(&self, internal_name: impl Into<String>) -> Option<&CellValue> {
         let internal_name = internal_name.into();
 

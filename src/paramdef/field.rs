@@ -27,42 +27,42 @@ static ARRAY_NAME: LazyLock<Regex> =
     });
 
 #[derive(Debug, Clone, PartialEq)]
-/// Information about a field present in each row in a param
+/// Information about a field present in each row in a param.
 pub struct Field {
-    /// Name to display in the editor
+    /// Name to display in the editor.
     pub display_name: String,
-    /// Type of value to display in the editor
+    /// Type of value to display in the editor.
     pub display_type: ParamDefType,
-    /// Printf-style format string to apply to the value in the editor
+    /// Printf-style format string to apply to the value in the editor.
     pub display_format: String,
-    /// Default value for new rows; may be absent for variable editor value types
+    /// Default value for new rows.
     pub default: CellValue,
-    /// Minimum valid value; may be absent for variable editor value types
+    /// Minimum editor value.
     pub min: CellValue,
-    /// Maximum valid value; may be absent for variable editor value types
+    /// Maximum editor value.
     pub max: CellValue,
-    /// Amount of increase or decrease per step; may be absent for variable editor value types
+    /// Amount of increase or decrease per editor step.
     pub increment: CellValue,
-    /// Flags determining behavior of the field
+    /// Flags determining behavior of the field.
     pub edit_flags: EditFlags,
-    /// Number of elements for array types; only supported for ArrayU8, StringShiftJIS, and StringUTF16
+    /// Number of elements for array types; only supported for ArrayU8, StringShiftJIS, and StringUTF16.
     pub array_length: Option<i32>,
-    /// Optional description of the field; may be null
+    /// Optional description of the field; may be null.
     pub description: Option<String>,
-    /// Type of the value in the engine; may be an enum type
+    /// Type of the value in the engine; may be an enum type.
     pub internal_type: Option<String>,
-    /// Name of the value in the engine; not present before version 102
+    /// Name of the value in the engine; not present before version 102.
     pub internal_name: Option<String>,
-    /// Number of bits used by a bitfield; only supported for unsigned types, -1 when not used
+    /// Bit width for a bitfield, or `None` when not specified.
     pub bit_size: Option<i32>,
-    /// Fields are ordered by this value in the editor; not present before version 104
+    /// Fields are ordered by this value in the editor; not present before version 104.
     pub sort_id: Option<i32>,
     pub unk_b8: Option<String>,
     pub unk_c0: Option<String>,
     pub unk_c8: Option<String>,
-    /// Regulation version when the `Field` was introduced, set to `None` when it always existed
+    /// Regulation version when the `Field` was introduced, set to `None` when it always existed.
     pub first_regulation_version: Option<u64>,
-    /// Regulation version when the `Field` was removed, set to `None` when it was never removed
+    /// Regulation version when the `Field` was removed, set to `None` when it was never removed.
     pub removed_regulation_version: Option<u64>,
 }
 
@@ -73,7 +73,7 @@ impl Default for Field {
 }
 
 impl Field {
-    /// Creates a new `Field`, with specified parameters
+    /// Creates a new `Field`, with specified parameters.
     pub fn new(display_type: ParamDefType, internal_name: impl Into<String>) -> Self {
         let internal_name = internal_name.into();
         Self {
@@ -99,7 +99,9 @@ impl Field {
         }
     }
 
-    /// Checks if `Field` versions are valid for given regulation version
+    /// Checks whether the field is present in the given regulation version.
+    ///
+    /// The first version is inclusive; a nonzero removed version is exclusive.
     pub fn is_valid_version(&self, version: u64) -> io::Result<bool> {
         let temp_first_version = self.first_regulation_version.unwrap_or(0);
         let temp_removed_version = self.removed_regulation_version.unwrap_or(0);
@@ -108,7 +110,10 @@ impl Field {
             && (temp_removed_version == 0 || version < temp_removed_version))
     }
 
-    /// Checks if `Field` versions are vaild for specified game version
+    /// Checks whether the field is present in the given game version.
+    ///
+    /// Version zero always matches. Otherwise, the first version is inclusive and a
+    /// nonzero removed version is exclusive.
     pub fn fits_game_version(&self, version: u64) -> io::Result<bool> {
         let temp_first_version = self.first_regulation_version.unwrap_or(0);
         let temp_removed_version = self.removed_regulation_version.unwrap_or(0);

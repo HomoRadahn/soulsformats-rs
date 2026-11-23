@@ -10,21 +10,21 @@ pub use crate::binder::{
     format::{FileFlags, Format},
 };
 
-/// A general-purpose file container used before DS2
+/// A general-purpose file container used before DS2.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Bnd3 {
-    /// The files contained within this `Bnd3`
+    /// The files contained within this `Bnd3`.
     pub files: Vec<File>,
-    /// A timestamp or version number, 8 characters maximum
+    /// A timestamp or version number, 8 characters maximum.
     pub version: String,
-    /// Indicates the format of the `Bnd3`
+    /// Indicates the format of the `Bnd3`.
     pub format: Format,
-    /// Endian format of the data
+    /// Endian format of the data.
     pub endian: Endian,
-    /// Ordering of flag bits
+    /// Ordering of flag bits.
     pub bit_endian: Endian,
     pub unk_18: i32,
-    /// Whether or not to write the file headers end value or 0
+    /// Whether or not to write the file headers end value or 0.
     pub write_file_headers_end: bool,
 }
 
@@ -43,7 +43,7 @@ impl Default for Bnd3 {
 }
 
 impl Bnd3 {
-    /// Initializes `Bnd3` with specifies parameters, and rest of parameters set to most common values
+    /// Creates a binder with the given timestamp and files, using defaults for other settings.
     pub fn new<Tz>(date: DateTime<Tz>, files: Vec<File>) -> Self
     where
         Tz: TimeZone,

@@ -9,24 +9,24 @@ use crate::{
 };
 use std::io::{self, ErrorKind::InvalidData, Read, Seek, Write};
 
-/// A general-purpose file container used since DS2
+/// A general-purpose file container used since DS2.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Bnd4 {
-    /// The files contained within this `Bnd4`
+    /// The files contained within this `Bnd4`.
     pub files: Vec<File>,
-    /// A timestamp or version number, 8 characters maximum
+    /// A timestamp or version number, 8 characters maximum.
     pub version: String,
-    /// Indicates the format of this `Bnd4`
+    /// Indicates the format of this `Bnd4`.
     pub format: Format,
     pub unk_04: bool,
     pub unk_05: bool,
-    /// Endian format of the data
+    /// Endian format of the data.
     pub endian: Endian,
-    /// Ordering of flag bits
+    /// Ordering of flag bits.
     pub bit_endian: Endian,
-    /// Whether to encode filenames as UTF-8 or Shift JIS
+    /// Whether filenames use UTF-16 instead of Shift-JIS.
     pub unicode: bool,
-    /// Indicates presence of filename hash table
+    /// Indicates presence of filename hash table.
     pub extended: u8,
 }
 
@@ -47,7 +47,7 @@ impl Default for Bnd4 {
 }
 
 impl Bnd4 {
-    /// Initializes `Bnd3` with specifies parameters, and rest of parameters set to most common values
+    /// Creates a binder with the given timestamp and files, using defaults for other settings.
     pub fn new<Tz>(date: DateTime<Tz>, files: Vec<File>) -> Self
     where
         Tz: TimeZone,

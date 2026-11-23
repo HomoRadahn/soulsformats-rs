@@ -10,7 +10,7 @@ pub struct File {
 }
 
 impl File {
-    /// Creates a new `File`
+    /// Creates a new `File`.
     pub fn new(id: Option<i32>, name: Option<impl Into<String>>, bytes: Vec<u8>) -> Self {
         Self {
             id,

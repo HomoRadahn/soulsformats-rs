@@ -19,6 +19,8 @@ cargo run --example decompress-bnd4
 
 For integration tests, which can serve as crude examples, see `tests` folder.
 
+Generate API documentation, including examples, with `cargo doc --open`.
+
 ## Credits
 - [SoulsFormatsNEXT](https://github.com/soulsmods/SoulsFormatsNEXT) (and the original SoulsFormats library). Without the authors' work, this project would never exist.
 - [oodle-rs](https://github.com/meszmate/oodle-rs)
@@ -36,4 +38,4 @@ This will only ever support formats up to Armored Core VI / Elden Ring, unless a
 - [x] Optimizations in format reading / writing
 - [ ] Param, Row, Cell
 - [ ] MSB formats
-- [ ] Improve documentation, maybe add doc tests
+- [x] Improve documentation and add doc tests

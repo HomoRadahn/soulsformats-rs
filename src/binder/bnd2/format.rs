@@ -2,15 +2,15 @@ use bitflags::bitflags;
 use std::io::{self};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-/// An enum for the different supported file path modes
+/// An enum for the different supported file path modes.
 pub enum FilePathMode {
-    /// Files in this Bnd have no name
+    /// Files in this Bnd have no name.
     Nameless = 0,
-    /// Files in this Bnd only have file names
+    /// Files in this Bnd only have file names.
     FileName = 1,
-    /// All files use a full file path
+    /// All files use a full file path.
     FullPath = 2,
-    /// Add a base directory all paths start from, then write the rest of the path as each file name
+    /// Add a base directory all paths start from, then write the rest of the path as each file name.
     BaseDirectory = 3,
 }
 
@@ -33,7 +33,7 @@ impl TryFrom<u8> for FilePathMode {
 
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    /// Header Info flags describing what features are enabled
+    /// Header Info flags describing what features are enabled.
     pub struct HeaderInfoFlags: u8 {
         const HeaderItem = 0b00000001;
         const Endian = 0b00000010;
@@ -57,7 +57,7 @@ impl TryFrom<u8> for HeaderInfoFlags {
 
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    /// File Info flags describing what features are enabled
+    /// File Info flags describing what features are enabled.
     pub struct FileInfoFlags: u8 {
         const ID = 0b00000001;
         const Offset = 0b00000010;

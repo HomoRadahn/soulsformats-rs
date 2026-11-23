@@ -6,7 +6,7 @@ use flate2::{Compression, read::DeflateDecoder, write::DeflateEncoder};
 use std::io::{self, Read, Seek, Write};
 use zstd::{self, bulk::Compressor, zstd_safe::CParameter};
 
-/// Decompresses deflate bytes
+/// Decompresses deflate bytes.
 pub(crate) fn decompress_deflate_bytes(compressed_bytes: &[u8]) -> io::Result<Vec<u8>> {
     let mut decoder = DeflateDecoder::new(compressed_bytes);
     let mut decompressed = Vec::new();
@@ -16,7 +16,7 @@ pub(crate) fn decompress_deflate_bytes(compressed_bytes: &[u8]) -> io::Result<Ve
     Ok(decompressed)
 }
 
-/// Compresses deflate bytes
+/// Compresses deflate bytes.
 pub(crate) fn compress_deflate_bytes(data: &[u8]) -> io::Result<Vec<u8>> {
     let mut encoder = DeflateEncoder::new(Vec::new(), Compression::default());
     encoder.write_all(data)?;
@@ -25,7 +25,7 @@ pub(crate) fn compress_deflate_bytes(data: &[u8]) -> io::Result<Vec<u8>> {
     Ok(output)
 }
 
-/// Reads a Zstd block from a `BinaryReader` and returns the uncompressed data
+/// Reads a Zstd block from a `BinaryReader` and returns the uncompressed data.
 pub(crate) fn read_zstd<R>(br: &mut BinaryReader<R>, compressed_size: u64) -> io::Result<Vec<u8>>
 where
     R: Read + Seek,
@@ -34,7 +34,7 @@ where
     zstd::decode_all(compressed.as_slice())
 }
 
-/// Writes `data` as Zstd with `compression_level`
+/// Compresses `data` as Zstd with `compression_level`.
 pub(crate) fn write_zstd(data: &[u8], compression_level: u8) -> io::Result<Vec<u8>> {
     let mut compressor = Compressor::new(compression_level as i32)?;
     compressor.set_parameter(CParameter::ContentSizeFlag(false))?;
@@ -42,17 +42,17 @@ pub(crate) fn write_zstd(data: &[u8], compression_level: u8) -> io::Result<Vec<u
     compressor.compress(data)
 }
 
-/// Size in bytes of one uncompressed EDGE chunk
+/// Size in bytes of one uncompressed EDGE chunk.
 pub(crate) const EDGE_CHUNK_SIZE: usize = 0x10000;
 
 /// Returns the number of EDGE chunks needed for `len` bytes, and the size of the last partial
-/// chunk (0 if the data divides evenly)
+/// chunk (0 if the data divides evenly).
 pub(crate) fn edge_chunk_layout(len: usize) -> (usize, usize) {
     (len.div_ceil(EDGE_CHUNK_SIZE), len % EDGE_CHUNK_SIZE)
 }
 
 /// Compresses chunk `index` of `data` for an EDGE container, falling back to the raw bytes when
-/// deflate doesn't make them smaller. Returns the chunk bytes and whether they are compressed
+/// deflate doesn't make them smaller. Returns the chunk bytes and whether they are compressed.
 pub(crate) fn compress_edge_chunk(data: &[u8], index: usize) -> io::Result<(Vec<u8>, bool)> {
     let start = index * EDGE_CHUNK_SIZE;
     let input = &data[start..data.len().min(start + EDGE_CHUNK_SIZE)];
@@ -65,7 +65,7 @@ pub(crate) fn compress_edge_chunk(data: &[u8], index: usize) -> io::Result<(Vec<
     }
 }
 
-/// Writes a zlib stream and returns the number of bytes written
+/// Writes a zlib stream and returns the number of bytes written.
 pub(crate) fn write_zlib<W>(
     bw: &mut BinaryWriter<W>,
     format_byte: u8,
@@ -110,7 +110,7 @@ fn adler32(data: &[u8]) -> u32 {
     (adler_b << 16) | adler_a
 }
 
-/// Appends a chunk read from an EDGE container to `output`, inflating it if necessary
+/// Appends a chunk read from an EDGE container to `output`, inflating it if necessary.
 pub(crate) fn append_edge_chunk(
     output: &mut Vec<u8>,
     chunk: Vec<u8>,

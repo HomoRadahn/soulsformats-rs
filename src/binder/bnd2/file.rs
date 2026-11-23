@@ -6,22 +6,22 @@ use crate::{
     util,
 };
 
-/// A file in `Bnd2`
+/// A file in `Bnd2`.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct File {
-    /// ID of this `File`, or `None` if it has no ID
+    /// ID of this `File`, or `None` if it has no ID.
     pub id: Option<i32>,
-    /// The name of this `File`<br>
-    /// Will be set to `id` if name does not exist<br>
-    /// Will be a path with a drive letter if `FilePathMode::FullPath` is set<br>
-    /// Will need `BaseDirectory` added as the base directory if `FilePathMode::BaseDirectory` is set
+    /// The stored name or path. Its interpretation depends on [`FilePathMode`].
+    ///
+    /// In nameless mode, reading uses the file ID as the name when name offsets are present.
+    /// In base-directory mode, the archive's base directory supplies the path prefix.
     pub name: String,
-    /// Raw data contained in the `File`
+    /// Raw data contained in the `File`.
     pub bytes: Vec<u8>,
 }
 
 impl File {
-    /// Initializes a new `File` with specified parameters
+    /// Initializes a new `File` with specified parameters.
     pub fn new(id: Option<i32>, name: impl Into<String>, bytes: Vec<u8>) -> Self {
         Self {
             id,

@@ -3,7 +3,7 @@ use std::io::{self, Cursor, ErrorKind, Read, Seek};
 use crate::io::Endian;
 use crate::{Dcx, dcx::compression_info::CompressionInfo, io::BinaryReader};
 
-/// Decompresses data from `BinaryReader` if necessary, returning a new `BinaryReader` over bytes
+/// Decompresses data from `BinaryReader` if necessary, returning a new `BinaryReader` over bytes.
 pub fn get_decompressed_binary_reader<R>(
     br: &mut BinaryReader<R>,
 ) -> io::Result<(BinaryReader<Cursor<Vec<u8>>>, CompressionInfo)>
@@ -26,7 +26,7 @@ where
     }
 }
 
-/// Calls the `R::try_from` function on `I`, returning `io::Result<R>`
+/// Calls the `R::try_from` function on `I`, returning `io::Result<R>`.
 pub(crate) fn convert_num<I, R>(num: I) -> io::Result<R>
 where
     R: TryFrom<I>,
@@ -43,7 +43,7 @@ where
     })
 }
 
-/// FromSoft's basic filename hashing algorithm, used in `Bnd4` and `Bxf4`
+/// FromSoft's basic filename hashing algorithm, used in `Bnd4` and `Bxf4`.
 pub(crate) fn from_path_hash(text: impl Into<String>) -> u32 {
     let mut hashable = text.into().to_lowercase().replace("\\", "/");
     if !hashable.starts_with('/') {
@@ -54,7 +54,7 @@ pub(crate) fn from_path_hash(text: impl Into<String>) -> u32 {
     })
 }
 
-/// Determines whether a number is prime or not
+/// Determines whether a number is prime or not.
 pub(crate) fn is_prime(n: u32) -> bool {
     if n < 2 {
         return false;
@@ -81,7 +81,8 @@ pub(crate) fn is_prime(n: u32) -> bool {
     true
 }
 
-/// Trait for using `chrono::DateTime<Local>` with `Bnd` timestamps
+/// Converts a `chrono::DateTime` to a BND timestamp string.
 pub trait DateTimeExt {
+    /// Returns the timestamp string, padded with null characters to at least eight characters.
     fn to_bnd_timestamp(&self) -> String;
 }

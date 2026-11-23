@@ -16,19 +16,30 @@ use crate::{
 };
 
 #[derive(Debug, Clone, PartialEq)]
-/// A simple string container used throughout the series
+/// A string container used throughout the series.
+///
+/// ```
+/// use soulsformats_rs::{ByteIO, Fmg};
+///
+/// let mut fmg = Fmg::default();
+/// fmg.append(100, Some("Hello"));
+/// fmg.replace(100, Some("Welcome"));
+/// let decoded = Fmg::from_bytes(fmg.to_bytes()?)?;
+/// assert_eq!(decoded.find(100).as_deref(), Some("Welcome"));
+/// # Ok::<(), std::io::Error>(())
+/// ```
 pub struct Fmg {
-    /// The strings contained in this `FMG`
+    /// The strings contained in this `FMG`.
     pub entries: Vec<Entry>,
-    /// Indicates file format; 0 - DeS, 1 - DS1/DS2, 2 - DS3/BB
+    /// Indicates file format; 0 - DeS, 1 - DS1/DS2, 2 - DS3/BB.
     pub version: Version,
-    /// Data endianness
+    /// Data endianness.
     pub endian: Endian,
-    /// Whether or not the FMG uses UTF16 encoding
+    /// Whether strings use UTF-16 instead of Shift-JIS.
     pub unicode: bool,
-    /// Whether or not to add an MD5 hash to the top of the FMG file (Gundam Unicorn)
+    /// Whether or not to add an MD5 hash to the top of the FMG file (Gundam Unicorn).
     pub md5: bool,
-    /// Whether or not to reuse offsets to save space on duplicate entries
+    /// Whether writing reuses offsets for duplicate strings to save space.
     pub reuse_offsets: bool,
 }
 
@@ -46,7 +57,7 @@ impl Default for Fmg {
 }
 
 impl Fmg {
-    /// Initializes `FMG` with specified version
+    /// Creates an FMG with the specified version and default settings.
     pub fn with_version(version: Version) -> Self {
         Self {
             version,
@@ -54,7 +65,9 @@ impl Fmg {
         }
     }
 
-    /// Finds `Entry` text by ID
+    /// Returns a copy of the first matching entry's text.
+    ///
+    /// Returns `None` if the ID is absent or the entry has no text.
     pub fn find(&self, id: i32) -> Option<String> {
         self.entries
             .iter()
@@ -62,7 +75,7 @@ impl Fmg {
             .and_then(|entry| entry.text.clone())
     }
 
-    /// Adds a new `Entry` to `FMG` from specified parameters
+    /// Adds a new `Entry` to `FMG` from specified parameters.
     pub fn append(&mut self, id: i32, text: Option<impl Into<String>>) {
         self.entries.push(Entry::new(id, text));
     }
@@ -76,6 +89,10 @@ impl Fmg {
         }
     }
 
+    /// Writes entry strings, reusing offsets for duplicate text.
+    ///
+    /// The writer must already contain a `string-offset-{index}` varint reservation
+    /// for each entry.
     pub fn write_strings_reuse_offsets<W>(
         &self,
         bw: &mut BinaryWriter<W>,
@@ -117,6 +134,10 @@ impl Fmg {
         Ok(())
     }
 
+    /// Writes entry strings without reusing offsets.
+    ///
+    /// The writer must already contain a `string-offset-{index}` varint reservation
+    /// for each entry.
     pub fn write_strings<W>(&self, bw: &mut BinaryWriter<W>, entries: Vec<Entry>) -> io::Result<()>
     where
         W: Write + Seek,

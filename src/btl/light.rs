@@ -7,14 +7,14 @@ use crate::{
 };
 
 #[derive(Default, Clone, PartialEq, Debug)]
-/// Type of a light source
+/// Type of a light source.
 pub enum LightType {
     #[default]
-    /// Omnidirectional light
+    /// Omnidirectional light.
     Point = 0,
-    /// Cone of light
+    /// Cone of light.
     Spot = 1,
-    /// Light at a constant angle
+    /// Light at a constant angle.
     Directional = 2,
 }
 
@@ -37,76 +37,76 @@ impl TryFrom<u32> for LightType {
 #[derive(Clone, PartialEq, Debug)]
 pub struct Light {
     pub unk_00: Vec<u8>,
-    /// Name of this light
+    /// Name of this light.
     pub name: String,
-    /// Type of this light
+    /// Type of this light.
     pub light_type: LightType,
     pub unk_1c: bool,
-    /// Color of the light on diffuse surfaces
+    /// Color of the light on diffuse surfaces.
     pub diffuse_color: ByteVector3,
-    /// Intensity of diffuse light
+    /// Intensity of diffuse light.
     pub diffuse_power: f32,
-    /// Color of the light on reflective surfaces
+    /// Color of the light on reflective surfaces.
     pub specular_color: ByteVector3,
-    /// Whether the light casts shadows
+    /// Whether the light casts shadows.
     pub cast_shadows: bool,
-    /// Intensity of specular lighting
+    /// Intensity of specular lighting.
     pub specular_power: f32,
-    /// Tightness of the spot light beam
+    /// Tightness of the spot light beam.
     pub cone_angle: f32,
     pub unk_30: f32,
     pub unk_34: f32,
-    /// Center of the light
+    /// Center of the light.
     pub position: Vector3,
-    /// Rotation of a spot light
+    /// Rotation of a spot light.
     pub rotation: Vector3,
     pub unk_50: i32,
     pub unk_54: f32,
-    /// Distance the light shines
+    /// Distance the light shines.
     pub radius: f32,
     pub unk_5c: i32,
     pub unk_64: Vec<u8>,
     pub unk_68: f32,
-    /// Color of shadows cast by the light
+    /// Color of shadows cast by the light.
     pub shadow_color: ByteVector4,
     pub unk_70: f32,
-    /// Minimum time between flickers
+    /// Minimum time between flickers.
     pub flicker_interval_min: f32,
-    /// Maximum time between flickers
+    /// Maximum time between flickers.
     pub flicker_interval_max: f32,
-    /// Multiplies the brightness of the light while flickering
+    /// Multiplies the brightness of the light while flickering.
     pub flicker_brightness_multiplier: f32,
     pub unk_80: i32,
     pub unk_84: Vec<u8>,
     pub unk_88: f32,
     pub unk_90: f32,
     pub unk_98: f32,
-    /// Distance at which spot light beam starts
+    /// Distance at which spot light beam starts.
     pub near_clip: f32,
     pub unk_a0: Vec<u8>,
-    /// Unknown
+    /// Unknown.
     pub sharpness: f32,
     pub unk_ac: f32,
-    /// Stretches the spot light beam
+    /// Stretches the spot light beam.
     pub width: f32,
     pub unk_bc: f32,
     pub unk_c0: Vec<u8>,
     pub unk_c4: f32,
-    /// Not present before Sekiro
+    /// Not present before Sekiro.
     pub unk_c8: Option<f32>,
-    /// Not present before Sekiro
+    /// Not present before Sekiro.
     pub unk_cc: Option<f32>,
-    /// Not present before Sekiro
+    /// Not present before Sekiro.
     pub unk_d0: Option<f32>,
-    /// Not present before Sekiro
+    /// Not present before Sekiro.
     pub unk_d4: Option<f32>,
-    /// Not present before Sekiro
+    /// Not present before Sekiro.
     pub unk_d8: Option<f32>,
-    /// Not present before Sekiro
+    /// Not present before Sekiro.
     pub unk_dc: Option<i32>,
-    /// Not present before Sekiro
+    /// Not present before Sekiro.
     pub unk_e0: Option<f32>,
-    /// Not present before Sekiro
+    /// Not present before Sekiro.
     pub unk_e4: Option<i32>,
 }
 
@@ -177,7 +177,7 @@ impl Default for Light {
 }
 
 impl Light {
-    /// Reads the `Light` from the supplied `BinaryReader`
+    /// Reads the `Light` from the supplied `BinaryReader`.
     pub(crate) fn read<R>(
         br: &mut BinaryReader<R>,
         names_start: i64,

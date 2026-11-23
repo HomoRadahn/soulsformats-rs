@@ -9,18 +9,23 @@ pub mod compression_info;
 mod util;
 
 #[derive(Debug, Clone, PartialEq)]
+/// Decompressed data together with the compression format used to write it.
 pub struct Dcx {
+    /// Uncompressed data.
     pub data: Vec<u8>,
+    /// Compression to use when writing the data.
     pub compression: CompressionInfo,
 }
 
 impl Dcx {
-    /// Creates a `Dcx` from `Vec<u8>` and `CompressionInfo`
+    /// Creates a `Dcx` from `Vec<u8>` and `CompressionInfo`.
     pub fn new(data: Vec<u8>, compression: CompressionInfo) -> Self {
         Self { data, compression }
     }
 
-    /// Checks if the provided `BinaryReader` contains a valid `Dcx`
+    /// Checks the stream for a DCP or DCX magic header.
+    ///
+    /// This does not validate the rest of the data or detect bare zlib streams.
     pub fn is<R>(br: &mut BinaryReader<R>) -> io::Result<bool>
     where
         R: Read + Seek,
@@ -34,19 +39,19 @@ impl Dcx {
         Ok(magic == "DCP\0" || magic == "DCX\0")
     }
 
-    /// Checks whether provided `Vec<u8>` is a valid `Dcx`
+    /// Checks the bytes for a DCP or DCX magic header.
     pub fn is_bytes(bytes: Vec<u8>) -> io::Result<bool> {
         let mut br = BinaryReader::from_bytes(bytes, Endian::Big, false);
         Dcx::is(&mut br)
     }
 
-    /// Checks whether provided file is a valid `Dcx`
+    /// Checks the file for a DCP or DCX magic header.
     pub fn is_file(path: impl Into<String>) -> io::Result<bool> {
         let mut br = BinaryReader::from_file(path.into(), Endian::Big, false)?;
         Dcx::is(&mut br)
     }
 
-    /// Decompress `Dcx` from provided `Vec<u8>`
+    /// Decompress `Dcx` from provided `Vec<u8>`.
     pub fn from_bytes(data: Vec<u8>) -> io::Result<Self> {
         let br = BinaryReader::from_bytes(data, Endian::Big, false);
         let (decompressed, compression) = Dcx::decompress(br)?;
@@ -56,7 +61,7 @@ impl Dcx {
         })
     }
 
-    /// Decompress `Dcx` from provided file
+    /// Decompress `Dcx` from provided file.
     pub fn from_file(path: impl Into<String>) -> io::Result<Self> {
         let br = BinaryReader::from_file(path.into(), Endian::Big, false)?;
         let (decompressed, compression) = Dcx::decompress(br)?;
@@ -66,7 +71,7 @@ impl Dcx {
         })
     }
 
-    /// Compress `Dcx` to specified file
+    /// Compress `Dcx` to specified file.
     pub fn to_file(&self, path: impl Into<String>) -> io::Result<()> {
         let mut bw = BinaryWriter::to_file(path.into(), Endian::Big, false)?;
         let data = &self.data;
@@ -74,7 +79,7 @@ impl Dcx {
         Ok(())
     }
 
-    /// Compress `Dcx` to `Vec<u8>`
+    /// Compress `Dcx` to `Vec<u8>`.
     pub fn to_bytes(&self) -> io::Result<Vec<u8>> {
         let mut bw = BinaryWriter::to_bytes(Endian::Big, false);
         let data = &self.data;
@@ -83,9 +88,8 @@ impl Dcx {
     }
 }
 
-/// Decompression Internal Functions
 impl Dcx {
-    /// Decompress `Dcx` from the provided `BinaryReader`
+    /// Decompresses a DCP, DCX, or zlib stream and returns its data and compression.
     pub fn decompress<R>(mut br: BinaryReader<R>) -> io::Result<(Vec<u8>, CompressionInfo)>
     where
         R: Read + Seek,
@@ -429,9 +433,8 @@ impl Dcx {
     }
 }
 
-/// Compression Internal Functions
 impl Dcx {
-    /// Compress `Dcx` to provided `BinaryWriter`
+    /// Compresses data with the selected format into the provided writer.
     pub fn compress<W>(
         bw: &mut BinaryWriter<W>,
         data: &[u8],

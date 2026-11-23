@@ -13,13 +13,13 @@ pub use format::{EditFlags, ParamDefType};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParamDef {
-    /// Indicates a revision of the row data structure
+    /// Indicates a revision of the row data structure.
     pub data_version: i16,
-    /// Identifies corresponding `Param` and `ParamDEF`
+    /// Identifies corresponding `Param` and `ParamDEF`.
     pub param_type: String,
-    /// Endianness of data
+    /// Endianness of data.
     pub endian: Endian,
-    /// Write certain strings as UTF-16, otherwise Shift-JIS
+    /// Write certain strings as UTF-16, otherwise Shift-JIS.
     pub unicode: bool,
     /// Determines format of the file.
     //   0 - Armored Core Formula Front PS2, possibly not used yet
@@ -32,10 +32,9 @@ pub struct ParamDef {
     // 202 - Dark Souls 3
     // 203 - Elden Ring, Armored Core 6
     pub format_version: i16,
-    /// Fields in each param row, in order of appearance
+    /// Fields in each param row, in order of appearance.
     pub fields: Vec<Field>,
-    /// ParamDEF is "regulation version aware" and can be applied to older regulation params that may have a
-    /// different layout that the latest params if the XML paramdef supports it.
+    /// Whether the definition retains regulation-version information from XML.
     pub version_aware: bool,
     /// Only basic fields are present;
     /// This is used in Armored Core Formula Front for PS2.

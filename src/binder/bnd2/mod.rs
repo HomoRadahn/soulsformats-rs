@@ -13,25 +13,25 @@ pub mod format;
 pub use file::*;
 pub use format::*;
 
-/// Generic binder archive use in games: Metal Wolf Chaos, A.C.E. 2, AC: FF (PSP), AC: NB, AC: LR (PSP+PS2)
+/// Generic binder archive use in games: Metal Wolf Chaos, A.C.E. 2, AC: FF (PSP), AC: NB, AC: LR (PSP+PS2).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Bnd2 {
-    /// Header Info Flags
+    /// Header Info Flags.
     pub header_info_flags: HeaderInfoFlags,
-    /// File Info Flags
+    /// File Info Flags.
     pub file_info_flags: FileInfoFlags,
     pub unk_06: u8,
     pub unk_07: u8,
-    /// Version of `Bnd2` - usually `202` or `211`
+    /// Version of `Bnd2` - usually `202` or `211`.
     pub file_version: i32,
-    /// Alignment of each `File`
+    /// Alignment of each `File`.
     pub alignment_size: u16,
-    /// File Path Mode
+    /// File Path Mode.
     pub file_path_mode: FilePathMode,
     pub unk_1b: u8,
-    /// Base directory of all files - used only if `FilePathMode::BaseDirectory` is set
+    /// Base directory of all files - used only if `FilePathMode::BaseDirectory` is set.
     pub base_directory: String,
-    /// Files contained in this `Bnd2`
+    /// Files contained in this `Bnd2`.
     pub files: Vec<File>,
 }
 
@@ -53,7 +53,7 @@ impl Default for Bnd2 {
 }
 
 impl Bnd2 {
-    /// Creates `Bnd2` with specified version
+    /// Creates `Bnd2` with specified version.
     pub fn with_version(version: i32) -> Self {
         Self {
             file_version: version,
@@ -61,7 +61,7 @@ impl Bnd2 {
         }
     }
 
-    /// Creates `Bnd2` with specified `FilePathMode`
+    /// Creates `Bnd2` with specified `FilePathMode`.
     pub fn with_path_mode(file_path_mode: FilePathMode) -> Self {
         Self {
             file_path_mode,
@@ -69,7 +69,7 @@ impl Bnd2 {
         }
     }
 
-    /// Creates `Bnd2` with specified version and `FilePathMode`
+    /// Creates `Bnd2` with specified version and `FilePathMode`.
     pub fn with_version_path_mode(version: i32, file_path_mode: FilePathMode) -> Self {
         Self {
             file_version: version,

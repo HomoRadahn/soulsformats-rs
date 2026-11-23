@@ -9,14 +9,14 @@ pub mod light;
 pub use light::Light;
 pub use light::LightType;
 
-/// Point light sources in a map, used in BB, DS3, and Sekiro
+/// Map light sources used in Dark Souls 2, Bloodborne, Dark Souls 3, and Sekiro.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Btl {
-    /// Version
+    /// Version.
     pub version: i32,
-    /// Whether offsets are 64-bit; set to false for Dark Souls 2
+    /// Whether offsets are 64-bit; set to false for Dark Souls 2.
     pub offsets_64bit: bool,
-    /// Light sources in this `Btl`
+    /// Light sources in this `Btl`.
     pub lights: Vec<Light>,
 }
 
